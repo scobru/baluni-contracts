@@ -33,7 +33,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
 
   console.log("oracle:", oracle.address);
 
-  const pool = await deploy("BaluniPoolV1", {
+  const pool = await deploy("Pool", {
     from: deployer,
     // Contract constructor arguments
     args: [oracle.address, "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", "0x28F53bA70E5c8ce8D03b1FaD41E9dF11Bb646c36"],
@@ -45,7 +45,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
 
   console.log("pool:", pool.address);
 
-  const tournament = await deploy("BaluniTournamentV1", {
+  const tournament = await deploy("Tournament", {
     from: deployer,
     // Contract constructor arguments
     args: [oracle.address, 50],
