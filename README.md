@@ -1,7 +1,5 @@
 # BALUNI CONTRACTS
 
-##
-
 <div align="left">
 
 <figure><img src="https://storage.googleapis.com/download/storage/v1/b/buidlguidl-v3.appspot.com/o/builds%2F658192138d8963c5fdb4fe205.jpeg?generation=1710860175496254&#x26;alt=media" alt="" width="375"><figcaption></figcaption></figure>
