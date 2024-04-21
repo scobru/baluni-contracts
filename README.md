@@ -1,19 +1,24 @@
-
 # BALUNI CONTRACTS
+
+<div align="left">
+
+<figure><img src="https://storage.googleapis.com/download/storage/v1/b/buidlguidl-v3.appspot.com/o/builds%2F658192138d8963c5fdb4fe205.jpeg?generation=1710860175496254&#x26;alt=media" alt="" width="375"><figcaption></figcaption></figure>
+
+</div>
 
 ## DEPLOYMENTS
 
 ### Router.sol
 
-- Polygon: [0x19f330eba98ffd47a01f8f2afb0b9863a24497dd](https://polygonscan.com/address/0x19f330eba98ffd47a01f8f2afb0b9863a24497dd)
+* Polygon: [0x19f330eba98ffd47a01f8f2afb0b9863a24497dd](https://polygonscan.com/address/0x19f330eba98ffd47a01f8f2afb0b9863a24497dd)
 
 ### Pool.sol
 
-- Mumbai: [0xFe9B07e81c4BDDAA047bfF31D912f8c2e4E9a4Fc](https://mumbai.polygonscan.com/address/0xFe9B07e81c4BDDAA047bfF31D912f8c2e4E9a4Fc)
+* Mumbai: [0xFe9B07e81c4BDDAA047bfF31D912f8c2e4E9a4Fc](https://mumbai.polygonscan.com/address/0xFe9B07e81c4BDDAA047bfF31D912f8c2e4E9a4Fc)
 
 ### Tournament.sol
 
-- Mumbai: [0xe1743C0358487B46B87669A6695d662237C52F4E](https://mumbai.polygonscan.com/address/0xe1743C0358487B46B87669A6695d662237C52F4E)
+* Mumbai: [0xe1743C0358487B46B87669A6695d662237C52F4E](https://mumbai.polygonscan.com/address/0xe1743C0358487B46B87669A6695d662237C52F4E)
 
 ## ROUTER AND AGENT CONTRACT INTERACTION
 
@@ -29,17 +34,15 @@ The process begins when a user initiates a transaction through the `Router` cont
 2. **Agent Check/Create**: The `Router` checks for an existing `Agent` for the user. If none exists, it creates a new `Agent` and links it to the user.
 3. **Execution of Calls**: The `Router` calls the `execute` function on the `Agent` contract with the batch of calls.
 4. **Processing Calls**: The `Agent` processes these calls, which include:
-   - Executing the specified actions
-   - Charging fees
-   - Returning any remaining tokens to the user.
+   * Executing the specified actions
+   * Charging fees
+   * Returning any remaining tokens to the user.
 
 ### Fee Management and Token Return
 
 The `Agent` contract handles fee deductions from the operations performed and ensures any tokens left after the operation are returned to the user. This process involves the internal management of transaction fees and the secure transfer of assets.
 
-
 This interaction between the `Router` and `Agent` contracts enables efficient and secure batch processing of transactions within a decentralized application framework, ensuring users can perform multiple operations in a single transaction while managing fees and asset returns effectively.
-
 
 ## POOL AND TOURNAMENT CONTRACT INTERACTION
 
@@ -49,27 +52,25 @@ This README provides an overview of the `Pool` and `Tournament` contracts design
 
 The `Pool` contract allows users to submit predictions about the price movements of certain assets. Each prediction includes details such as the predicted price, actual price, and the time when the prediction was made. The contract calculates the outcome of predictions based on actual price movements obtained from an Oracle.
 
-- Users can submit price predictions for specified tokens.
-- Predictions are resolved based on actual price data from an Oracle.
-- Rewards are distributed based on the accuracy of predictions.
+* Users can submit price predictions for specified tokens.
+* Predictions are resolved based on actual price data from an Oracle.
+* Rewards are distributed based on the accuracy of predictions.
 
 ### Tournament Contract Overview
 
 The `Tournament` contract organizes prediction tournaments where participants can submit their price predictions for a chance to win a prize from the pooled entries. The contract manages rounds of predictions, collects entry fees to a prize pool, and distributes winnings based on prediction accuracy.
 
-- Organizes prediction tournaments with multiple rounds.
-- Participants submit predictions with an entry fee.
-- Winners are determined based on the accuracy of their predictions against actual prices from an Oracle.
+* Organizes prediction tournaments with multiple rounds.
+* Participants submit predictions with an entry fee.
+* Winners are determined based on the accuracy of their predictions against actual prices from an Oracle.
 
 ### Interaction Logic
 
-While the `Pool` and `Tournament` contracts operate independently, they share a common theme of leveraging predictions for decentralized finance applications. Both contracts utilize price data from Oracles to determine the outcomes of predictions, but they cater to different user experiences - individual predictions in `Pool` and competitive tournaments in `Tournament`.
-gi
+While the `Pool` and `Tournament` contracts operate independently, they share a common theme of leveraging predictions for decentralized finance applications. Both contracts utilize price data from Oracles to determine the outcomes of predictions, but they cater to different user experiences - individual predictions in `Pool` and competitive tournaments in `Tournament`. gi
 
-- Use of Oracles for price data.
-- Management of predictions and their resolutions.
-- Distribution of rewards based on prediction accuracy.
-
+* Use of Oracles for price data.
+* Management of predictions and their resolutions.
+* Distribution of rewards based on prediction accuracy.
 
 The `Pool` and `Tournament` contracts offer distinct ways for users to engage with prediction markets in a decentralized setting. The `Pool` contract focuses on individual predictions and rewards, while the `Tournament` contract provides a competitive platform for users to test their prediction skills against others.
 
