@@ -1,8 +1,12 @@
-pragma solidity 0.8.17;
+pragma solidity 0.8.25;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+
+interface IRouter {
+	function getBpsFee() external view returns (uint256);
+}
 
 contract Agent {
 	using SafeERC20 for IERC20;
@@ -57,14 +61,15 @@ contract Agent {
 		uint256 amount;
 		for (uint256 i = 0; i < tokensReturn.length; i++) {
 			address token = tokensReturn[i];
+			uint256 routerBpsFee = IRouter(router).getBpsFee();
 			if (token == _NATIVE) {
 				// Use the native balance for amount calculation as wrap will be executed later
-				amount = (address(this).balance * _BPS_FEE) / _BPS_BASE;
+				amount = (address(this).balance * routerBpsFee) / _BPS_BASE;
 				// send to router
 				payable(router).sendValue(amount);
 			} else {
 				uint256 balance = IERC20(token).balanceOf(address(this));
-				amount = (balance * _BPS_FEE) / _BPS_BASE;
+				amount = (balance * routerBpsFee) / _BPS_BASE;
 				IERC20(token).safeTransfer(router, amount);
 			}
 		}
