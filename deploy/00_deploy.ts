@@ -21,7 +21,17 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
 
-  const oracle = await deploy("Oracle", {
+  const router = await deploy("Router", {
+    from: deployer,
+    // Contract constructor arguments
+    args: [],
+    log: true,
+    autoMine: true,
+  });
+
+  console.log("router:", router.address);
+
+  /* const oracle = await deploy("Oracle", {
     from: deployer,
     // Contract constructor arguments
     args: ["0xAB594600376Ec9fD91F8e885dADF0CE036862dE0"],
@@ -55,7 +65,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     autoMine: true,
   });
 
-  console.log("tournament:", tournament.address);
+  console.log("tournament:", tournament.address); */
 };
 
 export default deployYourContract;
