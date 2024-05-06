@@ -186,12 +186,37 @@ contract Router is Ownable, ERC20 {
 		_burn(msg.sender, amount);
 	}
 
+	function mintBALUNI(uint256 amount) external {
+		require(amount > 0, "Amount must be greater than 0");
+		IERC20(USDC).transferFrom(msg.sender, address(this), amount);
+
+		uint256 mintAmount = amount * 1e12;
+		_mint(address(this), mintAmount);
+
+		emit Mint(address(this), mintAmount);
+
+		uint256 mintAmountFinal = mintAmount / _MINT_RATE;
+		IERC20(address(this)).safeTransfer(msg.sender, mintAmountFinal);
+
+		emit TransferAfterMint(msg.sender, mintAmountFinal);
+	}
+
 	function _calculateUSDCShare(uint balAmount) internal view returns (uint) {
 		uint totalSupply = totalSupply();
 		uint totalUSDCBalance = USDC.balanceOf(address(this));
 		uint scaledUSDCBalance = totalUSDCBalance * 1e12;
 
 		return (balAmount * scaledUSDCBalance) / totalSupply;
+	}
+
+	function withdrawRewards() external {
+		uint256 reward = _calculateReward(msg.sender, stakes[msg.sender]);
+		require(
+			reward <= balanceOf(address(this)) - totalStaked,
+			"Insufficient rewards available"
+		);
+		_transfer(address(this), msg.sender, reward);
+		emit RewardWithdrawn(msg.sender, reward);
 	}
 
 	function getShare(uint balAmount) external view returns (uint) {

@@ -93,7 +93,6 @@ contract Agent {
 
 	function _swapTokensForUSDC(address[] calldata tokens) internal {
 		uint256 routerBpsFee = IRouter(router).getBpsFee();
-		address intermediateToken = address(WNATIVE);
 
 		for (uint i = 0; i < tokens.length; i++) {
 			IERC20Metadata token = IERC20Metadata(tokens[i]);
@@ -127,7 +126,8 @@ contract Agent {
 				3000
 			);
 
-			if (poolTokenUSDC != address(0) || poolTokenWNATIVE != address(0))
+			// Se non esiste un pool per nessuno di questi, continua al token successivo.
+			if (poolTokenUSDC == address(0) && poolTokenWNATIVE == address(0))
 				continue;
 
 			(bool directSwapSuccess, ) = address(this).call(
@@ -145,7 +145,7 @@ contract Agent {
 					abi.encodeWithSignature(
 						"multiHopSwap(address,address,address,uint256)",
 						address(token),
-						intermediateToken,
+						address(WNATIVE),
 						address(USDC),
 						amountAfterFee
 					)
