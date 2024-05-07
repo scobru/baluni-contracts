@@ -181,6 +181,25 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 
 	// Assumi che `tokens` sia una variabile di stato di tipo EnumerableSet.AddressSet
 
+	function _calculateValuationUSDC(
+		uint256 diff,
+		address token
+	) internal view returns (uint256) {
+		uint256 usdRate;
+
+		if (token == address(USDC)) {
+			return diff;
+		}
+
+		usdRate = oracle.getRate(IERC20(token), IERC20(USDC), false);
+
+		if (usdRate != 0) {
+			return (diff * usdRate) / 1e12;
+		}
+
+		return 0;
+	}
+
 	function execute(
 		Agent.Call[] calldata calls,
 		address[] calldata tokensReturn
@@ -204,43 +223,22 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 			uint256 endBalance = IERC20(tokensReturn[i]).balanceOf(
 				address(this)
 			);
+
 			uint256 diff = endBalance > startBalances[i]
 				? endBalance - startBalances[i]
 				: 0;
 
-			if (diff > 0 && isTokenNew[i]) {
-				uint256 usdRate;
+			if (diff > 0) {
+				uint256 valuation = _calculateValuationUSDC(
+					diff,
+					tokensReturn[i]
+				);
 
-				if (tokensReturn[i] == address(USDC)) {
-					usdRate = 1;
-				} else {
-					usdRate = oracle.getRate(
-						IERC20(tokensReturn[i]),
-						IERC20(USDC),
-						false
-					);
-				}
-
-				if (usdRate != 0) {
+				if (isTokenNew[i] && valuation > 0) {
 					EnumerableSet.add(tokens, tokensReturn[i]);
-					totalValuation += diff * usdRate;
-				}
-			} else if (diff > 0 && !isTokenNew[i]) {
-				uint256 usdRate;
-
-				if (tokensReturn[i] == address(USDC)) {
-					usdRate = 1;
-				} else {
-					usdRate = oracle.getRate(
-						IERC20(tokensReturn[i]),
-						IERC20(USDC),
-						false
-					);
 				}
 
-				if (usdRate != 0) {
-					totalValuation += diff * usdRate;
-				}
+				totalValuation += valuation;
 			}
 		}
 
@@ -248,16 +246,16 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 			uint256 amountInWithFee = applyAmountInWithFee(totalValuation);
 			uint256 feeAmount = totalValuation - amountInWithFee;
 
-			_mint(address(this), feeAmount);
-			emit Mint(address(this), feeAmount);
+			_mint(address(this), feeAmount * 1e12);
+			emit Mint(address(this), feeAmount * 1e12);
 
-			IStakingPool(stakingPool).updateRewardIndex(feeAmount);
-			_mint(msg.sender, amountInWithFee);
-			emit Mint(msg.sender, amountInWithFee);
+			IStakingPool(stakingPool).updateRewardIndex(feeAmount * 1e12);
+			_mint(msg.sender, amountInWithFee * 1e12);
+			emit Mint(msg.sender, amountInWithFee * 1e12);
 		}
 	}
 
-	function liquidate(address token) external returns (bool) {
+	function liquidate(address token) external nonReentrant {
 		uint totalERC20Balance = IERC20(token).balanceOf(address(this));
 		uint allowance = IERC20(token).allowance(
 			address(this),
@@ -265,14 +263,14 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 		);
 
 		if (totalERC20Balance > allowance) {
-			IERC20(token).approve(address(uniswapRouter), 2 ** 256 - 1);
+			setApproval(token, address(uniswapRouter), totalERC20Balance);
 		}
 
 		uint256 amountOut = singleSwap(
 			token,
 			address(USDC),
 			totalERC20Balance,
-			msg.sender
+			address(this)
 		);
 
 		if (amountOut > 0) {
@@ -281,7 +279,7 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 				address(WNATIVE),
 				address(USDC),
 				totalERC20Balance,
-				msg.sender
+				address(this)
 			);
 			require(amountOutHop > 0, "Swap Failed, Try Burn()");
 		}
@@ -290,16 +288,22 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 	}
 
 	function burn(uint amount) external nonReentrant {
-		require(amount > 0, "Insufficient BAL");
+		require(balanceOf(msg.sender) >= amount, "Insufficient BAL");
 		for (uint256 i; i < tokens.length(); i++) {
 			address token = tokens.at(i);
 			uint totalBaluni = totalSupply();
 			uint totalERC20Balance = IERC20(token).balanceOf(address(this));
-			uint burnAmount = ((amount * totalERC20Balance) / totalBaluni) /
-				1e12;
-			IERC20(token).transfer(msg.sender, burnAmount);
+			uint256 decimals = IERC20Metadata(token).decimals();
+			uint share = _calculateShare(
+				totalBaluni,
+				totalERC20Balance,
+				amount,
+				decimals
+			);
+			IERC20(token).transfer(msg.sender, share);
 		}
 		_burn(msg.sender, amount);
+		emit Burn(msg.sender, amount);
 	}
 
 	function burnAndSwap(uint amount) external nonReentrant {
@@ -308,14 +312,20 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 			address token = tokens.at(i);
 			uint totalBaluni = totalSupply();
 			uint totalERC20Balance = IERC20(token).balanceOf(address(this));
-			uint burnAmount = ((amount * totalERC20Balance) / totalBaluni) /
-				1e12;
+			uint256 decimals = IERC20Metadata(token).decimals();
+			uint burnAmount = _calculateShare(
+				totalBaluni,
+				totalERC20Balance,
+				amount,
+				decimals
+			);
 			uint256 amountOut = singleSwap(
 				token,
 				address(USDC),
 				burnAmount,
 				msg.sender
 			);
+
 			if (amountOut > 0) {
 				uint256 amountOutHop = multiHopSwap(
 					token,
@@ -329,6 +339,7 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 			IERC20(token).transfer(msg.sender, burnAmount);
 		}
 		_burn(msg.sender, amount);
+		emit Burn(msg.sender, amount);
 	}
 
 	function applyAmountInWithFee(
@@ -339,10 +350,10 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 	}
 
 	function getBurnUnitPrice() external view returns (uint256) {
-		return _calculateShare(1e18);
+		return _calculateShareOnTotalUSDC(1e18);
 	}
 
-	function mint(uint256 amount) external {
+	function mint(uint256 amount) external nonReentrant {
 		require(amount > 0, "Amount must be greater than zero");
 
 		// Ensure there is enough allowance
@@ -354,44 +365,73 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 		uint256 amountInWithFee = applyAmountInWithFee(amount);
 		uint256 feeAmount = amount - amountInWithFee;
 
+		// Correctly emit the event after state changes
 		_mint(address(this), feeAmount * 1e12);
-		emit Mint(address(this), feeAmount * 1e12);
-
 		IStakingPool(stakingPool).updateRewardIndex(feeAmount * 1e12);
 		_mint(msg.sender, amountInWithFee * 1e12);
+
+		emit Mint(address(this), feeAmount * 1e12);
 		emit Mint(msg.sender, amountInWithFee * 1e12);
 	}
 
-	function _calculateShare(uint balAmount) internal view returns (uint) {
+	function _calculateShareOnTotalUSDC(
+		uint balAmount
+	) internal view returns (uint) {
 		uint totalBaluni = totalSupply();
-		uint totalUSDC = calculateTotalValuation() * 1e12;
+		require(totalBaluni > 0, "Total supply cannot be zero");
+		uint totalUSDC = calculateTotalValuationUSDC() * 1e12;
 		return ((balAmount * totalUSDC) / totalBaluni) / 1e12;
 	}
 
-	function calculateTotalValuation() internal view returns (uint) {
+	function _calculateShare(
+		uint totalBaluni,
+		uint totalERC20Balance,
+		uint amount,
+		uint tokenDecimals
+	) internal pure returns (uint256) {
+		require(totalBaluni > 0, "Total supply cannot be zero");
+		uint share;
+		if (tokenDecimals != 18) {
+			amount = amount * (10 ** (18 - tokenDecimals));
+			uint256 balance = totalERC20Balance * (10 ** (18 - tokenDecimals));
+			uint share18 = (amount * balance) / totalBaluni;
+			share = share18 / (10 ** (18 - tokenDecimals));
+		} else {
+			share = (amount * totalERC20Balance) / totalBaluni;
+		}
+		return share;
+	}
+
+	function calculateTotalValuationUSDC() public view returns (uint) {
 		uint totalValuation;
+
 		for (uint256 i; i < tokens.length(); i++) {
 			address token = tokens.at(i);
 			uint256 balance = IERC20(token).balanceOf(address(this));
-			uint256 usdRate = oracle.getRate(
-				IERC20(token),
-				IERC20(USDC),
-				false
-			);
-			uint256 tokenBalanceValuation = (balance * (usdRate * 1e12)) / 1e18;
+			uint256 decimals = IERC20Metadata(token).decimals();
+			uint256 usdRate;
 
-			totalValuation += tokenBalanceValuation;
+			if (token == address(USDC)) {
+				usdRate = 1e18;
+			} else {
+				usdRate =
+					oracle.getRate(IERC20(token), IERC20(USDC), false) *
+					(1 ** (18 - decimals));
+			}
+
+			uint256 tokenBalanceValuation = (getDecimalAdjustedAmount(
+				balance,
+				decimals
+			) * usdRate) / 1e18;
+
+			totalValuation += tokenBalanceValuation / (1 ** 12);
 		}
 
-		return totalValuation / 1e12;
+		return totalValuation;
 	}
 
-	function getValuation() external view returns (uint) {
-		return calculateTotalValuation();
-	}
-
-	function getShare(uint balAmount) external view returns (uint) {
-		return _calculateShare(balAmount);
+	function getShareUSDC(uint balAmount) external view returns (uint) {
+		return _calculateShareOnTotalUSDC(balAmount);
 	}
 
 	function singleSwap(
@@ -411,6 +451,7 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 				amountOutMinimum: 0,
 				sqrtPriceLimitX96: 0
 			});
+
 		return uniswapRouter.exactInputSingle(params);
 	}
 
@@ -436,5 +477,21 @@ contract Router is Ownable, ERC20, ReentrancyGuard {
 				amountOutMinimum: 0
 			});
 		return uniswapRouter.exactInput(params);
+	}
+
+	function getDecimalAdjustedAmount(
+		uint256 amount,
+		uint256 decimals
+	) internal pure returns (uint256) {
+		return amount * (10 ** (18 - decimals));
+	}
+
+	function setApproval(
+		address token,
+		address spender,
+		uint256 amount
+	) internal {
+		IERC20(token).approve(spender, 0); // Reset approval to zero first to prevent issues highlighted in EIP-20
+		IERC20(token).approve(spender, amount);
 	}
 }
