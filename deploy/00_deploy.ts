@@ -31,6 +31,16 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
 
   console.log("router:", router.address);
 
+  const stakingPool = await deploy("Stake", {
+    from: deployer,
+    // Contract constructor arguments
+    args: [router.address, router.address],
+    log: true,
+    autoMine: true,
+  });
+
+  console.log("stakingPool:", stakingPool.address);
+
   /* const oracle = await deploy("Oracle", {
     from: deployer,
     // Contract constructor arguments
