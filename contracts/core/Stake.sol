@@ -6,8 +6,8 @@ contract Stake {
 	IERC20 public immutable stakingToken;
 	IERC20 public immutable rewardToken;
 
-	mapping(address => uint256) public balanceOf;
-	uint256 public totalSupply;
+	mapping(address => uint256) public balanceStakedOf;
+	uint256 public supply;
 
 	uint256 private constant MULTIPLIER = 1e18;
 	uint256 private rewardIndex;
@@ -19,13 +19,13 @@ contract Stake {
 		rewardToken = IERC20(_rewardToken);
 	}
 
-	function updateRewardIndex(uint256 reward) external {
-		rewardToken.transferFrom(msg.sender, address(this), reward);
-		rewardIndex += (reward * MULTIPLIER) / totalSupply;
+	function updateRewardIndex(uint256 reward) public {
+		//rewardToken.transferFrom(msg.sender, address(this), reward);
+		rewardIndex += (reward * MULTIPLIER) / supply;
 	}
 
 	function _calculateRewards(address account) private view returns (uint256) {
-		uint256 shares = balanceOf[account];
+		uint256 shares = balanceStakedOf[account];
 		return (shares * (rewardIndex - rewardIndexOf[account])) / MULTIPLIER;
 	}
 
@@ -35,7 +35,7 @@ contract Stake {
 		return earned[account] + _calculateRewards(account);
 	}
 
-	function _updateRewards(address account) private {
+	function _updateRewards(address account) internal {
 		earned[account] += _calculateRewards(account);
 		rewardIndexOf[account] = rewardIndex;
 	}
@@ -43,8 +43,8 @@ contract Stake {
 	function stake(uint256 amount) external {
 		_updateRewards(msg.sender);
 
-		balanceOf[msg.sender] += amount;
-		totalSupply += amount;
+		balanceStakedOf[msg.sender] += amount;
+		supply += amount;
 
 		stakingToken.transferFrom(msg.sender, address(this), amount);
 	}
@@ -52,8 +52,8 @@ contract Stake {
 	function unstake(uint256 amount) external {
 		_updateRewards(msg.sender);
 
-		balanceOf[msg.sender] -= amount;
-		totalSupply -= amount;
+		balanceStakedOf[msg.sender] -= amount;
+		supply -= amount;
 
 		stakingToken.transfer(msg.sender, amount);
 	}
@@ -65,6 +65,18 @@ contract Stake {
 		if (reward > 0) {
 			earned[msg.sender] = 0;
 			rewardToken.transfer(msg.sender, reward);
+		}
+
+		return reward;
+	}
+
+	function claimTo(address _to) public returns (uint256) {
+		_updateRewards(_to);
+
+		uint256 reward = earned[msg.sender];
+		if (reward > 0) {
+			earned[msg.sender] = 0;
+			rewardToken.transfer(_to, reward);
 		}
 
 		return reward;
