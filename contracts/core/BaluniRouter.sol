@@ -45,11 +45,12 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-import "./Agent.sol";
-import "./Stake.sol";
+import "./BaluniAgent.sol";
+import "./BaluniStake.sol";
 
 interface IOracle {
 	function getRate(
@@ -59,12 +60,14 @@ interface IOracle {
 	) external view returns (uint256 weightedRate);
 }
 
-contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
+contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 	using SafeERC20 for IERC20;
 
 	uint256 public constant _MAX_BPS_FEE = 500;
-	uint256 public _BPS_FEE = 300; // 10 / 10000 * 100 = 3%.
-	uint256 public _LIQ_PRIZE = 0.00001 * 1e18;
+	uint256 public _BPS_FEE = 30; // 0.3%.
+	uint256 public _BPS_BASE = 10000;
+	uint256 public _BPS_LIQUIDATE_FEE = 30; // 0.3%.
+	uint256 public _START_MINT_AMOUNT = 1 ether;
 
 	using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -81,15 +84,19 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 	IUniswapV3Factory public immutable uniswapFactory =
 		IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
-	mapping(address => Agent) public userAgents;
+	mapping(address => BaluniAgent) public userAgents;
 	mapping(address => uint256) public tokenBalanceMap;
 
 	event AgentCreated(address user, address agent);
-	event Execute(address user, Agent.Call[] calls, address[] tokensReturn);
+	event Execute(
+		address user,
+		BaluniAgent.Call[] calls,
+		address[] tokensReturn
+	);
 	event Burn(address user, uint256 value);
 	event Mint(address user, uint256 value);
 	event ChangeBpsFee(uint256 newFee);
-	event ChangeLiquidationPrize(uint256 newPrize);
+	event ChangeLiquidateFee(uint256 newFee);
 
 	modifier validTimestamp(uint _timestamp) {
 		require(
@@ -113,22 +120,26 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 	constructor()
 		Ownable(msg.sender)
 		ERC20("Baluni", "BALUNI")
-		Stake(address(this), address(this))
+		BaluniStake(address(this), address(this))
 	{
-		_mint(address(this), 1 * 1e18);
+		_mint(address(this), _START_MINT_AMOUNT);
+		_stakeToContract(address(this), _START_MINT_AMOUNT);
 		_updateRewards(address(this));
-
-		balanceStakedOf[address(this)] += 0.1 * 1e18;
-		supply += 1 * 1e18;
-
-		if (supply > 0) {
-			updateRewardIndex(0.9 * 1e18);
-		}
 	}
 
-	function updateReward(uint256 reward) external onlyOwner {
-		require(supply > 0, "No Staking Supply");
-		updateRewardIndex(reward);
+	/**
+	 * @dev Internal function to stake tokens to the contract.
+	 * @param _to The address to stake tokens to.
+	 * @param _amount The amount of tokens to stake.
+	 */
+	function _stakeToContract(address _to, uint256 _amount) internal {
+		balanceStakedOf[_to] += _amount;
+		stakeTimestamp[_to] = block.timestamp;
+		stakingSupply += _amount;
+
+		if (stakingSupply > 0) {
+			updateRewardIndex(_amount);
+		}
 	}
 
 	/**
@@ -162,10 +173,13 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 	/**
 	 * @dev This contract contains functions related to creating and interacting with agents.
 	 */
-	function getOrCreateAgent(address user) private returns (Agent) {
+	function getOrCreateAgent(address user) private returns (BaluniAgent) {
 		bytes32 salt = keccak256(abi.encodePacked(user));
 		if (address(userAgents[user]) == address(0)) {
-			Agent agent = new Agent{ salt: salt }(user, address(this));
+			BaluniAgent agent = new BaluniAgent{ salt: salt }(
+				user,
+				address(this)
+			);
 			// Ensure that the contract is actually deployed
 			require(
 				isContract(address(agent)),
@@ -198,7 +212,7 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 	 */
 	function getBytecode(address _owner) internal view returns (bytes memory) {
 		require(_owner != address(0), "Owner address cannot be zero.");
-		bytes memory bytecode = type(Agent).creationCode;
+		bytes memory bytecode = type(BaluniAgent).creationCode;
 		return abi.encodePacked(bytecode, abi.encode(_owner, address(this)));
 	}
 
@@ -220,12 +234,15 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 	}
 
 	/**
-	 * @dev Changes the liquidation prize value.
-	 * @param _newPrice The new liquidation prize value.
+	 * @dev Changes the basis points (BPS) liquidate fee.
+	 * @param _newFee The new fee value to be set.
+	 * Requirements:
+	 * - Only the contract owner can call this function.
+	 * Emits a {ChangeLiquidateFee} event with the new fee value.
 	 */
-	function changeLiquidationPrize(uint256 _newPrice) external onlyOwner {
-		_LIQ_PRIZE = _newPrice;
-		emit ChangeLiquidationPrize(_newPrice);
+	function changeBpsLiquidateFee(uint256 _newFee) external onlyOwner {
+		_BPS_LIQUIDATE_FEE = _newFee;
+		emit ChangeLiquidateFee(_newFee);
 	}
 
 	/**
@@ -234,44 +251,45 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 	 * @param tokensReturn An array of addresses representing the tokens to be returned to the caller.
 	 */
 	function execute(
-		Agent.Call[] calldata calls,
+		BaluniAgent.Call[] calldata calls,
 		address[] calldata tokensReturn
 	) external nonReentrant {
-		Agent agent = getOrCreateAgent(msg.sender);
+		BaluniAgent agent = getOrCreateAgent(msg.sender);
 
+		// Check if tokens are new to the set for conditional addition later
 		bool[] memory isTokenNew = new bool[](tokensReturn.length);
-
 		for (uint256 i = 0; i < tokensReturn.length; i++) {
 			isTokenNew[i] = !EnumerableSet.contains(tokens, tokensReturn[i]);
 		}
 
+		// Execute agent calls
 		agent.execute(calls, tokensReturn);
 
+		// Handle tokens after execution
 		for (uint256 i = 0; i < tokensReturn.length; i++) {
 			address token = tokensReturn[i];
-
 			address poolNative3000 = uniswapFactory.getPool(
-				tokensReturn[i],
+				token,
 				address(WNATIVE),
 				3000
 			);
-
 			address poolNative500 = uniswapFactory.getPool(
-				tokensReturn[i],
+				token,
 				address(WNATIVE),
 				500
 			);
 
+			// Check if any pool exists for the token
 			bool poolExist = poolNative3000 != address(0) ||
 				poolNative500 != address(0);
 
 			if (isTokenNew[i] && poolExist) {
-				EnumerableSet.add(tokens, tokensReturn[i]);
+				EnumerableSet.add(tokens, token);
 			}
 
+			// If no pool exists, return the token to the sender
 			if (!poolExist) {
 				uint256 balance = IERC20(token).balanceOf(address(this));
-				setApproval(token, msg.sender, balance);
 				IERC20(token).transfer(msg.sender, balance);
 			}
 		}
@@ -288,20 +306,20 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 	 * @notice If the multi-hop swap fails, the function reverts with an error message.
 	 * @notice After the swaps, the function mints a specified amount of tokens to the message sender and emits a Mint event.
 	 */
-	function convertTokenToUSDC(address token) external nonReentrant {
+	function liquidate(address token) external nonReentrant {
 		uint totalERC20Balance = IERC20(token).balanceOf(address(this));
-
-		uint allowance = IERC20(token).allowance(
-			address(this),
-			address(uniswapRouter)
-		);
-
-		setApproval(token, address(uniswapRouter), totalERC20Balance);
-
 		address pool = uniswapFactory.getPool(token, address(USDC), 3000);
 
+		secureApproval(token, address(uniswapRouter), totalERC20Balance);
+
 		if (pool != address(0)) {
-			singleSwap(token, address(USDC), totalERC20Balance, address(this));
+			uint256 singleSwapResult = singleSwap(
+				token,
+				address(USDC),
+				totalERC20Balance,
+				address(this)
+			);
+			require(singleSwapResult > 0, "Swap Failed, Try Burn()");
 		} else {
 			uint256 amountOutHop = multiHopSwap(
 				token,
@@ -313,14 +331,21 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 			require(amountOutHop > 0, "Swap Failed, Try Burn()");
 		}
 
-		uint reward = claimTo(msg.sender);
-		emit Mint(msg.sender, reward);
+		uint256 mintAmount = (totalSupply() * _BPS_LIQUIDATE_FEE) / 10000;
+
+		_mint(address(this), mintAmount);
+		_stakeToContract(address(this), mintAmount);
+
+		uint reward = claimTo(address(this), msg.sender);
+
+		emit Mint(address(this), mintAmount);
+		emit RewardClaimed(msg.sender, reward);
 	}
 
 	/**
 	 * @dev Burns a specified amount of BAL tokens from the caller's balance.
 	 * The caller must have a balance of at least `amount` BAL tokens.
-	 * The function calculates the share of each token held by the contract based on the total supply of BAL tokens and the balance of each token.
+	 * The function calculates the share of each token held by the contract based on the total stakingSupply of BAL tokens and the balance of each token.
 	 * It transfers the proportional share of each token to the caller and burns the specified amount of BAL tokens.
 	 * Emits a `Burn` event with the caller's address and the burned amount.
 	 *
@@ -336,6 +361,9 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 			address token = tokens.at(i);
 			uint totalBaluni = totalSupply();
 			uint totalERC20Balance = IERC20(token).balanceOf(address(this));
+
+			if (totalERC20Balance == 0 || token == address(this)) continue;
+
 			uint256 decimals = IERC20Metadata(token).decimals();
 			uint share = _calculateTokenShare(
 				totalBaluni,
@@ -343,7 +371,7 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 				amount,
 				decimals
 			);
-			setApproval(token, msg.sender, share);
+
 			IERC20(token).transfer(msg.sender, share);
 		}
 		_burn(msg.sender, amount);
@@ -375,9 +403,12 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 			uint totalBaluni = totalSupply();
 			uint totalERC20Balance = IERC20(token).balanceOf(address(this));
 
+			if (totalERC20Balance > 0 == false) continue;
+			if (token == address(this)) continue;
+
 			uint256 decimals = IERC20Metadata(token).decimals();
 
-			uint burnAmount = _calculateTokenShare(
+			uint burnAmountToken = _calculateTokenShare(
 				totalBaluni,
 				totalERC20Balance,
 				amount,
@@ -386,14 +417,16 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 
 			address pool = uniswapFactory.getPool(token, address(USDC), 3000);
 
+			secureApproval(token, address(uniswapRouter), burnAmountToken);
+
 			if (pool != address(0)) {
-				singleSwap(token, address(USDC), burnAmount, msg.sender);
+				singleSwap(token, address(USDC), burnAmountToken, msg.sender);
 			} else {
 				uint256 amountOutHop = multiHopSwap(
 					token,
 					address(WNATIVE),
 					address(USDC),
-					burnAmount,
+					burnAmountToken,
 					msg.sender
 				);
 				require(amountOutHop > 0, "Swap Failed, Try Burn()");
@@ -411,7 +444,8 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 	function calculateNetAmountAfterFee(
 		uint256 _amount
 	) public view returns (uint256) {
-		uint256 amountInWithFee = (_amount * (10000 - (_BPS_FEE))) / 10000;
+		uint256 amountInWithFee = (_amount * (_BPS_BASE - (_BPS_FEE))) /
+			_BPS_BASE;
 		return amountInWithFee;
 	}
 
@@ -428,8 +462,6 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 	 * @param amount The amount of tokens to mint.
 	 */
 	function mint(uint256 amount) external nonReentrant returns (uint256) {
-		require(amount > 0, "Amount must be greater than zero");
-
 		uint balance = IERC20(USDC).balanceOf(msg.sender);
 		require(amount > 0, "Amount must be greater than zero");
 		require(balance >= amount, "Amount must be greater than balance");
@@ -440,7 +472,6 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 		USDC.safeTransferFrom(msg.sender, address(this), amount);
 
 		uint256 totalUSDValuation = calculateTotalUSDCValuation();
-
 		uint toMint = ((totalSupply() / 1e12) * (amount)) /
 			(totalUSDValuation / 1e12);
 
@@ -459,7 +490,7 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 		emit Mint(address(this), feeAmount);
 		emit Mint(msg.sender, amountInWithFee);
 
-		if (supply > 0) {
+		if (stakingSupply > 0) {
 			updateRewardIndex(feeAmount);
 		}
 
@@ -489,24 +520,29 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 	 * @return The token share.
 	 */
 	function _calculateTokenShare(
-		uint totalBaluni,
-		uint totalERC20Balance,
-		uint amount,
-		uint tokenDecimals
+		uint256 totalBaluni,
+		uint256 totalERC20Balance,
+		uint256 amount,
+		uint256 tokenDecimals
 	) internal pure returns (uint256) {
 		require(totalBaluni > 0, "Total supply cannot be zero");
 
-		uint share;
-
 		if (tokenDecimals != 18) {
-			amount = amount * (10 ** (18 - tokenDecimals));
-			uint256 balance = totalERC20Balance * (10 ** (18 - tokenDecimals));
-			share = (amount * balance) / totalBaluni;
-		} else {
-			share = (amount * totalERC20Balance) / totalBaluni;
-		}
+			// Calculate the scaling factor to adjust for token decimals
+			uint256 factor = 10 ** (18 - tokenDecimals);
 
-		return share;
+			// Adjust the totalERC20Balance up to 18 decimals
+			uint256 adjustedBalance = totalERC20Balance * factor;
+
+			// Calculate share at 18 decimal precision
+			uint256 share = (amount * adjustedBalance) / totalBaluni;
+
+			// Scale the share back down to the original token decimals
+			return share / factor;
+		} else {
+			// No adjustment needed for tokens already at 18 decimals
+			return (amount * totalERC20Balance) / totalBaluni;
+		}
 	}
 
 	/**
@@ -519,40 +555,30 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 		uint amount,
 		address token
 	) internal view returns (uint256) {
-		uint valuation;
 		uint256 tokenDecimal = IERC20Metadata(token).decimals();
 		if (token == address(USDC)) return amount * 1e12;
 
-		try IOracle(oracle).getRate(IERC20(token), IERC20(USDC), false) {
-			if (tokenDecimal == 8) {
-				uint formattedAmount = amount * 1 ** (18 - tokenDecimal);
-				uint usdRate = IOracle(oracle).getRate(
-					IERC20(token),
-					IERC20(USDC),
-					false
-				) * 1e2;
-				valuation = (formattedAmount * usdRate) / 1e18;
-			} else if (tokenDecimal == 6) {
-				uint formattedAmount = amount * 1 ** (18 - tokenDecimal);
-				uint usdRate = IOracle(oracle).getRate(
-					IERC20(token),
-					IERC20(USDC),
-					false
-				);
-				valuation = (formattedAmount * usdRate) / 1e18;
-			} else {
-				uint usdRate = IOracle(oracle).getRate(
-					IERC20(token),
-					IERC20(USDC),
-					false
-				) * 1e12;
-				valuation = (amount * usdRate) / 1e18;
-			}
+		uint rate;
+		try
+			IOracle(oracle).getRate(IERC20(token), IERC20(USDC), false)
+		returns (uint _rate) {
+			rate = _rate;
 		} catch {
-			valuation = 0;
+			return 0;
 		}
 
-		return valuation;
+		uint formattedAmount;
+		if (tokenDecimal == 8) {
+			formattedAmount = amount * 10 ** (18 - tokenDecimal);
+			rate *= 1e2;
+		} else if (tokenDecimal == 6) {
+			formattedAmount = amount * 10 ** (18 - tokenDecimal);
+		} else {
+			formattedAmount = amount;
+			rate *= 1e12;
+		}
+
+		return (formattedAmount * rate) / 1e18;
 	}
 
 	/**
@@ -649,26 +675,7 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 		return uniswapRouter.exactInput(params);
 	}
 
-	/**
-	 * @dev Adjusts the amount by multiplying it with 10^(18 - decimals).
-	 * @param amount The original amount.
-	 * @param decimals The number of decimals of the token.
-	 * @return The adjusted amount.
-	 */
-	function getDecimalAdjustedAmount(
-		uint256 amount,
-		uint256 decimals
-	) internal pure returns (uint256) {
-		return amount * (10 ** (18 - decimals));
-	}
-
-	/**
-	 * @dev Sets the approval of a token for a spender.
-	 * @param token The address of the token to approve.
-	 * @param spender The address of the spender.
-	 * @param amount The amount to approve.
-	 */
-	function setApproval(
+	function secureApproval(
 		address token,
 		address spender,
 		uint256 amount
@@ -676,10 +683,12 @@ contract Router is Ownable, ERC20, Stake, ReentrancyGuard {
 		IERC20 _token = IERC20(token);
 		uint256 currentAllowance = _token.allowance(address(this), spender);
 
-		if (currentAllowance > 0) {
-			if (currentAllowance < amount) {
-				_token.approve(spender, amount);
+		if (currentAllowance != amount) {
+			if (currentAllowance != 0) {
+				_token.approve(spender, 0);
 			}
+
+			_token.approve(spender, amount);
 		}
 	}
 }

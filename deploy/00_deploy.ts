@@ -21,7 +21,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
 
-  const router = await deploy("Router", {
+  const router = await deploy("BaluniRouter", {
     from: deployer,
     // Contract constructor arguments
     args: [],
@@ -30,16 +30,6 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   });
 
   console.log("router:", router.address);
-
-  const stakingPool = await deploy("Stake", {
-    from: deployer,
-    // Contract constructor arguments
-    args: [router.address, router.address],
-    log: true,
-    autoMine: true,
-  });
-
-  console.log("stakingPool:", stakingPool.address);
 
   /* const oracle = await deploy("Oracle", {
     from: deployer,

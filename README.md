@@ -1,79 +1,52 @@
-# BALUNI CONTRACTS
+# Baluni Contracts
 
-<div align="left">
+- BaluniRouter.sol
+- BaluniStake.sol
+- BaluniAgent.sol
 
-<figure><img src="https://storage.googleapis.com/download/storage/v1/b/buidlguidl-v3.appspot.com/o/builds%2F658192138d8963c5fdb4fe205.jpeg?generation=1710860175496254&#x26;alt=media" alt="" width="375"><figcaption></figcaption></figure>
+The `BaluniRouter` smart contract offers comprehensive decentralized finance (DeFi) functionalities built on Ethereum, leveraging Solidity version 0.8.25. It incorporates ERC-20 standard features, OpenZeppelin's secure libraries, and integrates with Uniswap V3 for advanced token handling capabilities.
 
-</div>
+## Key Features
 
-## DEPLOYMENTS
+### Token Minting and Burning:
+- **Minting:** Users can mint new BALUNI tokens by locking USDC as collateral. A `BPS_FEE` is applied to the USDC amount converted, enhancing the protocol's reward pool with the fee collected. The net USDC after the fee is converted into BALUNI tokens.
+- **Burning:** Users can reduce the total supply of BALUNI by burning tokens. In return, they receive a proportional share of the ERC-20 tokens held by the contract, based on their burned amount. This can also be directed to receive a share in USDC, providing flexibility in rewards.
 
-### Router.sol
+### Staking:
+BALUNI tokens can be staked directly within the contract. Staking rewards are dynamically managed based on the total staked balance and other contract activities, incentivizing long-term holding and contribution to network stability.
 
-* Polygon: [0x19f330eba98ffd47a01f8f2afb0b9863a24497dd](https://polygonscan.com/address/0x19f330eba98ffd47a01f8f2afb0b9863a24497dd)
+### Liquidation:
+The contract facilitates the liquidation of internal assets by converting them into USDC. Initiators of liquidation are rewarded with BALUNI tokens, encouraging active liquidity management and supporting the contract’s economic model.
 
-### Pool.sol
+### Agent System:
+The `BaluniAgent` framework allows users to execute delegated tasks, enhancing interaction within the ecosystem through a modular approach that supports expandable functionalities.
 
-* Mumbai: [0xFe9B07e81c4BDDAA047bfF31D912f8c2e4E9a4Fc](https://mumbai.polygonscan.com/address/0xFe9B07e81c4BDDAA047bfF31D912f8c2e4E9a4Fc)
+### Swap Operations:
+Leveraging Uniswap V3’s protocols, the contract performs internal token swaps to manage its liquidity effectively. These operations convert various ERC-20 tokens into either USDC or BALUNI, optimizing liquidity and ensuring efficient asset management.
 
-### Tournament.sol
+### Fee Structure:
+- **`BPS_FEE`:** A basis points fee applied for the usage of the protocol, particularly during the `execute` function and when minting BALUNI tokens. This fee is deducted from the USDC used for minting or from the transactions processed through `execute`. The collected fees are allocated to the reward pool, directly benefiting the staking participants.
 
-* Mumbai: [0xe1743C0358487B46B87669A6695d662237C52F4E](https://mumbai.polygonscan.com/address/0xe1743C0358487B46B87669A6695d662237C52F4E)
+## Technical Specifications
 
-## ROUTER AND AGENT CONTRACT INTERACTION
+### Security Measures:
+The contract includes `ReentrancyGuard` to prevent re-entrancy attacks, a common vulnerability in Ethereum smart contracts involving external calls.
 
-This README outlines the interaction between a `Router` contract and an `Agent` contract within a decentralized application.
+### Flexibility and Efficiency:
+Utilizes `EnumerableSet` to manage sets of addresses, which enhances the efficiency of operations such as adding or checking the presence of tokens.
 
-### Overview
+### Real-Time Pricing:
+Integrates with an oracle interface (`IOracle`) to fetch real-time rates for accurate valuation of assets during minting, burning, or swapping operations.
 
-The process begins when a user initiates a transaction through the `Router` contract. The `Router` then checks if the user already has an associated `Agent` contract. If the user does not have an `Agent`, the `Router` creates one and links it to the user. Once the user's `Agent` is determined or created, the `Router` invokes the `execute` function on the `Agent` contract, passing a batch of calls for execution.
+## Governance and Administration
 
-### Key Processes
+### Ownership and Control:
+Managed by an owner account, which has exclusive rights to adjust critical parameters like transaction fees or oracle settings, ensuring adaptability to changing market conditions.
 
-1. **Transaction Initiation**: A user initiates a transaction through the `Router` contract.
-2. **Agent Check/Create**: The `Router` checks for an existing `Agent` for the user. If none exists, it creates a new `Agent` and links it to the user.
-3. **Execution of Calls**: The `Router` calls the `execute` function on the `Agent` contract with the batch of calls.
-4. **Processing Calls**: The `Agent` processes these calls, which include:
-   * Executing the specified actions
-   * Charging fees
-   * Returning any remaining tokens to the user.
+## Interactions and Events
 
-### Fee Management and Token Return
+### User Interactions:
+Users interact with the contract through functions that allow minting, burning, staking, and liquidating tokens directly from their Ethereum wallets using compatible Web3 interfaces.
 
-The `Agent` contract handles fee deductions from the operations performed and ensures any tokens left after the operation are returned to the user. This process involves the internal management of transaction fees and the secure transfer of assets.
-
-This interaction between the `Router` and `Agent` contracts enables efficient and secure batch processing of transactions within a decentralized application framework, ensuring users can perform multiple operations in a single transaction while managing fees and asset returns effectively.
-
-## POOL AND TOURNAMENT CONTRACT INTERACTION
-
-This README provides an overview of the `Pool` and `Tournament` contracts designed for managing predictions on price movements and facilitating prediction tournaments within a decentralized application.
-
-### Pool Contract Overview
-
-The `Pool` contract allows users to submit predictions about the price movements of certain assets. Each prediction includes details such as the predicted price, actual price, and the time when the prediction was made. The contract calculates the outcome of predictions based on actual price movements obtained from an Oracle.
-
-* Users can submit price predictions for specified tokens.
-* Predictions are resolved based on actual price data from an Oracle.
-* Rewards are distributed based on the accuracy of predictions.
-
-### Tournament Contract Overview
-
-The `Tournament` contract organizes prediction tournaments where participants can submit their price predictions for a chance to win a prize from the pooled entries. The contract manages rounds of predictions, collects entry fees to a prize pool, and distributes winnings based on prediction accuracy.
-
-* Organizes prediction tournaments with multiple rounds.
-* Participants submit predictions with an entry fee.
-* Winners are determined based on the accuracy of their predictions against actual prices from an Oracle.
-
-### Interaction Logic
-
-While the `Pool` and `Tournament` contracts operate independently, they share a common theme of leveraging predictions for decentralized finance applications. Both contracts utilize price data from Oracles to determine the outcomes of predictions, but they cater to different user experiences - individual predictions in `Pool` and competitive tournaments in `Tournament`. gi
-
-* Use of Oracles for price data.
-* Management of predictions and their resolutions.
-* Distribution of rewards based on prediction accuracy.
-
-The `Pool` and `Tournament` contracts offer distinct ways for users to engage with prediction markets in a decentralized setting. The `Pool` contract focuses on individual predictions and rewards, while the `Tournament` contract provides a competitive platform for users to test their prediction skills against others.
-
-## Keeper Script Overview
-
-The `keeper.ts` script automates the resolution of predictions and tournaments. It interacts with the `Pool` and `Tournament` contracts to check for and resolve outcomes based on predefined conditions, such as time constraints and the presence of unresolved predictions.
+### Contract Events:
+Specific events are emitted for key actions such as minting (`Mint`), burning (`Burn`), and administrative updates (`ChangeBpsFee`, `ChangeLiquidateFee`), facilitating external tracking and auditing of the contract's activities.

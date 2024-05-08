@@ -8,9 +8,10 @@ interface IRouter {
 	function getBpsFee() external view returns (uint256);
 }
 
-contract Agent {
+contract BaluniAgent {
 	using SafeERC20 for IERC20Metadata;
 	using Address for address payable;
+
 	address public owner;
 	address private router;
 	address internal constant _NATIVE =
@@ -28,6 +29,12 @@ contract Agent {
 		bytes data;
 	}
 
+	/**
+	 * @dev Initializes a new instance of the Agent contract.
+	 * @param _owner The address of the contract owner.
+	 * @param _router The address of the router contract.
+	 * @notice Only the router contract can deploy this contract.
+	 */
 	constructor(address _owner, address _router) {
 		require(msg.sender == _router, "Only Router");
 		owner = _owner;
@@ -39,6 +46,12 @@ contract Agent {
 		_;
 	}
 
+	/**
+	 * @dev Executes a batch of calls and performs token operations.
+	 * @param calls An array of Call structs representing the calls to be executed.
+	 * @param tokensReturn An array of token addresses to return after the batch call.
+	 * @notice Only the router contract is allowed to execute this function.
+	 */
 	function execute(
 		Call[] calldata calls,
 		address[] calldata tokensReturn
@@ -53,10 +66,18 @@ contract Agent {
 		_returnTokens(tokensReturn);
 	}
 
+	/**
+	 * @dev Returns the address of the router contract.
+	 * @return The address of the router contract.
+	 */
 	function getRouter() public view returns (address) {
 		return router;
 	}
 
+	/**
+	 * @dev Internal function to charge fees for the tokens returned.
+	 * @param tokensReturn The array of tokens to charge fees for.
+	 */
 	function _chargeFees(address[] calldata tokensReturn) internal {
 		uint256 amount;
 		uint256 bpsFee = IRouter(router).getBpsFee();
@@ -75,6 +96,10 @@ contract Agent {
 		}
 	}
 
+	/**
+	 * @dev Internal function to return tokens to the owner.
+	 * @param tokensReturn The array of tokens to return.
+	 */
 	function _returnTokens(address[] calldata tokensReturn) internal {
 		uint256 tokensReturnLength = tokensReturn.length;
 		if (tokensReturnLength > 0) {
