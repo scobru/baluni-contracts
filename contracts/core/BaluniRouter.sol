@@ -40,10 +40,9 @@ pragma solidity 0.8.25;
  */
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
@@ -60,14 +59,14 @@ interface IOracle {
 	) external view returns (uint256 weightedRate);
 }
 
-contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
+contract BaluniRouter is Ownable, ERC20, BaluniStake {
 	using SafeERC20 for IERC20;
 
 	uint256 public constant _MAX_BPS_FEE = 500;
+
 	uint256 public _BPS_FEE = 30; // 0.3%.
 	uint256 public _BPS_BASE = 10000;
 	uint256 public _BPS_LIQUIDATE_FEE = 30; // 0.3%.
-	uint256 public _START_MINT_AMOUNT = 1 ether;
 
 	using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -98,7 +97,7 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 	event ChangeBpsFee(uint256 newFee);
 	event ChangeLiquidateFee(uint256 newFee);
 
-	modifier validTimestamp(uint _timestamp) {
+	modifier validTimestamp(uint256 _timestamp) {
 		require(
 			_timestamp <= block.timestamp,
 			"Timestamp too far in the future"
@@ -110,51 +109,32 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 		_;
 	}
 
-	/**
-	 * @dev Initializes the Router contract.
-	 *
-	 * It sets the contract owner, token name, token symbol, and initializes the staking mechanism.
-	 * Additionally, it mints an initial supply of tokens to the contract address, updates the rewards,
-	 * adds a staked balance to the contract address, and updates the reward index if the supply is greater than zero.
-	 */
 	constructor()
 		Ownable(msg.sender)
 		ERC20("Baluni", "BALUNI")
 		BaluniStake(address(this), address(this))
 	{
-		_mint(address(this), _START_MINT_AMOUNT);
-		_stakeToContract(address(this), _START_MINT_AMOUNT);
+		_mint(address(this), 1 ether);
+		_stakeToContract(address(this), 1 ether);
 		_updateRewards(address(this));
+
+		EnumerableSet.add(tokens, address(USDC));
 	}
 
-	/**
-	 * @dev Internal function to stake tokens to the contract.
-	 * @param _to The address to stake tokens to.
-	 * @param _amount The amount of tokens to stake.
-	 */
 	function _stakeToContract(address _to, uint256 _amount) internal {
 		balanceStakedOf[_to] += _amount;
-		stakeTimestamp[_to] = block.timestamp;
 		stakingSupply += _amount;
+		stakeTimestamp[msg.sender] = block.timestamp;
 
 		if (stakingSupply > 0) {
 			updateRewardIndex(_amount);
 		}
 	}
 
-	/**
-	 * @dev Returns an array of all token addresses.
-	 * @return An array of token addresses.
-	 */
 	function listAllTokens() external view returns (address[] memory) {
 		return tokens.values();
 	}
 
-	/**
-	 * @dev Returns the agent address for a given user address.
-	 * @param _user The user address.
-	 * @return The agent address.
-	 */
 	function getAgentAddress(address _user) public view returns (address) {
 		bytes32 salt = keccak256(abi.encodePacked(_user));
 		bytes memory bytecode = getBytecode(_user);
@@ -167,36 +147,27 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 			)
 		);
 
-		return address(uint160(uint(hash)));
+		return address(uint160(uint256(hash)));
 	}
 
-	/**
-	 * @dev This contract contains functions related to creating and interacting with agents.
-	 */
 	function getOrCreateAgent(address user) private returns (BaluniAgent) {
 		bytes32 salt = keccak256(abi.encodePacked(user));
+
 		if (address(userAgents[user]) == address(0)) {
 			BaluniAgent agent = new BaluniAgent{ salt: salt }(
 				user,
 				address(this)
 			);
-			// Ensure that the contract is actually deployed
 			require(
 				isContract(address(agent)),
 				"Agent creation failed, not a contract"
 			);
-
 			userAgents[user] = agent;
 			emit AgentCreated(user, address(agent));
 		}
 		return userAgents[user];
 	}
 
-	/**
-	 * @dev Checks if the given address is a contract.
-	 * @param _addr The address to check.
-	 * @return A boolean indicating whether the address is a contract or not.
-	 */
 	function isContract(address _addr) private view returns (bool) {
 		uint32 size;
 		assembly {
@@ -205,67 +176,39 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 		return size > 0;
 	}
 
-	/**
-	 * @dev Gets the bytecode of the Agent contract with the specified owner.
-	 * @param _owner The owner address.
-	 * @return The bytecode of the Agent contract.
-	 */
 	function getBytecode(address _owner) internal view returns (bytes memory) {
 		require(_owner != address(0), "Owner address cannot be zero.");
 		bytes memory bytecode = type(BaluniAgent).creationCode;
 		return abi.encodePacked(bytecode, abi.encode(_owner, address(this)));
 	}
 
-	/**
-	 * @dev Returns the basis points fee value.
-	 * @return The basis points fee value.
-	 */
 	function getBpsFee() external view returns (uint256) {
 		return _BPS_FEE;
 	}
 
-	/**
-	 * @dev Changes the basis points fee value.
-	 * @param _newFee The new basis points fee value.
-	 */
 	function changeBpsFee(uint256 _newFee) external onlyOwner {
 		_BPS_FEE = _newFee;
 		emit ChangeBpsFee(_newFee);
 	}
 
-	/**
-	 * @dev Changes the basis points (BPS) liquidate fee.
-	 * @param _newFee The new fee value to be set.
-	 * Requirements:
-	 * - Only the contract owner can call this function.
-	 * Emits a {ChangeLiquidateFee} event with the new fee value.
-	 */
 	function changeBpsLiquidateFee(uint256 _newFee) external onlyOwner {
 		_BPS_LIQUIDATE_FEE = _newFee;
 		emit ChangeLiquidateFee(_newFee);
 	}
 
-	/**
-	 * @dev Executes a series of calls and transfers tokens to the caller based on the result.
-	 * @param calls An array of Agent.Call structs representing the calls to be executed.
-	 * @param tokensReturn An array of addresses representing the tokens to be returned to the caller.
-	 */
 	function execute(
 		BaluniAgent.Call[] calldata calls,
 		address[] calldata tokensReturn
 	) external nonReentrant {
 		BaluniAgent agent = getOrCreateAgent(msg.sender);
-
-		// Check if tokens are new to the set for conditional addition later
 		bool[] memory isTokenNew = new bool[](tokensReturn.length);
+
 		for (uint256 i = 0; i < tokensReturn.length; i++) {
 			isTokenNew[i] = !EnumerableSet.contains(tokens, tokensReturn[i]);
 		}
 
-		// Execute agent calls
 		agent.execute(calls, tokensReturn);
 
-		// Handle tokens after execution
 		for (uint256 i = 0; i < tokensReturn.length; i++) {
 			address token = tokensReturn[i];
 			address poolNative3000 = uniswapFactory.getPool(
@@ -278,8 +221,6 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 				address(WNATIVE),
 				500
 			);
-
-			// Check if any pool exists for the token
 			bool poolExist = poolNative3000 != address(0) ||
 				poolNative500 != address(0);
 
@@ -287,7 +228,6 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 				EnumerableSet.add(tokens, token);
 			}
 
-			// If no pool exists, return the token to the sender
 			if (!poolExist) {
 				uint256 balance = IERC20(token).balanceOf(address(this));
 				IERC20(token).transfer(msg.sender, balance);
@@ -295,21 +235,9 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 		}
 	}
 
-	/**
-	 * @dev Converts the specified token to USDC.
-	 * @param token The address of the token to be converted.
-	 * @notice This function is external and can only be called once per transaction.
-	 * @notice The contract must have sufficient allowance to spend the specified token.
-	 * @notice If the contract's balance of the specified token is greater than the allowance, the contract will set the allowance to the total balance.
-	 * @notice The function performs a single swap from the specified token to USDC using the Uniswap router.
-	 * @notice If the swap is successful and the resulting amount is greater than zero, the function performs a multi-hop swap from the specified token to USDC using the Uniswap router.
-	 * @notice If the multi-hop swap fails, the function reverts with an error message.
-	 * @notice After the swaps, the function mints a specified amount of tokens to the message sender and emits a Mint event.
-	 */
 	function liquidate(address token) external nonReentrant {
-		uint totalERC20Balance = IERC20(token).balanceOf(address(this));
+		uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
 		address pool = uniswapFactory.getPool(token, address(USDC), 3000);
-
 		secureApproval(token, address(uniswapRouter), totalERC20Balance);
 
 		if (pool != address(0)) {
@@ -331,92 +259,65 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 			require(amountOutHop > 0, "Swap Failed, Try Burn()");
 		}
 
+		uint256 reward = claimTo(address(this), msg.sender);
 		uint256 mintAmount = (totalSupply() * _BPS_LIQUIDATE_FEE) / 10000;
 
 		_mint(address(this), mintAmount);
 		_stakeToContract(address(this), mintAmount);
 
-		uint reward = claimTo(address(this), msg.sender);
-
 		emit Mint(address(this), mintAmount);
 		emit RewardClaimed(msg.sender, reward);
 	}
 
-	/**
-	 * @dev Burns a specified amount of BAL tokens from the caller's balance.
-	 * The caller must have a balance of at least `amount` BAL tokens.
-	 * The function calculates the share of each token held by the contract based on the total stakingSupply of BAL tokens and the balance of each token.
-	 * It transfers the proportional share of each token to the caller and burns the specified amount of BAL tokens.
-	 * Emits a `Burn` event with the caller's address and the burned amount.
-	 *
-	 * Requirements:
-	 * - The caller must have a balance of at least `amount` BAL tokens.
-	 *
-	 * @param amount The amount of BAL tokens to burn.
-	 */
-	function burn(uint amount) external nonReentrant {
-		require(balanceOf(msg.sender) >= amount, "Insufficient BAL");
+	function burn(uint256 burnAmount) external nonReentrant {
+		require(balanceOf(msg.sender) >= burnAmount, "Insufficient BAL");
 
 		for (uint256 i; i < tokens.length(); i++) {
 			address token = tokens.at(i);
-			uint totalBaluni = totalSupply();
-			uint totalERC20Balance = IERC20(token).balanceOf(address(this));
+			uint256 totalBaluni = totalSupply();
+			uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
 
 			if (totalERC20Balance == 0 || token == address(this)) continue;
 
 			uint256 decimals = IERC20Metadata(token).decimals();
-			uint share = _calculateTokenShare(
+			uint256 share = _calculateTokenShare(
 				totalBaluni,
 				totalERC20Balance,
-				amount,
+				burnAmount,
 				decimals
 			);
 
 			IERC20(token).transfer(msg.sender, share);
 		}
-		_burn(msg.sender, amount);
-		emit Burn(msg.sender, amount);
+		_burn(msg.sender, burnAmount);
+		emit Burn(msg.sender, burnAmount);
 	}
 
-	/**
-	 * @dev Burns tokens and swaps them to USDC.
-	 * @param amount The amount of tokens to burn.
-	 * Requirements:
-	 * - `amount` must be greater than 0.
-	 * - The contract must have sufficient BAL tokens.
-	 * - The contract must have sufficient balance of each token in the `tokens` array.
-	 * - The `token` must implement the ERC20 interface.
-	 * - The `token` must implement the ERC20Metadata interface.
-	 * - The `token` must have a valid `decimals` value.
-	 * - The `USDC` and `WNATIVE` addresses must be valid.
-	 * - The `singleSwap` and `multiHopSwap` functions must successfully execute the swaps.
-	 * - The `token` must be successfully transferred to `msg.sender`.
-	 * - The `amount` must be successfully burned from `msg.sender`.
-	 * Emits a `Burn` event with the `msg.sender` and `amount`.
-	 */
-	function burnTokensAndSwapToUSDC(uint amount) external nonReentrant {
-		require(amount > 0, "Insufficient BAL");
+	function burnTokensAndSwapToUSDC(uint256 burnAmount) external nonReentrant {
+		require(burnAmount > 0, "Insufficient BAL");
 
 		for (uint256 i; i < tokens.length(); i++) {
 			address token = tokens.at(i);
-
-			uint totalBaluni = totalSupply();
-			uint totalERC20Balance = IERC20(token).balanceOf(address(this));
+			uint256 totalBaluni = totalSupply();
+			uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
 
 			if (totalERC20Balance > 0 == false) continue;
 			if (token == address(this)) continue;
 
 			uint256 decimals = IERC20Metadata(token).decimals();
-
-			uint burnAmountToken = _calculateTokenShare(
+			uint256 burnAmountToken = _calculateTokenShare(
 				totalBaluni,
 				totalERC20Balance,
-				amount,
+				burnAmount,
 				decimals
 			);
 
-			address pool = uniswapFactory.getPool(token, address(USDC), 3000);
+			if (token == address(USDC)) {
+				IERC20(USDC).transfer(msg.sender, burnAmountToken);
+				continue;
+			}
 
+			address pool = uniswapFactory.getPool(token, address(USDC), 3000);
 			secureApproval(token, address(uniswapRouter), burnAmountToken);
 
 			if (pool != address(0)) {
@@ -432,93 +333,117 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 				require(amountOutHop > 0, "Swap Failed, Try Burn()");
 			}
 		}
-		_burn(msg.sender, amount);
-		emit Burn(msg.sender, amount);
+		_burn(msg.sender, burnAmount);
+
+		emit Burn(msg.sender, burnAmount);
 	}
 
-	/**
-	 * @dev Calculates the net amount after deducting the fee.
-	 * @param _amount The input amount.
-	 * @return The net amount after deducting the fee.
-	 */
 	function calculateNetAmountAfterFee(
 		uint256 _amount
-	) public view returns (uint256) {
+	) internal view returns (uint256) {
 		uint256 amountInWithFee = (_amount * (_BPS_BASE - (_BPS_FEE))) /
 			_BPS_BASE;
 		return amountInWithFee;
 	}
 
-	/**
-	 * @dev Returns the unit price for burning.
-	 * @return The unit price for burning.
-	 */
 	function getUnitPrice() public view returns (uint256) {
-		return _calculateProportionalUSDCShare(1e18);
+		return _calculateBaluniToUsdc(1e18);
 	}
 
-	/**
-	 * @dev Mints tokens to the caller.
-	 * @param amount The amount of tokens to mint.
-	 */
-	function mint(uint256 amount) external nonReentrant returns (uint256) {
-		uint balance = IERC20(USDC).balanceOf(msg.sender);
-		require(amount > 0, "Amount must be greater than zero");
-		require(balance >= amount, "Amount must be greater than balance");
+	function mintUSDC(
+		uint256 balAmountToMint
+	) public nonReentrant returns (uint256) {
+		uint256 totalUSDValuation = _totalValuation();
+		uint256 totalBalSupply = totalSupply();
+		uint256 usdcRequired = (balAmountToMint * totalUSDValuation) /
+			totalBalSupply;
+		uint256 balance = IERC20(USDC).balanceOf(msg.sender);
+		require(totalBalSupply > 0, "Total BALUNI supply cannot be zero");
+		require(balance >= usdcRequired / 1e12, "USDC balance is insufficient");
 
 		uint256 allowed = USDC.allowance(msg.sender, address(this));
-		require(allowed >= amount, "Check the token allowance");
+		require(allowed >= usdcRequired / 1e12, "Check the token allowance");
 
-		USDC.safeTransferFrom(msg.sender, address(this), amount);
+		USDC.safeTransferFrom(msg.sender, address(this), usdcRequired / 1e12);
 
-		uint256 totalUSDValuation = calculateTotalUSDCValuation();
-		uint toMint = ((totalSupply() / 1e12) * (amount)) /
-			(totalUSDValuation / 1e12);
+		uint256 amountAfterFee = calculateNetAmountAfterFee(balAmountToMint);
+		uint256 netBalAmountToMint = balAmountToMint - amountAfterFee;
 
-		uint256 amountInWithFee = calculateNetAmountAfterFee(toMint * 1e12);
-
-		require(
-			amountInWithFee > 0,
-			"AmountInWithFee must be greater than zero"
-		);
-
-		uint256 feeAmount = toMint * 1e12 - amountInWithFee;
-
-		_mint(address(this), feeAmount);
-		_mint(msg.sender, amountInWithFee);
-
-		emit Mint(address(this), feeAmount);
-		emit Mint(msg.sender, amountInWithFee);
+		_mint(address(this), netBalAmountToMint);
+		emit Mint(address(this), netBalAmountToMint);
 
 		if (stakingSupply > 0) {
-			updateRewardIndex(feeAmount);
+			updateRewardIndex(netBalAmountToMint);
 		}
 
-		return amountInWithFee;
+		_mint(msg.sender, amountAfterFee);
+		emit Mint(msg.sender, amountAfterFee);
+
+		return netBalAmountToMint;
 	}
 
-	/**
-	 * @dev Calculates the proportional USDC share for a given BAL amount.
-	 * @param amount The amount of BAL tokens.
-	 * @return The proportional USDC share.
-	 */
-	function _calculateProportionalUSDCShare(
-		uint amount
-	) internal view returns (uint) {
-		uint totalBaluni = totalSupply();
+	function mintERC20(
+		uint256 balAmountToMint,
+		address asset
+	) public nonReentrant returns (uint256) {
+		uint256 totalUSDValuation = _totalValuation();
+		uint256 totalBalSupply = totalSupply();
+		require(totalBalSupply > 0, "Total BALUNI supply cannot be zero");
+
+		uint256 usdcRequired = (balAmountToMint * totalUSDValuation) /
+			totalBalSupply;
+
+		uint8 decimalA = IERC20Metadata(address(USDC)).decimals();
+		uint8 decimalB = IERC20Metadata(asset).decimals();
+
+		uint256 assetRate = oracle.getRate(IERC20(USDC), IERC20(asset), false);
+		uint256 required;
+
+		if (decimalB > decimalA) {
+			uint256 rate = assetRate / 10 ** (decimalB - decimalA);
+			required = (usdcRequired / rate) * 1e18;
+			required = required / 10 ** (decimalB - decimalA);
+		} else {
+			uint256 rate = assetRate * 10 ** (decimalA - decimalB);
+			required = (usdcRequired / rate) * 1e18;
+			required = required / 10 ** (decimalA - decimalB);
+		}
+
+		uint256 balance = IERC20(asset).balanceOf(msg.sender);
+
+		require(balance >= required, "Balance is insufficient");
+
+		uint256 allowed = IERC20(asset).allowance(msg.sender, address(this));
+
+		require(allowed >= required, "Check the token allowance");
+
+		IERC20(asset).safeTransferFrom(msg.sender, address(this), required);
+
+		uint256 amountAfterFee = calculateNetAmountAfterFee(balAmountToMint);
+		uint256 netBalAmountToMint = balAmountToMint - amountAfterFee;
+
+		_mint(address(this), netBalAmountToMint);
+		emit Mint(address(this), netBalAmountToMint);
+
+		if (stakingSupply > 0) {
+			updateRewardIndex(netBalAmountToMint);
+		}
+
+		_mint(msg.sender, amountAfterFee);
+		emit Mint(msg.sender, amountAfterFee);
+
+		return amountAfterFee;
+	}
+
+	function _calculateBaluniToUsdc(
+		uint256 amount
+	) internal view returns (uint256 shareUSDC) {
+		uint256 totalBaluni = totalSupply();
 		require(totalBaluni > 0, "Total supply cannot be zero");
-		uint totalUSDC = calculateTotalUSDCValuation();
-		return ((amount * totalUSDC) / totalBaluni);
+		uint256 totalUSDC = _totalValuation();
+		shareUSDC = (amount * totalUSDC) / totalBaluni;
 	}
 
-	/**
-	 * @dev Calculates the token share for a given amount of tokens.
-	 * @param totalBaluni The total supply of BAL tokens.
-	 * @param totalERC20Balance The total balance of the ERC20 token.
-	 * @param amount The amount of tokens.
-	 * @param tokenDecimals The number of decimals of the token.
-	 * @return The token share.
-	 */
 	function _calculateTokenShare(
 		uint256 totalBaluni,
 		uint256 totalERC20Balance,
@@ -526,111 +451,145 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 		uint256 tokenDecimals
 	) internal pure returns (uint256) {
 		require(totalBaluni > 0, "Total supply cannot be zero");
+		uint256 rate;
 
-		if (tokenDecimals != 18) {
-			// Calculate the scaling factor to adjust for token decimals
-			uint256 factor = 10 ** (18 - tokenDecimals);
-
-			// Adjust the totalERC20Balance up to 18 decimals
-			uint256 adjustedBalance = totalERC20Balance * factor;
-
-			// Calculate share at 18 decimal precision
-			uint256 share = (amount * adjustedBalance) / totalBaluni;
-
-			// Scale the share back down to the original token decimals
-			return share / factor;
+		if (tokenDecimals < 18) {
+			rate =
+				((amount * totalERC20Balance)) /
+				(totalBaluni / (10 ** (18 - tokenDecimals)));
 		} else {
-			// No adjustment needed for tokens already at 18 decimals
-			return (amount * totalERC20Balance) / totalBaluni;
+			rate = (amount * totalERC20Balance) / totalBaluni;
 		}
+
+		return rate;
 	}
 
-	/**
-	 * @dev Calculates the valuation of a given token amount.
-	 * @param amount The amount of tokens to calculate the valuation for.
-	 * @param token The address of the token.
-	 * @return The valuation of the token amount.
-	 */
 	function _calculateTokenValuation(
-		uint amount,
+		uint256 amount,
 		address token
-	) internal view returns (uint256) {
-		uint256 tokenDecimal = IERC20Metadata(token).decimals();
+	) internal view returns (uint256 valuation) {
+		uint256 rate;
+		uint8 tokenDecimal = IERC20Metadata(token).decimals();
+		uint8 usdcDecimal = IERC20Metadata(address(USDC)).decimals();
+
 		if (token == address(USDC)) return amount * 1e12;
 
-		uint rate;
 		try
 			IOracle(oracle).getRate(IERC20(token), IERC20(USDC), false)
-		returns (uint _rate) {
+		returns (uint256 _rate) {
 			rate = _rate;
 		} catch {
 			return 0;
 		}
 
-		uint formattedAmount;
-		if (tokenDecimal == 8) {
-			formattedAmount = amount * 10 ** (18 - tokenDecimal);
-			rate *= 1e2;
-		} else if (tokenDecimal == 6) {
-			formattedAmount = amount * 10 ** (18 - tokenDecimal);
-		} else {
-			formattedAmount = amount;
-			rate *= 1e12;
-		}
+		uint256 factor = (10 ** (tokenDecimal - usdcDecimal));
 
-		return (formattedAmount * rate) / 1e18;
+		rate = ((amount * factor) * (rate * factor)) / 1e18;
+
+		return rate;
 	}
 
-	/**
-	 * @dev Calculates the total USDC valuation of all tokens held by the contract.
-	 * @return The total USDC valuation.
-	 */
+	function totalValuation() external view returns (uint256) {
+		return _totalValuation();
+	}
 
-	function calculateTotalUSDCValuation() public view returns (uint) {
-		uint totalValuation;
+	function _totalValuation() internal view returns (uint256) {
+		uint256 _totalV;
 
 		for (uint256 i; i < tokens.length(); i++) {
 			address token = tokens.at(i);
 			uint256 balance = IERC20(token).balanceOf(address(this));
-
 			uint256 tokenBalanceValuation = _calculateTokenValuation(
 				balance,
 				token
 			);
-
-			totalValuation += tokenBalanceValuation;
+			_totalV += tokenBalanceValuation;
 		}
 
-		return totalValuation;
+		return _totalV;
 	}
 
-	/**
-	 * @dev Returns the value of a given BAL token amount in USDC.
-	 * @param amount The amount of BAL tokens.
-	 * @return The value of the BAL tokens in USDC.
-	 */
-	function getUSDCShareValue(uint amount) external view returns (uint) {
-		return _calculateProportionalUSDCShare(amount);
+	function getUSDCShareValue(uint256 amount) external view returns (uint256) {
+		return _calculateBaluniToUsdc(amount);
 	}
 
-	/**
-	 * @dev Performs a single token swap on Uniswap.
-	 * @param token The address of the token to swap.
-	 * @param stableToken The address of the stable token to receive.
-	 * @param tokenBalance The balance of the token to swap.
-	 * @param receiver The address to receive the swapped tokens.
-	 * @return amountOut The amount of stable tokens received.
-	 */
+	function performArbitrage() external nonReentrant {
+		uint256 unitPrice = getUnitPrice();
+		uint256 marketPrice = oracle.getRate(
+			IERC20(address(this)),
+			IERC20(address(USDC)),
+			false
+		);
+
+		uint256 baluniBalance = balanceOf(address(this));
+		uint256 usdcBalance = IERC20(USDC).balanceOf(address(this));
+
+		if (marketPrice * 1e12 < unitPrice) {
+			uint256 amountToBuy = (usdcBalance * 1e12) /
+				(marketPrice * 1e12) /
+				1e18;
+
+			if (amountToBuy > baluniBalance) amountToBuy = baluniBalance;
+
+			secureApproval(address(USDC), address(uniswapRouter), usdcBalance);
+
+			uint256 amountOut = singleSwap(
+				address(USDC),
+				address(this),
+				usdcBalance,
+				address(this)
+			);
+			require(
+				amountOut >= amountToBuy,
+				"Arbitrage failed: insufficient output amount"
+			);
+			secureApproval(address(this), address(uniswapRouter), amountOut);
+			singleSwap(address(this), address(USDC), amountOut, address(this));
+			require(
+				IERC20(USDC).balanceOf(address(this)) > usdcBalance,
+				"Arbitrage did not profit"
+			);
+		} else if (marketPrice * 1e12 > unitPrice) {
+			uint256 amountToSell = baluniBalance;
+			secureApproval(address(this), address(uniswapRouter), amountToSell);
+			uint256 amountOutUSDC = singleSwap(
+				address(this),
+				address(USDC),
+				amountToSell,
+				address(this)
+			);
+			require(
+				amountOutUSDC > usdcBalance,
+				"Arbitrage failed: insufficient output amount"
+			);
+			secureApproval(
+				address(USDC),
+				address(uniswapRouter),
+				amountOutUSDC
+			);
+			singleSwap(
+				address(USDC),
+				address(this),
+				amountOutUSDC,
+				address(this)
+			);
+			require(
+				balanceOf(address(this)) > baluniBalance,
+				"Arbitrage did not profit"
+			);
+		}
+	}
+
 	function singleSwap(
-		address token,
-		address stableToken,
-		uint tokenBalance,
+		address token0,
+		address token1,
+		uint256 tokenBalance,
 		address receiver
-	) private returns (uint amountOut) {
+	) private returns (uint256 amountOut) {
 		ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
 			.ExactInputSingleParams({
-				tokenIn: address(token),
-				tokenOut: stableToken,
+				tokenIn: token0,
+				tokenOut: token1,
 				fee: 3000,
 				recipient: address(receiver),
 				deadline: block.timestamp,
@@ -642,30 +601,21 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 		return uniswapRouter.exactInputSingle(params);
 	}
 
-	/**
-	 * @dev Performs a multi-hop swap using the Uniswap router.
-	 * @param token The address of the token to swap.
-	 * @param intermediateToken The address of the intermediate token to swap through.
-	 * @param stableToken The address of the stable token to receive.
-	 * @param tokenBalance The balance of the token to swap.
-	 * @param receiver The address to receive the swapped tokens.
-	 * @return amountOut The amount of stable tokens received.
-	 */
 	function multiHopSwap(
-		address token,
-		address intermediateToken,
-		address stableToken,
-		uint tokenBalance,
+		address token0,
+		address token1,
+		address token2,
+		uint256 tokenBalance,
 		address receiver
-	) private returns (uint amountOut) {
+	) private returns (uint256 amountOut) {
 		ISwapRouter.ExactInputParams memory params = ISwapRouter
 			.ExactInputParams({
 				path: abi.encodePacked(
-					address(token),
+					token0,
 					uint24(3000),
-					intermediateToken,
+					token1,
 					uint24(3000),
-					stableToken
+					token2
 				),
 				recipient: address(receiver),
 				deadline: block.timestamp,
@@ -690,5 +640,192 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake, ReentrancyGuard {
 
 			_token.approve(spender, amount);
 		}
+	}
+
+	function rebalance(
+		address[] calldata assets,
+		uint256[] calldata weights
+	) external returns (bool) {
+		uint256 totalValue;
+
+		for (uint256 i; i < assets.length; i++) {
+			uint256 balance = IERC20(assets[i]).balanceOf(msg.sender);
+			uint256 tokenValuation = _calculateTokenValuation(
+				balance,
+				assets[i]
+			);
+			totalValue += tokenValuation;
+		}
+
+		uint256[] memory overweightVaults = new uint256[](assets.length);
+		uint256[] memory overweightAmounts = new uint256[](assets.length);
+		uint256[] memory underweightVaults = new uint256[](assets.length);
+		uint256[] memory underweightAmounts = new uint256[](assets.length);
+
+		uint256 overweightVaultsLength;
+		uint256 underweightVaultsLength;
+		uint256 overweightAmount;
+		uint256 overweightPercent;
+		uint256 targetWeight;
+		uint256 currentWeight;
+		uint256 totalActiveWeight;
+
+		bool overweight;
+
+		for (uint256 i; i < assets.length; i++) {
+			uint256 balance = IERC20(assets[i]).balanceOf(msg.sender);
+			uint256 decimals = IERC20Metadata(assets[i]).decimals();
+			uint256 tokensTotalValue = _calculateTokenValuation(
+				balance,
+				assets[i]
+			);
+			targetWeight = weights[i];
+			currentWeight = tokensTotalValue / (10000) / (totalValue);
+			overweight = currentWeight > targetWeight;
+			overweightPercent = overweight
+				? currentWeight - (targetWeight)
+				: targetWeight - (currentWeight);
+			uint256 price = _calculateTokenValuation(
+				1 * 10 ** decimals,
+				assets[i]
+			);
+			if (overweight) {
+				overweightAmount = (overweightPercent * (totalValue)) / (10000);
+				overweightAmount = (overweightAmount * (1e18)) / (price);
+				overweightVaults[overweightVaultsLength] = i;
+				overweightAmounts[overweightVaultsLength] = overweightAmount;
+				overweightVaultsLength++;
+			} else if (!overweight) {
+				totalActiveWeight += overweightPercent;
+				overweightAmount = overweightPercent;
+				// overweightAmount = overweightPercent.mul(totalValue).div(10000);
+				underweightVaults[underweightVaultsLength] = i;
+				underweightAmounts[underweightVaultsLength] = overweightAmount;
+				underweightVaultsLength++;
+			}
+		}
+
+		// Resize overweightVaults and overweightAmounts to the actual overweighted vaults
+		overweightVaults = _resize(overweightVaults, overweightVaultsLength);
+		overweightAmounts = _resize(overweightAmounts, overweightVaultsLength);
+		// Resize overweightVaults and overweightAmounts to the actual overweighted vaults
+		underweightVaults = _resize(underweightVaults, underweightVaultsLength);
+		underweightAmounts = _resize(
+			underweightAmounts,
+			underweightVaultsLength
+		);
+
+		for (uint256 i; i < overweightVaults.length; i++) {
+			if (overweightAmounts[i] > 0) {
+				IERC20(address(assets[overweightVaults[i]])).transferFrom(
+					msg.sender,
+					address(this),
+					overweightAmounts[i]
+				);
+				address pool = uniswapFactory.getPool(
+					address(assets[overweightVaults[i]]),
+					address(USDC),
+					3000
+				);
+				secureApproval(
+					address(assets[overweightVaults[i]]),
+					address(uniswapRouter),
+					overweightAmounts[i]
+				);
+
+				if (pool != address(0)) {
+					uint singleSwapResult = singleSwap(
+						address(assets[overweightVaults[i]]),
+						address(USDC),
+						overweightAmounts[i],
+						underweightVaults.length == 0
+							? msg.sender
+							: address(this)
+					);
+				} else {
+					uint256 amountOutHop = multiHopSwap(
+						address(assets[overweightVaults[i]]),
+						address(WNATIVE),
+						address(USDC),
+						overweightAmounts[i],
+						underweightVaults.length == 0
+							? msg.sender
+							: address(this)
+					);
+				}
+			}
+		}
+		for (uint256 i; i < underweightVaults.length; i++) {
+			if (underweightAmounts[i] > 0) {
+				uint256 rebaseActiveWgt = (underweightAmounts[i] * (10000)) /
+					(totalActiveWeight);
+
+				uint256 rebBuyQty = (rebaseActiveWgt *
+					IERC20(USDC).balanceOf(msg.sender) *
+					1e12) / (10000);
+
+				if (
+					rebBuyQty > 0 &&
+					rebBuyQty <= IERC20(USDC).balanceOf(msg.sender) * 1e12
+				) {
+					address pool = uniswapFactory.getPool(
+						address(assets[underweightVaults[i]]),
+						address(USDC),
+						3000
+					);
+					secureApproval(
+						address(assets[underweightVaults[i]]),
+						address(uniswapRouter),
+						underweightAmounts[i] / 1e12
+					);
+
+					if (pool != address(0)) {
+						uint singleSwapResult = singleSwap(
+							address(USDC),
+							address(assets[underweightVaults[i]]),
+							underweightAmounts[i] / 1e12,
+							address(this)
+						);
+
+						uint256 amountToTransfer = calculateNetAmountAfterFee(
+							singleSwapResult
+						);
+						IERC20(USDC).transfer(msg.sender, amountToTransfer);
+
+						require(
+							singleSwapResult > 0,
+							"Swap Failed, Try Burn()"
+						);
+					} else {
+						uint256 amountOutHop = multiHopSwap(
+							address(USDC),
+							address(WNATIVE),
+							address(assets[underweightVaults[i]]),
+							underweightAmounts[i] / 1e12,
+							address(this)
+						);
+
+						uint256 amountToTransfer = calculateNetAmountAfterFee(
+							amountOutHop
+						);
+						IERC20(USDC).transfer(msg.sender, amountToTransfer);
+
+						require(amountOutHop > 0, "Swap Failed");
+					}
+				}
+			}
+		}
+		return true;
+	}
+
+	function _resize(
+		uint256[] memory arr,
+		uint256 size
+	) internal pure returns (uint256[] memory) {
+		uint256[] memory ret = new uint256[](size);
+		for (uint256 i; i < size; i++) {
+			ret[i] = arr[i];
+		}
+		return ret;
 	}
 }

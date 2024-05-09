@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
-import "@openzeppelin/contracts/interfaces/IERC20.sol";
 
-contract BaluniStake {
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+contract BaluniStake is ReentrancyGuard {
 	IERC20 public immutable stakingToken;
 	IERC20 public immutable rewardToken;
 
@@ -15,130 +17,98 @@ contract BaluniStake {
 	mapping(address => uint256) private rewardIndexOf;
 	mapping(address => uint256) private earned;
 
+	uint256 private constant STAKING_PERIOD = 365 days;
+
+	event RewardClaimed(address indexed user, uint256 amount);
+	event Staked(address indexed user, uint256 amount);
+	event Unstaked(address indexed user, uint256 amount);
+
 	constructor(address _stakingToken, address _rewardToken) {
+		require(
+			_stakingToken != address(0) && _rewardToken != address(0),
+			"Invalid token address"
+		);
 		stakingToken = IERC20(_stakingToken);
 		rewardToken = IERC20(_rewardToken);
 	}
 
-	uint256 private constant STAKING_PERIOD = 365 days;
-
-	event RewardClaimed(address indexed user, uint256 amount);
-
-	/**
-	 * @dev Updates the reward index based on the given reward amount.
-	 * @param reward The amount of reward to be added.
-	 */
 	function updateRewardIndex(uint256 reward) internal {
-		rewardIndex += (reward * MULTIPLIER) / stakingSupply;
-	}
-
-	/**
-	 * @dev Updates the reward index by adding the specified reward to the current reward index.
-	 * This function is public and can be called by any address.
-	 * @param reward The amount of reward tokens to be added to the reward index.
-	 */
-	function updateRewardIndexPublic(uint256 reward) public {
-		rewardToken.transferFrom(msg.sender, address(this), reward);
-		rewardIndex += (reward * MULTIPLIER) / stakingSupply;
-	}
-
-	/**
-	 * @dev Calculates the rewards for the specified account.
-	 * @param account The address of the account to calculate rewards for.
-	 * @return The calculated rewards for the account.
-	 */
-	function _calculateRewards(address account) private view returns (uint256) {
-		uint256 shares = balanceStakedOf[account];
-		uint256 timeStaked = block.timestamp - stakeTimestamp[account];
-		if (timeStaked > STAKING_PERIOD) {
-			timeStaked = STAKING_PERIOD;
+		if (stakingSupply > 0) {
+			rewardIndex =
+				rewardIndex +
+				((reward * (MULTIPLIER)) / (stakingSupply));
 		}
-		return
-			(shares * timeStaked * (rewardIndex - rewardIndexOf[account])) /
-			MULTIPLIER /
-			STAKING_PERIOD;
 	}
 
-	/**
-	 * @dev Calculates the total rewards earned by an account.
-	 * @param account The address of the account.
-	 * @return The total rewards earned by the account.
-	 */
+	function updateRewardIndexPublic(uint256 reward) public {
+		require(reward > 0, "Reward must be positive");
+		require(stakingSupply > 0, "No staking supply to distribute rewards");
+		rewardToken.transferFrom(msg.sender, address(this), reward);
+		updateRewardIndex(reward);
+	}
+
+	function _calculateRewards(address account) private view returns (uint256) {
+		uint256 timeStaked = block.timestamp - (stakeTimestamp[account]);
+		timeStaked = timeStaked > STAKING_PERIOD ? STAKING_PERIOD : timeStaked;
+		uint256 shares = balanceStakedOf[account];
+		uint256 rewardDelta = rewardIndex - (rewardIndexOf[account]);
+		return
+			(shares * (timeStaked) * (rewardDelta)) /
+			(MULTIPLIER) /
+			(STAKING_PERIOD);
+	}
+
 	function calculateRewardsEarned(
 		address account
 	) external view returns (uint256) {
-		return earned[account] + _calculateRewards(account);
+		return earned[account] + (_calculateRewards(account));
 	}
 
-	/**
-	 * @dev Updates the rewards for an account.
-	 * @param account The address of the account.
-	 */
 	function _updateRewards(address account) internal {
-		earned[account] += _calculateRewards(account);
+		uint256 rewards = _calculateRewards(account);
+		earned[account] = earned[account] + (rewards);
 		rewardIndexOf[account] = rewardIndex;
 	}
 
-	/**
-	 * @dev Stakes a specified amount of tokens.
-	 * @param amount The amount of tokens to stake.
-	 */
-	function stake(uint256 amount) external {
+	function stake(uint256 amount) external nonReentrant {
 		_updateRewards(msg.sender);
+		balanceStakedOf[msg.sender] = balanceStakedOf[msg.sender] + (amount);
+		stakingSupply = stakingSupply + (amount);
 		stakeTimestamp[msg.sender] = block.timestamp;
-		balanceStakedOf[msg.sender] += amount;
-		stakingSupply += amount;
-
 		stakingToken.transferFrom(msg.sender, address(this), amount);
+		emit Staked(msg.sender, amount);
 	}
 
-	/**
-	 * @dev Allows a user to unstake a specified amount of tokens.
-	 * @param amount The amount of tokens to unstake.
-	 */
-	function unstake(uint256 amount) external {
+	function unstake(uint256 amount) external nonReentrant {
 		_updateRewards(msg.sender);
-
-		balanceStakedOf[msg.sender] -= amount;
-		stakingSupply -= amount;
-
+		uint256 currentBalance = balanceStakedOf[msg.sender];
+		require(currentBalance >= amount, "Insufficient balance to unstake");
+		balanceStakedOf[msg.sender] = currentBalance - (amount);
+		stakingSupply = stakingSupply - (amount);
 		stakingToken.transfer(msg.sender, amount);
+		emit Unstaked(msg.sender, amount);
 	}
 
-	/**
-	 * @dev Allows a user to claim their earned rewards.
-	 * @return The amount of rewards claimed.
-	 */
-	function claim() external returns (uint256) {
+	function claim() external nonReentrant returns (uint256) {
 		_updateRewards(msg.sender);
-
 		uint256 reward = earned[msg.sender];
-		if (reward > 0) {
-			earned[msg.sender] = 0;
-			//rewardToken.approve(msg.sender, reward);
-			rewardToken.transfer(msg.sender, reward);
-		}
-
+		require(reward > 0, "No rewards to claim");
+		earned[msg.sender] = 0;
+		rewardToken.transfer(msg.sender, reward);
 		emit RewardClaimed(msg.sender, reward);
-
 		return reward;
 	}
 
-	/**
-	 * @dev Allows a user to claim their earned rewards and transfer them to a specified address.
-	 * @param _to The address to transfer the rewards to.
-	 * @return The amount of rewards claimed.
-	 */
-	function claimTo(address staker, address _to) public returns (uint256) {
+	function claimTo(
+		address staker,
+		address _to
+	) public nonReentrant returns (uint256) {
 		_updateRewards(staker);
-
 		uint256 reward = earned[staker];
-		if (reward > 0) {
-			earned[staker] = 0;
-			rewardToken.approve(_to, reward);
-			rewardToken.transfer(_to, reward);
-		}
-
+		require(reward > 0, "No rewards to claim");
+		earned[staker] = 0;
+		rewardToken.transfer(_to, reward);
+		emit RewardClaimed(_to, reward);
 		return reward;
 	}
 }

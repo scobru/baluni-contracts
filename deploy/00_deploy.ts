@@ -27,6 +27,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     args: [],
     log: true,
     autoMine: true,
+    gasLimit: 8000000,
   });
 
   console.log("router:", router.address);
@@ -72,4 +73,4 @@ export default deployYourContract;
 
 // Tags are useful if you have multiple deploy files and only want to run one of them.
 // e.g. yarn deploy --tags YourContract
-deployYourContract.tags = ["BaluniPoolV1"];
+deployYourContract.tags = ["BaluniRouter"];

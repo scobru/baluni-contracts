@@ -1,6 +1,8 @@
 {
   "name": "baluni-contracts",
-  "version": "0.0.1",
+  "version": "2.3.0",
+  "description": "Smart Contracts for Baluni",
+  "types": "typechain-types/index.ts",
   "scripts": {
     "account": "hardhat run scripts/listAccount.ts",
     "chain": "hardhat node --network hardhat --no-deploy",
@@ -51,6 +53,24 @@
     "@uniswap/v3-periphery": "^1.4.4",
     "dotenv": "^16.0.3",
     "envfile": "^6.18.0",
-    "qrcode": "^1.5.1"
-  }
+    "qrcode": "^1.5.1",
+    "v4-core": "uniswap/v4-core"
+  },
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scobru/baluni-contracts.git"
+  },
+  "keywords": [
+    "uniswap",
+    "defi",
+    "rebalance",
+    "erc20"
+  ],
+  "author": "scobru",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/scobru/baluni-contracts/issues"
+  },
+  "homepage": "https://github.com/scobru/baluni-contracts#readme"
 }
