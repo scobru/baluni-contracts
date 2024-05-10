@@ -451,17 +451,23 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake {
 		uint256 tokenDecimals
 	) internal pure returns (uint256) {
 		require(totalBaluni > 0, "Total supply cannot be zero");
-		uint256 rate;
+		require(tokenDecimals <= 18, "Token decimals should be <= 18");
+
+		uint256 baluniAdjusted;
+		uint256 amountAdjusted;
 
 		if (tokenDecimals < 18) {
-			rate =
-				((amount * totalERC20Balance)) /
-				(totalBaluni / (10 ** (18 - tokenDecimals)));
+			baluniAdjusted = totalBaluni / (10 ** (18 - tokenDecimals));
+			amountAdjusted = amount * (10 ** (18 - tokenDecimals));
 		} else {
-			rate = (amount * totalERC20Balance) / totalBaluni;
+			baluniAdjusted = totalBaluni;
+			amountAdjusted = amount;
 		}
 
-		return rate;
+		uint256 result = (amountAdjusted * totalERC20Balance) / baluniAdjusted;
+
+		// Scale down the result to have tokenDecimals
+		return result / (10 ** (18 - tokenDecimals));
 	}
 
 	function _calculateTokenValuation(
@@ -483,7 +489,6 @@ contract BaluniRouter is Ownable, ERC20, BaluniStake {
 		}
 
 		uint256 factor = (10 ** (tokenDecimal - usdcDecimal));
-
 		rate = ((amount * factor) * (rate * factor)) / 1e18;
 
 		return rate;
