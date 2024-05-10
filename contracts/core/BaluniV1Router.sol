@@ -346,10 +346,19 @@ contract BaluniV1Router is Ownable, ERC20, BaluniV1Stake {
     shareUSDC = (amount * totalUSDC) / totalBaluni;
   }
 
+  function calculateTokenShare(
+    uint256 totalBaluni,
+    uint256 totalERC20Balance,
+    uint256 baluniAmount,
+    uint256 tokenDecimals
+  ) external pure returns (uint256) {
+    return _calculateTokenShare(totalBaluni, totalERC20Balance, baluniAmount, tokenDecimals);
+  }
+
   function _calculateTokenShare(
     uint256 totalBaluni,
     uint256 totalERC20Balance,
-    uint256 amount,
+    uint256 baluniAmount,
     uint256 tokenDecimals
   ) internal pure returns (uint256) {
     require(totalBaluni > 0, 'Total supply cannot be zero');
@@ -359,14 +368,14 @@ contract BaluniV1Router is Ownable, ERC20, BaluniV1Stake {
 
     if (tokenDecimals < 18) {
       baluniAdjusted = totalBaluni / (10 ** (18 - tokenDecimals));
-      amountAdjusted = amount * (10 ** (18 - tokenDecimals));
+      amountAdjusted = baluniAmount * (10 ** (18 - tokenDecimals));
     } else {
       baluniAdjusted = totalBaluni;
-      amountAdjusted = amount;
+      amountAdjusted = baluniAmount;
     }
 
     uint256 result = (amountAdjusted * totalERC20Balance) / baluniAdjusted;
-    return result / (10 ** (18 - tokenDecimals));
+    return result;
   }
 
   function tokenValuation(uint256 amount, address token) external view returns (uint256) {
