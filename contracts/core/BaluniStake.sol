@@ -2,9 +2,12 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract BaluniStake is ReentrancyGuard {
+	using SafeMath for uint256;
+
 	IERC20 public immutable stakingToken;
 	IERC20 public immutable rewardToken;
 
@@ -34,9 +37,9 @@ contract BaluniStake is ReentrancyGuard {
 
 	function updateRewardIndex(uint256 reward) internal {
 		if (stakingSupply > 0) {
-			rewardIndex =
-				rewardIndex +
-				((reward * (MULTIPLIER)) / (stakingSupply));
+			rewardIndex = rewardIndex.add(
+				reward.mul(MULTIPLIER).div(stakingSupply)
+			);
 		}
 	}
 
@@ -48,32 +51,32 @@ contract BaluniStake is ReentrancyGuard {
 	}
 
 	function _calculateRewards(address account) private view returns (uint256) {
-		uint256 timeStaked = block.timestamp - (stakeTimestamp[account]);
+		uint256 timeStaked = block.timestamp.sub(stakeTimestamp[account]);
 		timeStaked = timeStaked > STAKING_PERIOD ? STAKING_PERIOD : timeStaked;
 		uint256 shares = balanceStakedOf[account];
-		uint256 rewardDelta = rewardIndex - (rewardIndexOf[account]);
+		uint256 rewardDelta = rewardIndex.sub(rewardIndexOf[account]);
 		return
-			(shares * (timeStaked) * (rewardDelta)) /
-			(MULTIPLIER) /
-			(STAKING_PERIOD);
+			shares.mul(timeStaked).mul(rewardDelta).div(MULTIPLIER).div(
+				STAKING_PERIOD
+			);
 	}
 
 	function calculateRewardsEarned(
 		address account
 	) external view returns (uint256) {
-		return earned[account] + (_calculateRewards(account));
+		return earned[account].add(_calculateRewards(account));
 	}
 
 	function _updateRewards(address account) internal {
 		uint256 rewards = _calculateRewards(account);
-		earned[account] = earned[account] + (rewards);
+		earned[account] = earned[account].add(rewards);
 		rewardIndexOf[account] = rewardIndex;
 	}
 
 	function stake(uint256 amount) external nonReentrant {
 		_updateRewards(msg.sender);
-		balanceStakedOf[msg.sender] = balanceStakedOf[msg.sender] + (amount);
-		stakingSupply = stakingSupply + (amount);
+		balanceStakedOf[msg.sender] = balanceStakedOf[msg.sender].add(amount);
+		stakingSupply = stakingSupply.add(amount);
 		stakeTimestamp[msg.sender] = block.timestamp;
 		stakingToken.transferFrom(msg.sender, address(this), amount);
 		emit Staked(msg.sender, amount);
@@ -83,8 +86,8 @@ contract BaluniStake is ReentrancyGuard {
 		_updateRewards(msg.sender);
 		uint256 currentBalance = balanceStakedOf[msg.sender];
 		require(currentBalance >= amount, "Insufficient balance to unstake");
-		balanceStakedOf[msg.sender] = currentBalance - (amount);
-		stakingSupply = stakingSupply - (amount);
+		balanceStakedOf[msg.sender] = currentBalance.sub(amount);
+		stakingSupply = stakingSupply.sub(amount);
 		stakingToken.transfer(msg.sender, amount);
 		emit Unstaked(msg.sender, amount);
 	}
