@@ -27,7 +27,6 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     args: [],
     log: true,
     autoMine: true,
-    gasLimit: 8000000,
   });
 
   console.log("router:", router.address);
