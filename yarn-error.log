@@ -1,5 +1,5 @@
 Arguments: 
-  C:\Program Files\nodejs\node.exe C:\Program Files (x86)\Yarn\bin\yarn.js add @uniswap/v4-core
+  C:\Program Files\nodejs\node.exe C:\Program Files (x86)\Yarn\bin\yarn.js add @openzeppelin/hardhat-upgrades
 
 PATH: 
   C:\Users\Utente\.pyenv\pyenv-win\versions\3.7.4;C:\Users\Utente\.pyenv\pyenv-win\versions\3.7.4;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\dotnet\;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Program Files (x86)\Yarn\bin\;C:\Program Files\nodejs\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Users\Utente\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\;C:\Users\Utente\.cargo\bin;C:\Program Files\GitHub CLI\;C:\Users\Utente\.pyenv\pyenv-win\bin;C:\Users\Utente\.pyenv\pyenv-win\shims;C:\Users\Utente\.cargo\bin;C:\Users\Utente\.console-ninja\.bin;C:\Users\Utente\TA-Lib-0.4.28;C:\Users\Utente\AppData\Local\Microsoft\WindowsApps;C:\Users\Utente\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\Utente\AppData\Local\Yarn\bin;C:\Users\Utente\AppData\Roaming\npm;C:\Users\Utente\.dotnet\tools;C:\Users\Utente\miniconda3\condabin;
@@ -14,7 +14,7 @@ Platform:
   win32 x64
 
 Trace: 
-  Error: https://registry.yarnpkg.com/@uniswap%2fv4-core: Not found
+  Error: https://registry.yarnpkg.com/@openzeppelin%2fcontracts-upgradeable-4.7.3: Not found
       at params.callback [as _callback] (C:\Program Files (x86)\Yarn\lib\cli.js:66145:18)
       at self.callback (C:\Program Files (x86)\Yarn\lib\cli.js:140890:22)
       at Request.emit (node:events:514:28)
@@ -78,6 +78,9 @@ npm manifest:
     "dependencies": {
       "@chainlink/contracts": "^0.8.0",
       "@openzeppelin/contracts": "^5.0.2",
+      "@openzeppelin/contracts-upgradeable": "^5.0.2",
+      "@openzeppelin/contracts-upgradeable-4.7.3": "^4.7.3",
+      "@openzeppelin/hardhat-upgrades": "^2.0.2",
       "@typechain/ethers-v6": "^0.5.1",
       "@uniswap/v3-periphery": "^1.4.4",
       "dotenv": "^16.0.3",
@@ -866,6 +869,11 @@ Lockfile:
     version "4.7.3"
     resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.7.3.tgz#f1d606e2827d409053f3e908ba4eb8adb1dd6995"
     integrity sha512-+wuegAMaLcZnLCJIvrVUDzA9z/Wp93f0Dla/4jJvIhijRrPabjQbZe6fWiECLaJyfn5ci9fqf9vTw3xpQOad2A==
+  
+  "@openzeppelin/contracts-upgradeable@^5.0.2":
+    version "5.0.2"
+    resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-5.0.2.tgz#3e5321a2ecdd0b206064356798c21225b6ec7105"
+    integrity sha512-0MmkHSHiW2NRFiT9/r5Lu4eJq5UJ4/tzlOgYXNAIj/ONkQTVnz22pLxDvp4C4uZ9he7ZFvGn3Driptn1/iU7tQ==
   
   "@openzeppelin/contracts-v0.7@npm:@openzeppelin/contracts@v3.4.2":
     version "3.4.2"

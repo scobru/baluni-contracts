@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-
+import { ethers, upgrades } from "hardhat";
 /**
  * Deploys a contract named "YourContract" using the deployer account and
  * constructor arguments set to the deployer address
@@ -8,38 +8,67 @@ import { DeployFunction } from "hardhat-deploy/types";
  * @param hre HardhatRuntimeEnvironment object.
  */
 const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  /*
-    On localhost, the deployer account is the one that comes with Hardhat, which is already funded.
+  /* const BaluniV1AgentFactory = await ethers.getContractFactory("BaluniV1AgentFactory");
+  const agentFactory = await upgrades.deployProxy(BaluniV1AgentFactory, { kind: "uups" });
+  const instanceAgentFactory = await agentFactory?.waitForDeployment(); // Make sure the contract is fully deployed
 
-    When deploying to live networks (e.g `yarn deploy --network goerli`), the deployer account
-    should have sufficient balance to pay for the gas fees for contract creation.
+  console.log("BaluniV1AgentFactory deployed to:", instanceAgentFactory.target);
 
-    You can generate a random account with `yarn generate` which will fill DEPLOYER_PRIVATE_KEY
-    with a random private key in the .env file (then used on hardhat.config.ts)
-    You can run the `yarn account` command to check your balance in every network.
-  */
-  const { deployer } = await hre.getNamedAccounts();
-  const { deploy } = hre.deployments;
+  const BaluniV1Router = await ethers.getContractFactory("BaluniV1Router");
+  const baluniRouter = await upgrades.deployProxy(BaluniV1Router, { kind: "uups" });
+  const instanceRouter = await baluniRouter?.waitForDeployment(); // Make sure the contract is fully deployed
 
-  const router = await deploy("BaluniRouter", {
-    from: deployer,
-    // Contract constructor arguments
-    args: [],
-    log: true,
-    autoMine: true,
-  });
+  console.log("BaluniV1Router deployed to:", instanceRouter.target);
 
-  console.log("router:", router.address);
+  const BaluniV1RewardPool = await ethers.getContractFactory("BaluniV1RewardPool");
+  const baluniRewardPool = await upgrades.deployProxy(BaluniV1RewardPool, [instanceRouter.target], { kind: "uups" });
+  const instanceRewardPool = await baluniRewardPool?.waitForDeployment();
 
-  const testRouter = await deploy("TestBaluniRouter", {
-    from: deployer,
-    // Contract constructor arguments
-    args: [],
-    log: true,
-    autoMine: true,
-  });
+  console.log("BaluniV1Reward deployed to:", instanceRewardPool.target);
 
-  console.log("testRouter:", testRouter.address);
+  const BaluniV1Rebalancer = await ethers.getContractFactory("BaluniV1Rebalancer");
+  const baluniRebalancer = await upgrades.deployProxy(BaluniV1Rebalancer, [instanceRouter.target], { kind: "uups" });
+  const instanceRebalance = await baluniRebalancer?.waitForDeployment();
+
+  console.log("BaluniV1Rebalance deployed to:", instanceRebalance.target);
+
+  console.log("Set Whitelist in Reward Pool");
+  await instanceRewardPool.setWhitelist(instanceRouter.target, true);
+
+  console.log("Set Agent Factory in Router");
+  await instanceRouter.changeAgentFactory(instanceAgentFactory.target); */
+
+  /// Upgrades -----------------------------------------------------------------------
+
+  const BaluniV1AgentFactory = await ethers.getContractFactory("BaluniV1AgentFactory");
+  const agentFactory = await upgrades.upgradeProxy("0x0fD4f6628D9c51554E01A81DacE290AA6E26Cff5", BaluniV1AgentFactory);
+  const instanceAgentFactory = await agentFactory?.waitForDeployment();
+  console.log("BaluniV1AgentFactory upgraded to:", instanceAgentFactory.target);
+  const changeImpl = await instanceAgentFactory.changeImplementation();
+  await changeImpl.wait();
+  console.log("BaluniV1AgentFactory implementation changed");
+  // const { deployer } = await hre.getNamedAccounts();
+  // const { deploy } = hre.deployments;
+
+  // const router = await deploy("BaluniRouter", {
+  //   from: deployer,
+  //   // Contract constructor arguments
+  //   args: [],
+  //   log: true,
+  //   autoMine: true,
+  // });
+
+  // console.log("router:", router.address);
+
+  // const testRouter = await deploy("TestBaluniRouter", {
+  //   from: deployer,
+  //   // Contract constructor arguments
+  //   args: [],
+  //   log: true,
+  //   autoMine: true,
+  // });
+
+  // console.log("testRouter:", testRouter.address);
 
   /* const oracle = await deploy("Oracle", {
     from: deployer,

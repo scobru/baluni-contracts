@@ -9,9 +9,10 @@ import "solidity-coverage";
 import "@nomicfoundation/hardhat-verify";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
+import "@openzeppelin/hardhat-upgrades";
 
 // If not set, it uses ours Alchemy's default API key.
-// You can get your own at https://dashboard.alchemyapi.io
+// You can get your own at https://yarndashboard.alchemyapi.io
 const providerApiKey = process.env.ALCHEMY_API_KEY || "oKxs-03sij-U_N0iOlrSsZFr29-IqbuF";
 // If not set, it uses the hardhat account 0 private key.
 const deployerPrivateKey =
@@ -26,7 +27,7 @@ const config: HardhatUserConfig = {
       optimizer: {
         enabled: true,
         // https://docs.soliditylang.org/en/latest/using-the-compiler.html#optimizer-options
-        runs: 400,
+        runs: 200,
       },
       viaIR: true,
       evmVersion: "london",
