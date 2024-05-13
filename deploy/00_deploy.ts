@@ -8,45 +8,76 @@ import { ethers, upgrades } from "hardhat";
  * @param hre HardhatRuntimeEnvironment object.
  */
 const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  /* const BaluniV1AgentFactory = await ethers.getContractFactory("BaluniV1AgentFactory");
-  const agentFactory = await upgrades.deployProxy(BaluniV1AgentFactory, { kind: "uups" });
-  const instanceAgentFactory = await agentFactory?.waitForDeployment(); // Make sure the contract is fully deployed
+  const { deployer } = await hre.getNamedAccounts();
 
-  console.log("BaluniV1AgentFactory deployed to:", instanceAgentFactory.target);
+  // const accounts = await hre.getUnnamedAccounts();
+  // const signer = await ethers.provider.getSigner(); // ottieni il signer
 
-  const BaluniV1Router = await ethers.getContractFactory("BaluniV1Router");
-  const baluniRouter = await upgrades.deployProxy(BaluniV1Router, { kind: "uups" });
-  const instanceRouter = await baluniRouter?.waitForDeployment(); // Make sure the contract is fully deployed
+  // const BaluniV1AgentFactory = await ethers.getContractFactory("BaluniV1AgentFactory");
+  // const agentFactory = await upgrades.deployProxy(BaluniV1AgentFactory, { kind: "uups" });
 
-  console.log("BaluniV1Router deployed to:", instanceRouter.target);
+  // const instanceAgentFactory = await agentFactory?.waitForDeployment();
+  // console.log("BaluniV1AgentFactory deployed to:", instanceAgentFactory.target);
 
-  const BaluniV1RewardPool = await ethers.getContractFactory("BaluniV1RewardPool");
-  const baluniRewardPool = await upgrades.deployProxy(BaluniV1RewardPool, [instanceRouter.target], { kind: "uups" });
-  const instanceRewardPool = await baluniRewardPool?.waitForDeployment();
+  // const BaluniV1Router = await ethers.getContractFactory("BaluniV1Router");
+  // const baluniRouter = await upgrades.deployProxy(BaluniV1Router, { kind: "uups" });
 
-  console.log("BaluniV1Reward deployed to:", instanceRewardPool.target);
+  // const instanceRouter = await baluniRouter?.waitForDeployment();
+  // console.log("BaluniV1Router deployed to:", instanceRouter.target);
 
-  const BaluniV1Rebalancer = await ethers.getContractFactory("BaluniV1Rebalancer");
-  const baluniRebalancer = await upgrades.deployProxy(BaluniV1Rebalancer, [instanceRouter.target], { kind: "uups" });
+  // const BaluniV1RewardPool = await ethers.getContractFactory("BaluniV1RewardPool");
+  // const baluniRewardPool = await upgrades.deployProxy(BaluniV1RewardPool, [instanceRouter.target], { kind: "uups" });
+
+  // const instanceRewardPool = await baluniRewardPool?.waitForDeployment();
+  // console.log("BaluniV1Reward deployed to:", instanceRewardPool.target);
+
+  /* const BaluniV1Rebalancer = await ethers.getContractFactory("BaluniV1Rebalancer");
+  const baluniRebalancer = await upgrades.deployProxy(
+    BaluniV1Rebalancer,
+    ["0xDf316b04aA2c05E02070FfaF4EB1E8E47C8E3176"],
+    { kind: "uups" },
+  );
+
   const instanceRebalance = await baluniRebalancer?.waitForDeployment();
+  console.log("BaluniV1Rebalance deployed to:", instanceRebalance.target); */
 
-  console.log("BaluniV1Rebalance deployed to:", instanceRebalance.target);
+  // console.log("Change Router in Agent Factory");
 
-  console.log("Set Whitelist in Reward Pool");
-  await instanceRewardPool.setWhitelist(instanceRouter.target, true);
+  // await instanceAgentFactory.changeRouter(instanceRouter.target);
 
-  console.log("Set Agent Factory in Router");
-  await instanceRouter.changeAgentFactory(instanceAgentFactory.target); */
+  // console.log("Set Whitelist in Reward Pool");
+  // await instanceRewardPool.setWhitelist(instanceRouter.target, true);
+
+  // console.log("Set Agent Factory in Router");
+  // await instanceRouter.changeAgentFactory(instanceAgentFactory.target);
+
+  // console.log("Set RewardPool in Router");
+  // await instanceRouter.changeRewardPool(instanceRewardPool.target);
 
   /// Upgrades -----------------------------------------------------------------------
 
-  const BaluniV1AgentFactory = await ethers.getContractFactory("BaluniV1AgentFactory");
-  const agentFactory = await upgrades.upgradeProxy("0x0fD4f6628D9c51554E01A81DacE290AA6E26Cff5", BaluniV1AgentFactory);
+  /* const BaluniV1AgentFactory = await ethers.getContractFactory("BaluniV1AgentFactory");
+  const agentFactory = await upgrades.upgradeProxy("0x48c3C00d1E181326da2AA4ea372882dB012F2DA0", BaluniV1AgentFactory);
   const instanceAgentFactory = await agentFactory?.waitForDeployment();
+
   console.log("BaluniV1AgentFactory upgraded to:", instanceAgentFactory.target);
-  const changeImpl = await instanceAgentFactory.changeImplementation();
-  await changeImpl.wait();
-  console.log("BaluniV1AgentFactory implementation changed");
+  await instanceAgentFactory.changeImplementation(); */
+
+  /* const BaluniV1Router = await ethers.getContractFactory("BaluniV1Router");
+  const router = await upgrades.upgradeProxy("0xDf316b04aA2c05E02070FfaF4EB1E8E47C8E3176", BaluniV1Router);
+  const instanceRouter = await router?.waitForDeployment();
+  console.log("BaluniV1Router upgraded to:", instanceRouter.target); */
+
+  const BaluniV1Rebalancer = await ethers.getContractFactory("BaluniV1Rebalancer");
+  const rebalancer = await upgrades.upgradeProxy("0x171af33387b8eA83702E9C895f374EDE8C7034CD", BaluniV1Rebalancer);
+  const instanceRouter = await rebalancer?.waitForDeployment();
+  console.log("BaluniV1Rebalancer upgraded to:", rebalancer.target);
+
+  /* const BaluniV1RewardPool = await ethers.getContractFactory("BaluniV1RewardPool");
+  const rewardPool = await upgrades.upgradeProxy("0x3Faa0B1703CB7f50E5333049d540F7E9FcEb0590", BaluniV1RewardPool);
+  const instanceRewardPool = await rewardPool?.waitForDeployment();
+  console.log("BaluniV1RewardPool upgraded to:", instanceRewardPool.target); */
+
   // const { deployer } = await hre.getNamedAccounts();
   // const { deploy } = hre.deployments;
 

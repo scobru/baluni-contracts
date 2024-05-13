@@ -28,21 +28,28 @@ contract BaluniV1Agent {
     bytes data;
   }
 
-  constructor() {
-    factory = msg.sender;
+  constructor(address _factory) {
+    factory = _factory;
   }
 
-  /**
-   * @dev Initializes a new instance of the Agent contract.
-   * @param _owner The address of the contract owner.
-   * @param _router The address of the router contract.
-   * @notice Only the router contract can deploy this contract.
-   */
   function initialize(address _owner, address _router) external {
     require(owner == address(0), 'Already initialized');
     owner = _owner;
     router = _router;
+    factory = msg.sender;
   }
+
+  // /**
+  //  * @dev Initializes a new instance of the Agent contract.
+  //  * @param _owner The address of the contract owner.
+  //  * @param _router The address of the router contract.
+  //  * @notice Only the router contract can deploy this contract.
+  //  */
+  // function initialize(address _owner, address _router) external {
+  //   require(owner == address(0), 'Already initialized');
+  //   owner = _owner;
+  //   router = _router;
+  // }
 
   modifier onlyRouter() {
     require(msg.sender == router, 'Callable only by the router');

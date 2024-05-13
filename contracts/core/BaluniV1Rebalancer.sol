@@ -73,11 +73,11 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     uint256 totalValue;
     address agentAddress = baluniRouter.getAgentAddress(msg.sender);
 
-    Call[] memory callDatasSell = new Call[](assets.length * 2);
-    Call[] memory callDatasBuy = new Call[](assets.length * 2);
+    Call[] memory callDatasSell = new Call[](0);
+    Call[] memory callDatasBuy = new Call[](0);
 
-    Call[] memory approvalsSell = new Call[](assets.length * 2);
-    Call[] memory approvalsBuy = new Call[](assets.length * 2);
+    Call[] memory approvalsSell = new Call[](0);
+    Call[] memory approvalsBuy = new Call[](0);
 
     for (uint256 i; i < assets.length; i++) {
       uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(msg.sender);

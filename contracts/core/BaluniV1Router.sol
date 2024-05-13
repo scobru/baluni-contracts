@@ -238,6 +238,10 @@ contract BaluniV1Router is
     emit Burn(msg.sender, burnAmount);
   }
 
+  function getAgentAddress(address _user) external returns (address) {
+    return agentFactory.getAgentAddress(_user);
+  }
+
   function mintUSDC(uint256 balAmountToMint) public nonReentrant {
     uint256 totalUSDValuation = _totalValuation();
     uint256 totalBalSupply = totalSupply();
@@ -258,7 +262,7 @@ contract BaluniV1Router is
     uint256 usdcAmountAfterFee = _calculateNetAmountAfterFee(usdcRequired);
     uint256 usdcToSend = usdcRequired - usdcAmountAfterFee;
 
-    approve(address(rewardPool), usdcToSend / 1e12);
+    IERC20Upgradeable(USDC).approve(address(rewardPool), usdcToSend / 1e12);
     rewardPool.notifyRewardAmount(address(USDC), usdcToSend / 1e12, 30 days);
   }
 
@@ -300,7 +304,6 @@ contract BaluniV1Router is
     uint256 toSend = required - amountAfterFee;
 
     IERC20Upgradeable(asset).approve(address(rewardPool), toSend);
-
     rewardPool.notifyRewardAmount(address(USDC), toSend, 30 days);
   }
 

@@ -4,8 +4,9 @@ pragma solidity ^0.8.24;
 
 import {ERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import {SafeERC20Upgradeable, IERC20Upgradeable, IERC20PermitUpgradeable} from '@openzeppelin/contracts-upgradeable-4.7.3/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import {SafeERC20Upgradeable, IERC20Upgradeable, IERC20PermitUpgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import {IERC20MetadataUpgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
 
 contract BaluniV1RewardPool is ERC20Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
   using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -263,6 +264,9 @@ contract BaluniV1RewardPool is ERC20Upgradeable, OwnableUpgradeable, UUPSUpgrade
       leftover = remaining * rewardData.rate;
     }
 
+    uint256 factor = 10 ** 18 - IERC20MetadataUpgradeable(_reward).decimals();
+    _amount = _amount * factor;
+    rewardData.rate = (_amount + leftover) / _duration;
     rewardData.rate = (_amount + leftover) / _duration;
     rewardData.lastUpdateTime = block.timestamp;
     rewardData.periodFinish = block.timestamp + _duration;
@@ -394,9 +398,18 @@ contract BaluniV1RewardPool is ERC20Upgradeable, OwnableUpgradeable, UUPSUpgrade
   /// @return earnedAmount Amount of reward earned by the user
   function _earned(address _user, address _reward) private view returns (uint256 earnedAmount) {
     RewardInfo storage rewardData = _getRewardInfo(_reward);
+    uint256 decimals = IERC20MetadataUpgradeable(_reward).decimals();
+    uint256 factor = 10 ** (18 - decimals);
+
     earnedAmount =
       rewardData.earned[_user] +
       ((balanceOf(_user) * (_rewardPerToken(_reward) - rewardData.userRewardPerTokenPaid[_user])) / 1e18);
+
+    if (decimals < 18) {
+      return earnedAmount / factor;
+    } else {
+      earnedAmount;
+    }
   }
 
   /// @dev Return the most current reward information for a reward
