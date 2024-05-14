@@ -404,7 +404,7 @@ contract BaluniV1Router is
     _mint(msg.sender, balAmountToMint);
     emit Mint(msg.sender, balAmountToMint);
 
-    uint256 fee = (usdcRequired * _BPS_FEE) / _BPS_BASE;
+    uint256 fee = ((usdcRequired / 1e12) * _BPS_FEE) / _BPS_BASE;
     IERC20Upgradeable(address(USDC)).transfer(getTreasury(), fee);
   }
 

@@ -346,7 +346,7 @@ contract BaluniV1Rebalancer is
     address sender
   ) external view override returns (RebalanceType) {
     require(
-      IERC20Upgradeable(address(baluniRouter)).balanceOf(sender) > 1 ether,
+      IERC20Upgradeable(address(baluniRouter)).balanceOf(sender) >= 1 ether,
       'You need to hold at least 1 BALUNI'
     );
     uint256 len = assets.length;

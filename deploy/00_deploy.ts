@@ -50,6 +50,15 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // console.log("Set Agent Factory in Router");
   // await instanceRouter.changeAgentFactory(instanceAgentFactory.target);
 
+  // const BaluniV1StablePool = await ethers.getContractFactory("BaluniV1StablePool");
+  // const baluniV1StablePool = await upgrades.deployProxy(
+  //   BaluniV1StablePool,
+  //   [oracle, "0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC", USDT, USDC],
+  //   { kind: "uups" },
+  // );
+  // const instanceStablePool = await baluniV1StablePool?.waitForDeployment();
+  // console.log("BaluniV1tablePool deployed to:", instanceStablePool.target);
+
   /// Upgrades -----------------------------------------------------------------------
   // const BaluniV1AgentFactory = await ethers.getContractFactory("BaluniV1AgentFactory");
   // const agentFactory = await upgrades.upgradeProxy("0x48c3C00d1E181326da2AA4ea372882dB012F2DA0", BaluniV1AgentFactory);
@@ -60,22 +69,22 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // const router = await upgrades.upgradeProxy("0xa77BF40309CC7434Bf622641A4E40E1aBbe397F0", BaluniV1Router);
   // const instanceRouter = await router?.waitForDeployment();
   // console.log("BaluniV1Router upgraded to:", instanceRouter.target);
-  // const BaluniV1Rebalancer = await ethers.getContractFactory("BaluniV1Rebalancer");
-  // const rebalancer = await upgrades.upgradeProxy("0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC", BaluniV1Rebalancer);
-  // const instanceRebalancer = await rebalancer?.waitForDeployment();
-  // console.log("BaluniV1Rebalancer upgraded to:", instanceRebalancer.target);
+  const BaluniV1Rebalancer = await ethers.getContractFactory("BaluniV1Rebalancer");
+  const rebalancer = await upgrades.upgradeProxy("0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC", BaluniV1Rebalancer);
+  const instanceRebalancer = await rebalancer?.waitForDeployment();
+  console.log("BaluniV1Rebalancer upgraded to:", instanceRebalancer.target);
 
-  const baluniStablePool = await deploy("BaluniV1StablePool", {
-    from: deployer,
-    // Contract constructor arguments
-    args: [oracle, "0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC", USDT, USDC],
-    log: true,
-    // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
-    // automatically mining the contract deployment transaction. There is no effect on live networks.
-    autoMine: true,
-  });
+  // const baluniStablePool = await deploy("BaluniV1StablePool", {
+  //   from: deployer,
+  //   // Contract constructor arguments
+  //   args: [oracle, "0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC", USDT, USDC],
+  //   log: true,
+  //   // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
+  //   // automatically mining the contract deployment transaction. There is no effect on live networks.
+  //   autoMine: true,
+  // });
 
-  console.log("baluniStablePool:", baluniStablePool.address);
+  // console.log("baluniStablePool:", baluniStablePool.address);
 
   // Others ---------------------------------------------------------------------------------
 
