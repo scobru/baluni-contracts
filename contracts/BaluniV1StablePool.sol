@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: GNU AGPLv3
 pragma solidity 0.8.25;
 
-import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import './interfaces/IBaluniV1Rebalancer.sol';
-import './interfaces/IOracle.sol';
 
-abstract contract BaluniV1StablePool is
-  ERC20Upgradeable,
-  ReentrancyGuardUpgradeable,
-  IOracle
-{
-  using SafeERC20Upgradeable for IERC20Upgradeable;
+interface IOracle {
+  function getRate(
+    IERC20 srcToken,
+    IERC20 dstToken,
+    bool useWrappers
+  ) external view returns (uint256 weightedRate);
+}
+
+contract BaluniV1StablePool is ERC20, ReentrancyGuard {
+  using SafeERC20 for IERC20;
 
   IBaluniV1Rebalancer public rebalancer;
-  IERC20Upgradeable public asset1;
-  IERC20Upgradeable public asset2;
+  IERC20 public asset1;
+  IERC20 public asset2;
   IOracle public oracle;
 
   uint256 public constant SWAP_FEE_BPS = 30;
@@ -28,17 +31,14 @@ abstract contract BaluniV1StablePool is
     address _rebalancer,
     address _asset1,
     address _asset2
-  ) {
-    __ERC20_init('Baluni StableLP', 'BALUNI-SLP');
-    __ReentrancyGuard_init();
-
+  ) ERC20('Baluni StableLP', 'BALUNI-SLP') {
     rebalancer = IBaluniV1Rebalancer(_rebalancer);
-    asset1 = IERC20Upgradeable(_asset1);
-    asset2 = IERC20Upgradeable(_asset2);
+    asset1 = IERC20(_asset1);
+    asset2 = IERC20(_asset2);
     oracle = IOracle(_oracle);
 
-    asset1.safeApprove(address(rebalancer), type(uint256).max);
-    asset2.safeApprove(address(rebalancer), type(uint256).max);
+    asset1.approve(address(rebalancer), type(uint256).max);
+    asset2.approve(address(rebalancer), type(uint256).max);
   }
 
   function calculateReceivedAmount(
@@ -47,15 +47,11 @@ abstract contract BaluniV1StablePool is
     uint256 amountAfterFee
   ) public view returns (uint256) {
     // Getting rate from the oracle
-    uint256 rate = oracle.getRate(
-      IERC20Upgradeable(fromToken),
-      IERC20Upgradeable(toToken),
-      true
-    );
+    uint256 rate = oracle.getRate(IERC20(fromToken), IERC20(toToken), true);
 
     // Adjusting for token decimals
-    uint8 fromDecimals = IERC20MetadataUpgradeable(fromToken).decimals();
-    uint8 toDecimals = IERC20MetadataUpgradeable(toToken).decimals();
+    uint8 fromDecimals = IERC20Metadata(fromToken).decimals();
+    uint8 toDecimals = IERC20Metadata(toToken).decimals();
 
     // Calculate received amount considering the decimals
     uint256 receivedAmount;
@@ -87,11 +83,7 @@ abstract contract BaluniV1StablePool is
     require(fromToken != toToken, 'Cannot swap the same token');
     require(amount > 0, 'Amount must be greater than zero');
 
-    IERC20Upgradeable(fromToken).safeTransferFrom(
-      msg.sender,
-      address(this),
-      amount
-    );
+    IERC20(fromToken).safeTransferFrom(msg.sender, address(this), amount);
 
     uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
     uint256 amountAfterFee = amount - fee;
@@ -102,7 +94,7 @@ abstract contract BaluniV1StablePool is
       amountAfterFee
     );
 
-    IERC20Upgradeable(toToken).safeTransfer(msg.sender, receivedAmount);
+    IERC20(toToken).safeTransfer(msg.sender, receivedAmount);
   }
 
   function provideLiquidity(
@@ -150,12 +142,12 @@ abstract contract BaluniV1StablePool is
 
   function calculatePoolValue() internal view returns (uint256) {
     uint256 totalAsset1 = asset1.balanceOf(address(this)) *
-      (10 ** (18 - IERC20MetadataUpgradeable(address(asset1)).decimals()));
+      (10 ** (18 - IERC20Metadata(address(asset1)).decimals()));
     uint256 totalAsset2ValueInAsset1 = calculateReceivedAmount(
       address(asset2),
       address(asset1),
       asset2.balanceOf(address(this))
-    ) * (10 ** (18 - IERC20MetadataUpgradeable(address(asset1)).decimals()));
+    ) * (10 ** (18 - IERC20Metadata(address(asset1)).decimals()));
 
     return totalAsset1 + totalAsset2ValueInAsset1;
   }
@@ -164,10 +156,10 @@ abstract contract BaluniV1StablePool is
     uint256 value,
     address asset
   ) internal view returns (uint256) {
-    uint256 rate = oracle.getRate(IERC20Upgradeable(asset), asset1, true); // Assume rate is from asset to asset1
+    uint256 rate = oracle.getRate(IERC20(asset), asset1, true); // Assume rate is from asset to asset1
     uint256 decimalsDiff = 18 +
-      IERC20MetadataUpgradeable(address(asset1)).decimals() -
-      IERC20MetadataUpgradeable(asset).decimals();
+      IERC20Metadata(address(asset1)).decimals() -
+      IERC20Metadata(asset).decimals();
     return (value * 10 ** decimalsDiff) / rate;
   }
 

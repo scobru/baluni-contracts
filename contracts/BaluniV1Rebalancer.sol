@@ -103,33 +103,13 @@ contract BaluniV1Rebalancer is
     address newImplementation
   ) internal override onlyOwner {}
 
-  /**
-   * @dev Returns the valuation of a given amount of a token.
-   * @param amount The amount of the token.
-   * @param token The address of the token.
-   * @return The valuation of the token amount.
-   */
-  function getTokenValuation(
-    uint256 amount,
-    address token
-  ) internal view returns (uint256) {
-    return baluniRouter.tokenValuation(amount, token);
-  }
-
-  /**
-   * @dev Rebalances the assets in the contract based on the specified weights.
-   * @param assets An array of asset addresses.
-   * @param weights An array of weights corresponding to the assets.
-   * @param receiver The address that will receive the rebalanced assets.
-   * @return A boolean indicating the success of the rebalance operation.
-   */
-  function rebalance(
+  function adjustWeights(
     address[] memory assets,
     uint256[] memory weights,
+    uint256 totalValue,
     address sender,
     address receiver
-  ) external override returns (bool) {
-    uint256 totalValue;
+  ) private {
     uint256 overweightVaultsLength;
     uint256 underweightVaultsLength;
     uint256 overweightAmount;
@@ -139,12 +119,6 @@ contract BaluniV1Rebalancer is
     uint256 totalActiveWeight;
     uint256 amountOut;
     bool overweight;
-
-    for (uint256 i; i < assets.length; i++) {
-      uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(sender);
-      uint256 _tokenValuation = getTokenValuation(balance, assets[i]);
-      totalValue += _tokenValuation;
-    }
 
     uint256[] memory overweightVaults = new uint256[](assets.length);
     uint256[] memory overweightAmounts = new uint256[](assets.length);
@@ -324,6 +298,36 @@ contract BaluniV1Rebalancer is
         }
       }
     }
+  }
+
+  /**
+   * @dev Returns the valuation of a given amount of a token.
+   * @param amount The amount of the token.
+   * @param token The address of the token.
+   * @return The valuation of the token amount.
+   */
+  function getTokenValuation(
+    uint256 amount,
+    address token
+  ) internal view returns (uint256) {
+    return baluniRouter.tokenValuation(amount, token);
+  }
+
+  /**
+   * @dev Rebalances the assets in the contract based on the specified weights.
+   * @param assets An array of asset addresses.
+   * @param weights An array of weights corresponding to the assets.
+   * @param receiver The address that will receive the rebalanced assets.
+   * @return A boolean indicating the success of the rebalance operation.
+   */
+  function rebalance(
+    address[] memory assets,
+    uint256[] memory weights,
+    address sender,
+    address receiver
+  ) external override returns (bool) {
+    uint256 totalValue = calculateTotalValue(assets);
+    adjustWeights(assets, weights, totalValue, sender, receiver);
     return true;
   }
 
@@ -345,6 +349,11 @@ contract BaluniV1Rebalancer is
       IERC20Upgradeable(address(baluniRouter)).balanceOf(sender) > 1 ether,
       'You need to hold at least 1 BALUNI'
     );
+    uint256 len = assets.length;
+
+    uint256 totalValue = calculateTotalValue(assets);
+    bool overweight;
+
     uint256 overweightVaultsLength;
     uint256 underweightVaultsLength;
     uint256 overweightAmount;
@@ -352,27 +361,18 @@ contract BaluniV1Rebalancer is
     uint256 targetWeight;
     uint256 currentWeight;
     uint256 totalActiveWeight;
-    bool overweight;
     uint256 finalUsdBalance;
-    uint256 totalValue;
 
-    for (uint256 i; i < assets.length; i++) {
-      uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(sender);
-      totalValue += getTokenValuation(balance, address(assets[i]));
-    }
+    uint256[] memory overweightVaults = new uint256[](len * 2);
+    uint256[] memory overweightAmounts = new uint256[](len * 2);
+    uint256[] memory underweightVaults = new uint256[](len * 2);
+    uint256[] memory underweightAmounts = new uint256[](len * 2);
 
-    uint256[] memory overweightVaults = new uint256[](assets.length * 2);
-    uint256[] memory overweightAmounts = new uint256[](assets.length * 2);
-    uint256[] memory underweightVaults = new uint256[](assets.length * 2);
-    uint256[] memory underweightAmounts = new uint256[](assets.length * 2);
-
-    for (uint256 i = 0; i < assets.length; i++) {
+    for (uint256 i = 0; i < len; i++) {
       if (assets[i] == address(USDC)) continue;
-
       uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(sender);
       uint256 decimals = IERC20MetadataUpgradeable(assets[i]).decimals();
       uint256 totalTokensValuation = getTokenValuation(balance, assets[i]);
-
       targetWeight = weights[i];
       currentWeight = (totalTokensValuation * (10000)) / (totalValue);
       overweight = currentWeight > targetWeight;
@@ -385,7 +385,9 @@ contract BaluniV1Rebalancer is
         assets[i]
       );
 
-      if (overweight && overweightPercent > limit) {
+      uint256 _limit = limit;
+
+      if (overweight && overweightPercent > _limit) {
         overweightAmount = (overweightPercent * (totalValue)) / (10000);
         finalUsdBalance += overweightAmount;
 
@@ -396,7 +398,7 @@ contract BaluniV1Rebalancer is
         overweightVaults[overweightVaultsLength] = i;
         overweightAmounts[overweightVaultsLength] = overweightAmount;
         overweightVaultsLength++;
-      } else if (!overweight && overweightPercent > limit) {
+      } else if (!overweight && overweightPercent > _limit) {
         totalActiveWeight += overweightPercent;
         overweightAmount = overweightPercent;
         // overweightAmount = overweightPercent.mul(totalValue).div(10000);
@@ -601,5 +603,22 @@ contract BaluniV1Rebalancer is
     uint256 _BPS_FEE = baluniRouter.getBpsFee();
     uint256 amountInWithFee = (_amount * (_BPS_BASE - (_BPS_FEE))) / _BPS_BASE;
     return amountInWithFee;
+  }
+
+  /**
+   * @dev Calculates the total value of the assets held by the caller.
+   * @param assets An array of asset addresses.
+   * @return The total value of the assets held by the caller.
+   */
+  function calculateTotalValue(
+    address[] memory assets
+  ) private view returns (uint256) {
+    uint256 totalValue = 0;
+    for (uint256 i = 0; i < assets.length; i++) {
+      uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(msg.sender);
+      uint256 tokenValue = getTokenValuation(balance, assets[i]);
+      totalValue += tokenValue;
+    }
+    return totalValue;
   }
 }
