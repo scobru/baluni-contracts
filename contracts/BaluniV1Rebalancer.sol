@@ -413,9 +413,9 @@ contract BaluniV1Rebalancer is
     underweightVaults = _resize(underweightVaults, underweightVaultsLength);
     underweightAmounts = _resize(underweightAmounts, underweightVaultsLength);
 
-    if (overweightVaultsLength > 1) {
+    if (overweightVaultsLength > 0) {
       return RebalanceType.Overweight;
-    } else if (underweightVaultsLength > 1) {
+    } else if (underweightVaultsLength > 0) {
       return RebalanceType.Underweight;
     } else {
       return RebalanceType.NoRebalance;
