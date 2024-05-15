@@ -52,27 +52,51 @@ contract BaluniV1AgentFactory is OwnableUpgradeable, UUPSUpgradeable {
 
   event AgentCreated(address user, address agent);
 
+  /**
+   * @dev Changes the implementation of the BaluniV1Agent contract.
+   * Only the contract owner can call this function.
+   * Creates a new instance of BaluniV1Agent and updates the implementation address.
+   */
   function changeImplementation() external onlyOwner {
     BaluniV1Agent newAgent = new BaluniV1Agent(address(this));
     implementation = address(newAgent);
   }
 
-  function initialize() public initializer {
-    __Ownable_init();
-    __UUPSUpgradeable_init();
+    /**
+     * @dev Initializes the contract by calling the initializers of the parent contracts.
+     */
+    function initialize() public initializer {
+      __Ownable_init();
+      __UUPSUpgradeable_init();
 
-    BaluniV1Agent newAgent = new BaluniV1Agent(address(this));
-    implementation = address(newAgent);
-  }
+      // Create a new BaluniV1Agent instance and set it as the implementation address
+      BaluniV1Agent newAgent = new BaluniV1Agent(address(this));
+      implementation = address(newAgent);
+    }
 
-  function changeRouter(address _router) external onlyOwner {
-    router = _router;
-  }
+    /**
+     * @dev Changes the router address.
+     * @param _router The new router address.
+     */
+    function changeRouter(address _router) external onlyOwner {
+      router = _router;
+    }
+  
 
+  /**
+   * @dev Internal function to authorize an upgrade to a new implementation contract.
+   * @param newImplementation The address of the new implementation contract.
+   */
   function _authorizeUpgrade(
     address newImplementation
   ) internal override onlyOwner {}
 
+  /**
+   * @dev Internal function to create a new BaluniV1Agent contract instance.
+   * @param salt The salt value used for deterministic cloning.
+   * @param user The address of the user for whom the agent is being created.
+   * @return The address of the newly created BaluniV1Agent contract instance.
+   */
   function _createAgent(
     bytes32 salt,
     address user
@@ -82,10 +106,20 @@ contract BaluniV1AgentFactory is OwnableUpgradeable, UUPSUpgradeable {
     return BaluniV1Agent(clone);
   }
 
+  /**
+   * @dev Retrieves the address of the BaluniV1Agent contract associated with a user.
+   * @param user The address of the user.
+   * @return The address of the BaluniV1Agent contract associated with the user.
+   */
   function getAgentAddress(address user) public view returns (address) {
     return address(userAgents[user]);
   }
 
+  /**
+   * @dev Returns the address of an existing agent for the given user, or creates a new agent if one doesn't exist.
+   * @param user The address of the user.
+   * @return The address of the agent.
+   */
   function getOrCreateAgent(address user) external returns (address) {
     require(address(this) != address(0), 'Agent factory not set');
     bytes32 salt = keccak256(abi.encodePacked(user));
@@ -104,6 +138,11 @@ contract BaluniV1AgentFactory is OwnableUpgradeable, UUPSUpgradeable {
     return address(userAgents[user]);
   }
 
+  /**
+   * @dev Checks if the given address is a contract.
+   * @param _addr The address to check.
+   * @return A boolean indicating whether the address is a contract or not.
+   */
   function isContract(address _addr) private view returns (bool) {
     uint32 size;
     assembly {
@@ -112,3 +151,4 @@ contract BaluniV1AgentFactory is OwnableUpgradeable, UUPSUpgradeable {
     return size > 0;
   }
 }
+

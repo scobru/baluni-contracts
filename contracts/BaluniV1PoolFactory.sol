@@ -19,6 +19,14 @@ contract BaluniV1PoolFactory {
     address rebalancer
   );
 
+  /**
+   * @dev Creates a new pool with the specified parameters.
+   * @param oracle The address of the oracle contract.
+   * @param rebalancer The address of the rebalancer contract.
+   * @param asset1 The address of the first asset.
+   * @param asset2 The address of the second asset.
+   * @return The address of the newly created pool.
+   */
   function createPool(address oracle, address rebalancer, address asset1, address asset2) external returns (address) {
     require(oracle != address(0), 'Oracle address cannot be zero');
     require(rebalancer != address(0), 'Rebalancer address cannot be zero');
@@ -42,14 +50,27 @@ contract BaluniV1PoolFactory {
     return address(newPool);
   }
 
+  /**
+   * @dev Returns an array of all pools created by the factory.
+   * @return An array of BaluniV1Pool instances.
+   */
   function getAllPools() external view returns (BaluniV1Pool[] memory) {
     return allPools;
   }
 
+  /**
+   * @dev Returns the total number of pools created by the factory.
+   * @return The number of pools.
+   */
   function getPoolsCount() external view returns (uint256) {
     return allPools.length;
   }
 
+  /**
+   * @dev Retrieves the assets of a pool.
+   * @param poolAddress The address of the pool.
+   * @return The addresses of the assets in the pool.
+   */
   function getPoolAssets(address poolAddress) external view returns (address, address) {
     BaluniV1Pool pool = BaluniV1Pool(poolAddress);
     return (address(pool.asset1()), address(pool.asset2()));

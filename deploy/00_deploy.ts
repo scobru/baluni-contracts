@@ -67,23 +67,23 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // console.log("BaluniV1AgentFactory upgraded to:", instanceAgentFactory.target);
   // await instanceAgentFactory.changeImplementation();
 
-  // const BaluniV1Router = await ethers.getContractFactory("BaluniV1Router");
-  // const router = await upgrades.upgradeProxy("0xa77BF40309CC7434Bf622641A4E40E1aBbe397F0", BaluniV1Router);
-  // const instanceRouter = await router?.waitForDeployment();
-  // console.log("BaluniV1Router upgraded to:", instanceRouter.target);
+  const BaluniV1Router = await ethers.getContractFactory("BaluniV1Router");
+  const router = await upgrades.upgradeProxy("0xa77BF40309CC7434Bf622641A4E40E1aBbe397F0", BaluniV1Router);
+  const instanceRouter = await router?.waitForDeployment();
+  console.log("BaluniV1Router upgraded to:", instanceRouter.target);
 
   // const BaluniV1Rebalancer = await ethers.getContractFactory("BaluniV1Rebalancer");
   // const rebalancer = await upgrades.upgradeProxy("0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC", BaluniV1Rebalancer);
   // const instanceRebalancer = await rebalancer?.waitForDeployment();
   // console.log("BaluniV1Rebalancer upgraded to:", instanceRebalancer.target);
 
-  const BaluniV1StablePool = await ethers.getContractFactory("BaluniV1Pool");
-  const baluniStablePool = await upgrades.upgradeProxy(
-    "0x56fDcF3B78d3dbC06e90b369F95abe0008c1cC5E",
-    BaluniV1StablePool,
-  );
-  const instanceStablePool = await baluniStablePool?.waitForDeployment();
-  console.log("BaluniV1StablePool upgraded to:", instanceStablePool.target);
+  // const BaluniV1StablePool = await ethers.getContractFactory("BaluniV1Pool");
+  // const baluniStablePool = await upgrades.upgradeProxy(
+  //   "0x56fDcF3B78d3dbC06e90b369F95abe0008c1cC5E",
+  //   BaluniV1StablePool,
+  // );
+  // const instanceStablePool = await baluniStablePool?.waitForDeployment();
+  // console.log("BaluniV1StablePool upgraded to:", instanceStablePool.target);
 
   // const baluniStablePool = await deploy("BaluniV1StablePool", {
   //   from: deployer,

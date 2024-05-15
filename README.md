@@ -71,8 +71,10 @@ Fees collected from various operations are deposited into the router contract. T
 By offering an advanced rebalancing algorithm, efficient fee management, and a robust system for minting and burning tokens, the Baluni protocol provides users with a comprehensive toolset for managing their ERC20 token portfolios effectively.
 
 
+## Deployments
 
-ROUTER: '0xa77BF40309CC7434Bf622641A4E40E1aBbe397F0',
-REBALANCER: '0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC',
-FACTORY: '0x9eb0E92e625f2F75a1e1F08A9ec54E08612FCFEB',
-STABLEPOOL USDT-USDC: 0x56fDcF3B78d3dbC06e90b369F95abe0008c1cC5E
+### Polygon 
+ROUTER: 0xa77BF40309CC7434Bf622641A4E40E1aBbe397F0
+REBALANCER: 0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC
+FACTORY: 0x9eb0E92e625f2F75a1e1F08A9ec54E08612FCFEB
+POOL USDT-USDC: 0x56fDcF3B78d3dbC06e90b369F95abe0008c1cC5E

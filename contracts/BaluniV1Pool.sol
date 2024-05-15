@@ -87,10 +87,6 @@ contract BaluniV1Pool is OwnableUpgradeable, ERC20Upgradeable, ReentrancyGuardUp
    * @return The amount of tokens received after the swap.
    */
   function swap(address fromToken, address toToken, uint256 amount) external nonReentrant returns (uint256) {
-    // Function implementation...
-  }
-
-  function swap(address fromToken, address toToken, uint256 amount) external nonReentrant returns (uint256) {
     require(
       (fromToken == address(asset1) || fromToken == address(asset2)) &&
         (toToken == address(asset1) || toToken == address(asset2)),
@@ -208,9 +204,6 @@ contract BaluniV1Pool is OwnableUpgradeable, ERC20Upgradeable, ReentrancyGuardUp
    * The total liquidity is the sum of the asset1 balance and the value of asset2 in asset1.
    * @return The total liquidity in asset1.
    */
-  function totalLiquidityInAsset1() public view returns (uint256) {
-    // ...
-  }
 
   function totalLiquidityInAsset1() public view returns (uint256) {
     uint256 totalAsset1 = asset1.balanceOf(address(this));
