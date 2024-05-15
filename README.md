@@ -1,52 +1,78 @@
-# Baluni Contracts
+# Baluni Protocol Overview
 
-- BaluniRouter.sol
-- BaluniStake.sol
-- BaluniAgent.sol
+Baluni is a decentralized finance (DeFi) protocol that offers an advanced algorithm for rebalancing ERC20 tokens. It provides a mechanism for users to mint and burn Baluni tokens, which are backed by a variety of collateral held within the protocol. The protocol also accumulates fees from various operations, and these fees are deposited into the router contract. Users can receive their share of these accumulated fees by participating in the minting and burning process.
 
-The `BaluniRouter` smart contract offers comprehensive decentralized finance (DeFi) functionalities built on Ethereum, leveraging Solidity version 0.8.25. It incorporates ERC-20 standard features, OpenZeppelin's secure libraries, and integrates with Uniswap V3 for advanced token handling capabilities.
+## Core Components
+
+### BaluniV1Router
+
+**Description:** The central contract of the Baluni protocol, `BaluniV1Router` manages token operations and interactions with Uniswap. It handles minting, burning, swapping of tokens, and fee management.
+
+**Key Functions:**
+- `initialize()`: Sets up the contract with necessary parameters including USDC and WNATIVE token addresses, oracle, Uniswap router, and factory addresses.
+- `mintWithUSDC()`: Allows users to mint Baluni tokens using USDC.
+- `mintWithERC20()`: Allows users to mint Baluni tokens using other ERC20 tokens based on their valuation.
+- `burnERC20()`: Burns Baluni tokens and retrieves a proportional share of underlying assets from the contract.
+- `burnUSDC()`: Burns Baluni tokens, performs token swaps, and retrieves USDC in return.
+- `execute()`: Executes a series of calls to a BaluniV1Agent contract and handles token returns.
+- `liquidate()`: Liquidates specified tokens by swapping them for USDC.
+- `performArbitrage()`: Executes arbitrage based on the market price and unit price of Baluni tokens.
+
+### BaluniV1Rebalancer
+
+**Description:** Manages the rebalancing of assets within the protocol to maintain optimal portfolio allocation. It adjusts the weights of different assets based on predefined criteria.
+
+**Key Functions:**
+- `rebalance()`: Rebalances assets according to specified weights.
+- `checkRebalance()`: Checks if rebalancing is required based on current asset weights and a specified threshold.
+
+### BaluniV1AgentFactory
+
+**Description:** Creates and manages `BaluniV1Agent` contracts that execute batch calls and token operations on behalf of users.
+
+**Key Functions:**
+- `getOrCreateAgent()`: Retrieves or creates an agent contract for a user.
+- `getAgentAddress()`: Returns the address of the agent contract associated with a user.
+
+### BaluniV1Agent
+
+**Description:** Executes batch calls and token operations on behalf of the user. It ensures efficient handling of complex transactions.
+
+**Key Functions:**
+- `execute()`: Executes a batch of calls and performs token operations.
+- `_chargeFees()`: Charges fees for the tokens returned to the user.
+- `_returnTokens()`: Returns remaining tokens to the owner after executing the batch operations.
 
 ## Key Features
 
-### Token Minting and Burning:
-- **Minting:** Users can mint new BALUNI tokens by locking USDC as collateral. A `BPS_FEE` is applied to the USDC amount converted, enhancing the protocol's reward pool with the fee collected. The net USDC after the fee is converted into BALUNI tokens.
-- **Burning:** Users can reduce the total supply of BALUNI by burning tokens. In return, they receive a proportional share of the ERC-20 tokens held by the contract, based on their burned amount. This can also be directed to receive a share in USDC, providing flexibility in rewards.
+### Minting and Burning Baluni Tokens
 
-### Staking:
-BALUNI tokens can be staked directly within the contract. Staking rewards are dynamically managed based on the total staked balance and other contract activities, incentivizing long-term holding and contribution to network stability.
+- **Minting:** Users can mint Baluni tokens by depositing USDC or other ERC20 tokens into the protocol. The amount of Baluni tokens minted is based on the total valuation of the collateral.
+- **Burning:** Users can burn Baluni tokens to receive a proportional share of the collateral held in the protocol, including any accumulated fees.
 
-### Liquidation:
-The contract facilitates the liquidation of internal assets by converting them into USDC. Initiators of liquidation are rewarded with BALUNI tokens, encouraging active liquidity management and supporting the contract’s economic model.
+### Rebalancing Algorithm
 
-### Agent System:
-The `BaluniAgent` framework allows users to execute delegated tasks, enhancing interaction within the ecosystem through a modular approach that supports expandable functionalities.
+The protocol offers an algorithm to automatically rebalance the user's portfolio of ERC20 tokens. This ensures that the portfolio maintains optimal asset allocation according to predefined weights.
 
-### Swap Operations:
-Leveraging Uniswap V3’s protocols, the contract performs internal token swaps to manage its liquidity effectively. These operations convert various ERC-20 tokens into either USDC or BALUNI, optimizing liquidity and ensuring efficient asset management.
+### Fee Management and Distribution
 
-### Fee Structure:
-- **`BPS_FEE`:** A basis points fee applied for the usage of the protocol, particularly during the `execute` function and when minting BALUNI tokens. This fee is deducted from the USDC used for minting or from the transactions processed through `execute`. The collected fees are allocated to the reward pool, directly benefiting the staking participants.
+Fees collected from various operations are deposited into the router contract. To claim their share of these fees, users need to mint Baluni tokens and then burn them. The protocol distributes the fees proportionally based on the amount of Baluni tokens burned.
 
-## Technical Specifications
+## Process to Receive Protocol Fees
 
-### Security Measures:
-The contract includes `ReentrancyGuard` to prevent re-entrancy attacks, a common vulnerability in Ethereum smart contracts involving external calls.
+1. **Minting Baluni Tokens:**
+   - Users mint Baluni tokens by depositing USDC or other ERC20 tokens into the `BaluniV1Router` contract.
+   - The protocol calculates the required amount of collateral based on the total valuation and mints the corresponding amount of Baluni tokens.
 
-### Flexibility and Efficiency:
-Utilizes `EnumerableSet` to manage sets of addresses, which enhances the efficiency of operations such as adding or checking the presence of tokens.
+2. **Burning Baluni Tokens:**
+   - Users burn the minted Baluni tokens to receive their share of the accumulated fees.
+   - Upon burning, the protocol calculates the user's share of the collateral and any accumulated fees, then transfers these assets back to the user.
 
-### Real-Time Pricing:
-Integrates with an oracle interface (`IOracle`) to fetch real-time rates for accurate valuation of assets during minting, burning, or swapping operations.
+By offering an advanced rebalancing algorithm, efficient fee management, and a robust system for minting and burning tokens, the Baluni protocol provides users with a comprehensive toolset for managing their ERC20 token portfolios effectively.
 
-## Governance and Administration
 
-### Ownership and Control:
-Managed by an owner account, which has exclusive rights to adjust critical parameters like transaction fees or oracle settings, ensuring adaptability to changing market conditions.
 
-## Interactions and Events
-
-### User Interactions:
-Users interact with the contract through functions that allow minting, burning, staking, and liquidating tokens directly from their Ethereum wallets using compatible Web3 interfaces.
-
-### Contract Events:
-Specific events are emitted for key actions such as minting (`Mint`), burning (`Burn`), and administrative updates (`ChangeBpsFee`, `ChangeLiquidateFee`), facilitating external tracking and auditing of the contract's activities.
+ROUTER: '0xa77BF40309CC7434Bf622641A4E40E1aBbe397F0',
+REBALANCER: '0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC',
+FACTORY: '0x9eb0E92e625f2F75a1e1F08A9ec54E08612FCFEB',
+STABLEPOOL USDT-USDC: 0x56fDcF3B78d3dbC06e90b369F95abe0008c1cC5E
