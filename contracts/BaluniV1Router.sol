@@ -643,6 +643,9 @@ contract BaluniV1Router is
     } catch {
       return 0;
     }
+
+    if (tokenDecimal == usdcDecimal) return ((amount * 1e12) * (rate)) / 1e18;
+
     uint256 factor = (10 ** (tokenDecimal - usdcDecimal));
 
     if (tokenDecimal < 18) return ((amount * factor) * (rate * factor)) / 1e18;

@@ -128,7 +128,12 @@ contract BaluniV1Rebalancer is
     for (uint256 i = 0; i < assets.length; i++) {
       uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(sender);
       uint256 decimals = IERC20MetadataUpgradeable(assets[i]).decimals();
-      uint256 tokensTotalValue = getTokenValuation(balance, assets[i]);
+      uint256 tokensTotalValue;
+      if (assets[i] == address(USDC)) {
+        tokensTotalValue = balance * 1e12;
+      } else {
+        tokensTotalValue = getTokenValuation(balance, assets[i]);
+      }
       targetWeight = weights[i];
       currentWeight = (tokensTotalValue * (10000)) / (totalValue);
       overweight = currentWeight > targetWeight;
@@ -167,6 +172,7 @@ contract BaluniV1Rebalancer is
     for (uint256 i; i < overweightVaults.length; i++) {
       if (overweightAmounts[i] > 0) {
         address asset = assets[overweightVaults[i]];
+
         require(
           IERC20Upgradeable(asset).balanceOf(sender) >= overweightAmounts[i],
           'Balance under overweight amounts'
@@ -211,6 +217,11 @@ contract BaluniV1Rebalancer is
         uint256 rebBuyQty = (rebaseActiveWgt *
           IERC20Upgradeable(USDC).balanceOf(address(this)) *
           1e12) / (10000);
+
+        if (asset == address(USDC)) {
+          IERC20Upgradeable(address(USDC)).transfer(receiver, rebBuyQty / 1e12);
+          return;
+        }
 
         if (
           rebBuyQty > 0 &&
@@ -326,7 +337,7 @@ contract BaluniV1Rebalancer is
     address sender,
     address receiver
   ) external override returns (bool) {
-    uint256 totalValue = calculateTotalValue(assets);
+    uint256 totalValue = calculateTotalValue(assets, sender);
     adjustWeights(assets, weights, totalValue, sender, receiver);
     return true;
   }
@@ -351,7 +362,7 @@ contract BaluniV1Rebalancer is
     );
     uint256 len = assets.length;
 
-    uint256 totalValue = calculateTotalValue(assets);
+    uint256 totalValue = calculateTotalValue(assets, sender);
     bool overweight;
 
     uint256 overweightVaultsLength;
@@ -369,10 +380,16 @@ contract BaluniV1Rebalancer is
     uint256[] memory underweightAmounts = new uint256[](len * 2);
 
     for (uint256 i = 0; i < len; i++) {
-      if (assets[i] == address(USDC)) continue;
       uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(sender);
       uint256 decimals = IERC20MetadataUpgradeable(assets[i]).decimals();
-      uint256 totalTokensValuation = getTokenValuation(balance, assets[i]);
+      uint256 totalTokensValuation;
+
+      if (assets[i] == address(USDC)) {
+        totalTokensValuation = balance * 1e12;
+      } else {
+        totalTokensValuation = getTokenValuation(balance, assets[i]);
+      }
+
       targetWeight = weights[i];
       currentWeight = (totalTokensValuation * (10000)) / (totalValue);
       overweight = currentWeight > targetWeight;
@@ -611,14 +628,20 @@ contract BaluniV1Rebalancer is
    * @return The total value of the assets held by the caller.
    */
   function calculateTotalValue(
-    address[] memory assets
+    address[] memory assets,
+    address user
   ) private view returns (uint256) {
-    uint256 totalValue = 0;
+    uint256 _tokenValue = 0;
     for (uint256 i = 0; i < assets.length; i++) {
-      uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(msg.sender);
-      uint256 tokenValue = getTokenValuation(balance, assets[i]);
-      totalValue += tokenValue;
+      uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(user);
+
+      if (assets[i] == address(USDC)) {
+        _tokenValue += balance * 1e12;
+      } else {
+        _tokenValue += getTokenValuation(balance, assets[i]);
+      }
     }
-    return totalValue;
+
+    return _tokenValue;
   }
 }
