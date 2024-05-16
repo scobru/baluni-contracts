@@ -74,6 +74,7 @@ By offering an advanced rebalancing algorithm, efficient fee management, and a r
 ## Deployments
 
 ### Polygon 
+
 ROUTER: 0xa77BF40309CC7434Bf622641A4E40E1aBbe397F0
 REBALANCER: 0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC
 FACTORY: 0x9eb0E92e625f2F75a1e1F08A9ec54E08612FCFEB
