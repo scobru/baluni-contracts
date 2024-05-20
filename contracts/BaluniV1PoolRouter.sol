@@ -11,8 +11,10 @@ import './BaluniV1Pool.sol';
 import './BaluniV1PoolFactory.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-contract BaluniV1Periphery is OwnableUpgradeable {
+abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
   using SafeERC20Upgradeable for IERC20Upgradeable;
 
   // A reference to the BaluniV1PoolFactory contract.
@@ -23,6 +25,7 @@ contract BaluniV1Periphery is OwnableUpgradeable {
    * @param _poolFactory The address of the BaluniV1PoolFactory contract.
    */
   function initialize(address _poolFactory) public initializer {
+    __UUPSUpgradeable_init();
     __Ownable_init();
     poolFactory = BaluniV1PoolFactory(_poolFactory);
   }

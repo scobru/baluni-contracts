@@ -11,8 +11,15 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-contract BaluniV1Pool is OwnableUpgradeable, ERC20Upgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+contract BaluniV1Pool is
+  Initializable,
+  OwnableUpgradeable,
+  ERC20Upgradeable,
+  ReentrancyGuardUpgradeable,
+  UUPSUpgradeable
+{
   using SafeERC20Upgradeable for IERC20Upgradeable;
 
   IBaluniV1Rebalancer public rebalancer;

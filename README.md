@@ -74,8 +74,8 @@ By offering an advanced rebalancing algorithm, efficient fee management, and a r
 ## Deployments
 
 ### Polygon 
-
-ROUTER: 0xa77BF40309CC7434Bf622641A4E40E1aBbe397F0
-REBALANCER: 0x7Ed16f194faCD6eAaB72cdd847b2bEcc13C240EC
-FACTORY: 0x9eb0E92e625f2F75a1e1F08A9ec54E08612FCFEB
-POOL USDT-USDC: 0x56fDcF3B78d3dbC06e90b369F95abe0008c1cC5E
+BaluniV1AgentFactory deployed to: 0x4520c7ec5f1800453aE4b87426ba19048f9a3c86
+BaluniV1Router deployed to: 0x631E566f96DAAccfFFC2A1846Bd6D3cfA80D5684
+BaluniV1Rebalance deployed to: 0x5FAE73b0f45cd40E5A2a36d06ACc05ba7243899f
+BaluniV1tablePool deployed to: 0xE9687D54DA4333924ca82D546B44183228C41241
+BaluniV1MarketOracle deployed to: a

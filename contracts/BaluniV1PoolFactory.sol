@@ -2,8 +2,11 @@
 pragma solidity 0.8.25;
 
 import './BaluniV1Pool.sol';
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-contract BaluniV1PoolFactory {
+abstract contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
   // Array to keep track of all pools created
   BaluniV1Pool[] public allPools;
 
@@ -18,6 +21,11 @@ contract BaluniV1PoolFactory {
     address oracle,
     address rebalancer
   );
+
+  function initialize() public initializer {
+    __UUPSUpgradeable_init();
+    __Ownable_init();
+  }
 
   /**
    * @dev Creates a new pool with the specified parameters.

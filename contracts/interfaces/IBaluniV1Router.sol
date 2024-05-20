@@ -6,10 +6,9 @@ interface IBaluniV1Router {
 
   function getBpsFee() external view returns (uint256);
 
-  function tokenValuation(
-    uint256 amount,
-    address token
-  ) external view returns (uint256);
+  function tokenValuation(uint256 amount, address token) external view returns (uint256);
 
   function getTreasury() external view returns (address);
+
+  function getUnitPrice() external view returns (uint256);
 }

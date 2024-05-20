@@ -47,12 +47,20 @@ import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
 import './interfaces/IOracle.sol';
 import './interfaces/IBaluniV1AgentFactory.sol';
 import './interfaces/IBaluniV1Agent.sol';
+import './interfaces/IBaluniV1MarketOracle.sol';
 
-contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+contract BaluniV1Router is
+  Initializable,
+  ERC20Upgradeable,
+  OwnableUpgradeable,
+  ReentrancyGuardUpgradeable,
+  UUPSUpgradeable
+{
   using SafeERC20Upgradeable for IERC20Upgradeable;
 
   struct Call {
@@ -64,6 +72,7 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
   uint256 public _MAX_BPS_FEE;
   uint256 public _BPS_FEE;
   uint256 public _BPS_BASE;
+
   EnumerableSetUpgradeable.AddressSet private tokens;
   IERC20Upgradeable private USDC;
   IERC20MetadataUpgradeable private WNATIVE;
@@ -72,6 +81,8 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
   IUniswapV3Factory private uniswapFactory;
   IBaluniV1AgentFactory public agentFactory;
 
+  IBaluniV1MarketOracle public marketOracle;
+
   using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
   event Execute(address user, IBaluniV1Agent.Call[] calls, address[] tokensReturn);
@@ -79,6 +90,7 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
   event Mint(address user, uint256 value);
   event ChangeBpsFee(uint256 newFee);
   event ChangeRewardPool(address pool);
+  event Log(string message, uint256 value);
 
   /**
    * @dev Initializes the BaluniV1Router contract.
@@ -108,6 +120,11 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
     uniswapRouter = ISwapRouter(_uniRouter);
     uniswapFactory = IUniswapV3Factory(_uniFactory);
     EnumerableSetUpgradeable.add(tokens, address(USDC));
+  }
+
+  function initializeMarketOracle(address _marketOracle) public initializer {
+    require(address(marketOracle) == address(0), 'Market Oracle Already Initialized');
+    marketOracle = IBaluniV1MarketOracle(_marketOracle);
   }
 
   function getTreasury() public view returns (address) {
@@ -143,6 +160,10 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
    */
   function listAllTokens() external view returns (address[] memory) {
     return tokens.values();
+  }
+
+  function changeMarketOracle(address _marketOracle) external onlyOwner {
+    marketOracle = IBaluniV1MarketOracle(_marketOracle);
   }
 
   /**
@@ -187,9 +208,16 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
     for (uint256 i = 0; i < tokensReturn.length; i++) {
       address token = tokensReturn[i];
       uint256 balance = IERC20Upgradeable(token).balanceOf(address(this));
+
       address poolNative3000 = uniswapFactory.getPool(token, address(WNATIVE), 3000);
       address poolNative500 = uniswapFactory.getPool(token, address(WNATIVE), 500);
-      bool poolExist = poolNative3000 != address(0) || poolNative500 != address(0);
+      address poolUSDC500 = uniswapFactory.getPool(token, address(USDC), 500);
+      address poolUSDC3000 = uniswapFactory.getPool(token, address(USDC), 3000);
+
+      bool poolExist = poolNative3000 != address(0) ||
+        poolNative500 != address(0) ||
+        poolUSDC3000 != address(0) ||
+        poolUSDC500 != address(0);
 
       if (isTokenNew[i] && poolExist) {
         EnumerableSetUpgradeable.add(tokens, token);
@@ -217,16 +245,30 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
    * @notice If no pool exists, a multi-hop swap is performed through the WNATIVE token.
    * @notice If the swap fails, the `burn` function should be called to handle the failed swap.
    */
-  function liquidate(address token) external nonReentrant {
+  function liquidate(address token) public {
     uint256 totalERC20Balance = IERC20Upgradeable(token).balanceOf(address(this));
     address pool = uniswapFactory.getPool(token, address(USDC), 3000);
     secureApproval(token, address(uniswapRouter), totalERC20Balance);
-    if (pool != address(0)) {
+    bool haveBalance = totalERC20Balance > 0;
+    if (pool != address(0) && haveBalance) {
       uint256 singleSwapResult = _singleSwap(token, address(USDC), totalERC20Balance, address(this));
       require(singleSwapResult > 0, 'Swap Failed, Try Burn()');
-    } else {
+    } else if (pool == address(0) && haveBalance) {
       uint256 amountOutHop = _multiHopSwap(token, address(WNATIVE), address(USDC), totalERC20Balance, address(this));
       require(amountOutHop > 0, 'Swap Failed, Try Burn()');
+    }
+  }
+
+  /**
+   * @dev Liquidates all tokens in the contract.
+   * This function iterates through all the tokens in the contract and calls the `liquidate` function for each token.
+   * Can only be called by the contract owner.
+   */
+  function liquidateAll() public nonReentrant {
+    uint256 length = tokens.length();
+    for (uint256 i = 0; i < length; i++) {
+      address token = tokens.at(i);
+      liquidate(token);
     }
   }
 
@@ -264,7 +306,7 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
    * @dev Burns a specified amount of BAL tokens and performs token swaps on multiple tokens.
    * @param burnAmount The amount of BAL tokens to burn.
    */
-  function burnUSDC(uint256 burnAmount) external nonReentrant {
+  function burnUSDC(uint256 burnAmount) public nonReentrant {
     require(burnAmount > 0, 'Insufficient BAL');
     _checkUSDC(burnAmount);
 
@@ -338,49 +380,15 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
   }
 
   /**
-   * @dev Mints a specified amount of Baluni tokens in exchange for ERC20.
-   * @param balAmountToMint The amount of BALUNI tokens to mint.
-   * @param asset The address of the asset token.
-   * Requirements:
-   * - The total BALUNI supply must be greater than zero.
-   * - The caller must have a balance of the asset token that is greater than or equal to the required amount.
-   * - The caller must have approved the contract to spend the required amount of the asset token.
-   * Emits a `Mint` event with the caller's address and the minted amount of BALUNI tokens.
+   * @dev Calculates the amount of USDC required to mint a given amount of BAL tokens.
+   * @param balAmountToMint The amount of BAL tokens to be minted.
+   * @return The amount of USDC required to mint the specified amount of BAL tokens.
    */
-  function mintWithERC20(uint256 balAmountToMint, address asset) public nonReentrant {
+  function requiredUSDCtoMint(uint256 balAmountToMint) public view returns (uint256) {
     uint256 totalUSDValuation = _totalValuation();
     uint256 totalBalSupply = totalSupply();
-    require(totalBalSupply > 0, 'Total BALUNI supply cannot be zero');
-
     uint256 usdcRequired = (balAmountToMint * totalUSDValuation) / totalBalSupply;
-    uint8 decimalA = IERC20MetadataUpgradeable(address(USDC)).decimals();
-    uint8 decimalB = IERC20MetadataUpgradeable(asset).decimals();
-    uint256 assetRate = oracle.getRate(IERC20Upgradeable(USDC), IERC20Upgradeable(asset), false);
-    uint256 required;
-
-    if (decimalB > decimalA) {
-      uint256 rate = assetRate / 10 ** (decimalB - decimalA);
-      required = (usdcRequired / rate) * 1e18;
-      required = required / 10 ** (decimalB - decimalA);
-    } else {
-      uint256 rate = assetRate * 10 ** (decimalA - decimalB);
-      required = (usdcRequired / rate) * 1e18;
-      required = required / 10 ** (decimalA - decimalB);
-    }
-
-    uint256 balance = IERC20Upgradeable(asset).balanceOf(msg.sender);
-    require(balance >= required, 'Balance is insufficient');
-
-    uint256 allowed = IERC20Upgradeable(asset).allowance(msg.sender, address(this));
-    require(allowed >= required, 'Check the token allowance');
-
-    IERC20Upgradeable(asset).safeTransferFrom(msg.sender, address(this), required);
-
-    _mint(msg.sender, balAmountToMint);
-    emit Mint(msg.sender, balAmountToMint);
-
-    uint256 fee = (required * _BPS_FEE) / _BPS_BASE;
-    IERC20Upgradeable(asset).transfer(getTreasury(), fee);
+    return usdcRequired / 1e12;
   }
 
   /**
@@ -427,45 +435,10 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
     return _calculateBaluniToUSDC(amount);
   }
 
-  /**
-   * @dev Performs arbitrage based on the market price and unit price.
-   * If the market price is lower than the unit price, it buys BALUNI tokens using USDC.
-   * If the market price is higher than the unit price, it sells BALUNI tokens for USDC.
-   * The function ensures that the necessary balances and approvals are in place before performing the swaps.
-   * @notice This function can only be called by external accounts.
-   */
-  function performArbitrage() external nonReentrant {
-    uint256 unitPrice = getUnitPrice();
-    uint256 marketPrice = oracle.getRate(IERC20Upgradeable(address(this)), IERC20Upgradeable(address(USDC)), false);
-    marketPrice = marketPrice * 1e12;
-    uint256 baluniBalance = balanceOf(address(this));
-    uint256 usdcBalance = IERC20Upgradeable(USDC).balanceOf(address(this));
-    usdcBalance = usdcBalance * 1e12;
-
-    if (marketPrice < unitPrice) {
-      uint256 amountToBuy = ((usdcBalance) / (marketPrice)) * 1e18;
-
-      if (amountToBuy > baluniBalance) amountToBuy = baluniBalance;
-
-      require(amountToBuy > 0, 'Arbitrage failed: insufficient BALUNI balance');
-      require(usdcBalance > 0, 'Arbitrage failed: insufficient USDC balance');
-      secureApproval(address(USDC), address(uniswapRouter), usdcBalance);
-      uint256 amountOut = _singleSwap(address(USDC), address(this), usdcBalance, address(this));
-      require(amountOut >= amountToBuy, 'Arbitrage failed: insufficient output amount');
-      secureApproval(address(this), address(uniswapRouter), amountOut);
-      _singleSwap(address(this), address(USDC), amountOut, address(this));
-      require(IERC20Upgradeable(USDC).balanceOf(address(this)) > usdcBalance, 'Arbitrage did not profit');
-    } else if (marketPrice > unitPrice) {
-      uint256 amountToSell = baluniBalance;
-      require(amountToSell > 0, 'Arbitrage failed: insufficient BALUNI balance');
-      require(usdcBalance > 0, 'Arbitrage failed: insufficient USDC balance');
-      secureApproval(address(this), address(uniswapRouter), amountToSell);
-      uint256 amountOutUSDC = _singleSwap(address(this), address(USDC), amountToSell, address(this));
-      require(amountOutUSDC > usdcBalance, 'Arbitrage failed: insufficient output amount');
-      secureApproval(address(USDC), address(uniswapRouter), amountOutUSDC);
-      _singleSwap(address(USDC), address(this), amountOutUSDC, address(this));
-      require(balanceOf(address(this)) > baluniBalance, 'Arbitrage did not profit');
-    }
+  function fetchMarketPrices() external view returns (uint256, uint256) {
+    uint256 unitPrice = marketOracle._unitPriceBALUNI();
+    uint256 marketPrice = marketOracle._priceBALUNI() * 1e12;
+    return (unitPrice, marketPrice);
   }
 
   /**
@@ -480,10 +453,8 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
     IERC20Upgradeable _token = IERC20Upgradeable(token);
     uint256 currentAllowance = _token.allowance(address(this), spender);
 
-    if (currentAllowance != amount) {
-      if (currentAllowance != 0) {
-        _token.approve(spender, 0);
-      }
+    if (currentAllowance < amount) {
+      _token.approve(spender, 0);
       _token.approve(spender, amount);
     }
   }
@@ -501,7 +472,7 @@ contract BaluniV1Router is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuard
 
     if (token == address(USDC)) return amount * 1e12;
 
-    try IOracle(oracle).getRate(IERC20Upgradeable(token), IERC20Upgradeable(USDC), false) returns (uint256 _rate) {
+    try IOracle(oracle).getRate(IERC20Upgradeable(token), IERC20Upgradeable(USDC), true) returns (uint256 _rate) {
       rate = _rate;
     } catch {
       return 0;
