@@ -288,6 +288,31 @@ contract BaluniV1Pool is
     _performRebalanceIfNeeded();
   }
 
+  function getDeviation() external view returns (uint256, uint256) {
+    uint256 weights0 = 5000;
+    uint256 weights1 = 5000;
+
+    uint256 totalValueInAsset2 = totalLiquidityInAsset2();
+    uint256 asset1ValueInAsset2 = _calculateReceivedAmount(
+      address(asset1),
+      address(asset2),
+      asset1.balanceOf(address(this))
+    );
+    uint256 asset2Balance = asset2.balanceOf(address(this));
+
+    uint256 currentWeightAsset1 = (asset1ValueInAsset2 * 10000) / totalValueInAsset2;
+    uint256 currentWeightAsset2 = (asset2Balance * 10000) / totalValueInAsset2;
+
+    uint256 deviationAsset1 = currentWeightAsset1 > weights0
+      ? currentWeightAsset1 - 5000
+      : weights0 - currentWeightAsset1;
+    uint256 deviationAsset2 = currentWeightAsset2 > weights1
+      ? currentWeightAsset2 - weights1
+      : weights1 - currentWeightAsset2;
+
+    return (deviationAsset1, deviationAsset2);
+  }
+
   function _performRebalanceIfNeeded() internal {
     require(balanceOf(msg.sender) > 0, 'Caller has no shares');
     uint256 weights0 = 5000;
