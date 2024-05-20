@@ -37,9 +37,8 @@ pragma solidity 0.8.25;
  *                           _.-' :      ``.
  *                           \ r=._\        `.
  */
-import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
+import './libs/AddressUpgradeable.sol';
 
 interface IRouter {
   function getBpsFee() external view returns (uint256);
@@ -50,7 +49,6 @@ interface IRouter {
  * @dev This contract represents the BaluniV1Agent contract.
  */
 contract BaluniV1Agent {
-  using SafeERC20Upgradeable for IERC20MetadataUpgradeable;
   using AddressUpgradeable for address payable;
 
   address public owner;
@@ -58,8 +56,7 @@ contract BaluniV1Agent {
   address private factory;
   address internal constant _NATIVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-  IERC20MetadataUpgradeable internal constant WNATIVE =
-    IERC20MetadataUpgradeable(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
+  IERC20Metadata internal constant WNATIVE = IERC20Metadata(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
 
   uint256 internal constant _DUST = 10;
   uint256 internal constant _BPS_BASE = 10000;
@@ -140,9 +137,9 @@ contract BaluniV1Agent {
         amount = (address(this).balance * bpsFee) / _BPS_BASE;
         payable(router).sendValue(amount);
       } else {
-        uint256 balance = IERC20MetadataUpgradeable(token).balanceOf(address(this));
+        uint256 balance = IERC20Metadata(token).balanceOf(address(this));
         amount = (balance * bpsFee) / _BPS_BASE;
-        IERC20MetadataUpgradeable(token).safeTransfer(router, amount);
+        IERC20Metadata(token).transfer(router, amount);
       }
     }
   }
@@ -161,9 +158,9 @@ contract BaluniV1Agent {
             payable(owner).sendValue(address(this).balance);
           }
         } else {
-          uint256 balance = IERC20MetadataUpgradeable(token).balanceOf(address(this));
+          uint256 balance = IERC20Metadata(token).balanceOf(address(this));
           if (balance > _DUST) {
-            IERC20MetadataUpgradeable(token).safeTransfer(owner, balance);
+            IERC20Metadata(token).transfer(owner, balance);
           }
         }
 

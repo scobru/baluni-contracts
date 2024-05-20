@@ -37,9 +37,8 @@ pragma solidity 0.8.25;
  *                           _.-' :      ``.
  *                           \ r=._\        `.
  */
-import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
@@ -47,59 +46,42 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import './interfaces/IBaluniV1Router.sol';
 import './interfaces/IBaluniV1Rebalancer.sol';
 
-interface IOracle {
-  function getRate(
-    IERC20Upgradeable srcToken,
-    IERC20Upgradeable dstToken,
-    bool useWrappers
-  ) external view returns (uint256 weightedRate);
-}
-
 contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeable, IBaluniV1Rebalancer {
-  uint256 private multiplier;
+  uint256 internal multiplier;
 
   IBaluniV1Router public baluniRouter;
-  IERC20Upgradeable private USDC;
-  IERC20MetadataUpgradeable private WNATIVE;
-  IOracle private oracle;
-  ISwapRouter private uniswapRouter;
-  IUniswapV3Factory private uniswapFactory;
+  IERC20 internal USDC;
+  IERC20Metadata internal WNATIVE;
+  ISwapRouter internal uniswapRouter;
+  IUniswapV3Factory internal uniswapFactory;
 
-  struct RebalanceVars {
-    uint256 len;
-    uint256 totalValue;
-    uint256 finalUsdBalance;
-    uint256 overweightVaultsLength;
-    uint256 underweightVaultsLength;
-    uint256[] overweightVaults;
-    uint256[] overweightAmounts;
-    uint256[] underweightVaults;
-    uint256[] underweightAmounts;
-  }
-
-  /**
-   * @dev Initializes the contract.
-   * @param _baluniRouter The address of the BaluniV1Router contract.
-   *
-   * This function is a public initializer function that sets up the contract.
-   * It initializes the UUPSUpgradeable and Ownable contracts from which this contract inherits.
-   * It also sets the addresses of the USDC, WNATIVE, oracle, uniswapRouter, uniswapFactory, and baluniRouter contracts.
-   * The oracle is set to the address of the 1inch Spot Aggregator.
-   * The multiplier is set to 1e12.
-   */
   function initialize(
     address _baluniRouter,
     address _usdc,
     address _wnative,
-    address _oracle,
     address _uniRouter,
     address _uniFactory
   ) public initializer {
     __UUPSUpgradeable_init();
-    __Ownable_init();
-    USDC = IERC20Upgradeable(_usdc);
-    WNATIVE = IERC20MetadataUpgradeable(_wnative);
-    oracle = IOracle(_oracle); // 1inch Spot Aggregator
+    __Ownable_init(msg.sender);
+    USDC = IERC20(_usdc);
+    WNATIVE = IERC20Metadata(_wnative);
+    uniswapRouter = ISwapRouter(_uniRouter);
+    uniswapFactory = IUniswapV3Factory(_uniFactory);
+    baluniRouter = IBaluniV1Router(_baluniRouter);
+    multiplier = 1e12;
+  }
+
+  function reinitialize(
+    address _baluniRouter,
+    address _usdc,
+    address _wnative,
+    address _uniRouter,
+    address _uniFactory,
+    uint64 version
+  ) public reinitializer(version) {
+    USDC = IERC20(_usdc);
+    WNATIVE = IERC20Metadata(_wnative);
     uniswapRouter = ISwapRouter(_uniRouter);
     uniswapFactory = IUniswapV3Factory(_uniFactory);
     baluniRouter = IBaluniV1Router(_baluniRouter);
@@ -108,151 +90,26 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
 
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-  function adjustWeights(
-    address[] memory assets,
-    uint256[] memory weights,
-    uint256 totalValue,
-    address sender,
-    address receiver
-  ) private {
-    uint256 overweightVaultsLength;
-    uint256 underweightVaultsLength;
-    uint256 overweightAmount;
-    uint256 overweightPercent;
-    uint256 targetWeight;
-    uint256 currentWeight;
-    uint256 totalActiveWeight;
-    uint256 amountOut;
-    bool overweight;
-
-    uint256[] memory overweightVaults = new uint256[](assets.length);
-    uint256[] memory overweightAmounts = new uint256[](assets.length);
-    uint256[] memory underweightVaults = new uint256[](assets.length);
-    uint256[] memory underweightAmounts = new uint256[](assets.length);
-
-    for (uint256 i = 0; i < assets.length; i++) {
-      uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(sender);
-      uint256 decimals = IERC20MetadataUpgradeable(assets[i]).decimals();
-      uint256 tokensTotalValue = getTokenValuation(balance, assets[i]);
-      targetWeight = weights[i];
-      currentWeight = (tokensTotalValue * (10000)) / (totalValue);
-      overweight = currentWeight > targetWeight;
-      overweightPercent = overweight ? currentWeight - (targetWeight) : targetWeight - (currentWeight);
-      uint256 price = baluniRouter.tokenValuation(1 * 10 ** decimals, assets[i]);
-
-      if (overweight) {
-        overweightAmount = (overweightPercent * (totalValue)) / (10000);
-        overweightAmount = (overweightAmount * (1e18)) / (price);
-        if (decimals != uint8(18)) {
-          overweightAmount = overweightAmount / (10 ** (18 - decimals));
-        }
-        overweightVaults[overweightVaultsLength] = i;
-        overweightAmounts[overweightVaultsLength] = overweightAmount;
-        overweightVaultsLength++;
-      } else if (!overweight) {
-        totalActiveWeight += overweightPercent;
-        overweightAmount = overweightPercent;
-        // overweightAmount = overweightPercent.mul(totalValue).div(10000);
-        underweightVaults[underweightVaultsLength] = i;
-        underweightAmounts[underweightVaultsLength] = overweightAmount;
-        underweightVaultsLength++;
-      }
-    }
-
-    overweightVaults = _resize(overweightVaults, overweightVaultsLength);
-    overweightAmounts = _resize(overweightAmounts, overweightVaultsLength);
-    underweightVaults = _resize(underweightVaults, underweightVaultsLength);
-    underweightAmounts = _resize(underweightAmounts, underweightVaultsLength);
-
-    for (uint256 i; i < overweightVaults.length; i++) {
-      if (overweightAmounts[i] > 0) {
-        address asset = assets[overweightVaults[i]];
-        require(IERC20Upgradeable(asset).balanceOf(sender) >= overweightAmounts[i], 'Balance under overweight amounts');
-        IERC20Upgradeable(address(asset)).transferFrom(sender, address(this), overweightAmounts[i]);
-        address pool = uniswapFactory.getPool(asset, address(USDC), 3000);
-        secureApproval(asset, address(uniswapRouter), overweightAmounts[i]);
-
-        if (pool != address(0)) {
-          amountOut += _singleSwap(asset, address(USDC), overweightAmounts[i], address(this));
-        } else {
-          amountOut += _multiHopSwap(asset, address(WNATIVE), address(USDC), overweightAmounts[i], address(this));
-        }
-      }
-    }
-
-    require(USDC.balanceOf(address(this)) >= amountOut, 'Insufficient USDC Balance');
-
-    for (uint256 i; i < underweightVaults.length; i++) {
-      if (underweightAmounts[i] > 0) {
-        address asset = assets[underweightVaults[i]];
-        uint256 rebaseActiveWgt = (underweightAmounts[i] * (10000)) / (totalActiveWeight);
-        uint256 rebBuyQty = (rebaseActiveWgt * IERC20Upgradeable(USDC).balanceOf(address(this)) * 1e12) / (10000);
-
-        if (rebBuyQty > 0 && rebBuyQty <= IERC20Upgradeable(USDC).balanceOf(address(this)) * 1e12) {
-          address pool = uniswapFactory.getPool(asset, address(USDC), 3000);
-          secureApproval(address(USDC), address(uniswapRouter), rebBuyQty / 1e12);
-          require(IERC20Upgradeable(USDC).balanceOf(address(this)) >= rebBuyQty / 1e12, 'Balance under RebuyQty');
-
-          address treasury = baluniRouter.getTreasury();
-
-          if (pool != address(0)) {
-            uint256 singleSwapResult = _singleSwap(
-              address(USDC),
-              address(assets[underweightVaults[i]]),
-              rebBuyQty / 1e12,
-              address(this)
-            );
-
-            uint256 amountToReceiver = calculateNetAmountAfterFee(singleSwapResult);
-            uint256 remainingToReceiver = singleSwapResult - amountToReceiver;
-            uint256 amountToRouter = calculateNetAmountAfterFee(remainingToReceiver);
-            uint256 amountToTreasury = remainingToReceiver - amountToRouter;
-
-            require(
-              IERC20Upgradeable(asset).balanceOf(address(this)) >= amountToReceiver,
-              'Balance under amount to transfer'
-            );
-
-            IERC20Upgradeable(asset).transfer(receiver, amountToReceiver);
-            IERC20Upgradeable(asset).transfer(address(baluniRouter), amountToRouter);
-            IERC20Upgradeable(asset).transfer(treasury, amountToTreasury);
-          } else {
-            require(IERC20Upgradeable(USDC).balanceOf(address(this)) >= rebBuyQty / 1e12, 'Balance under RebuyQty');
-            uint256 multiHopSwapResult = _multiHopSwap(
-              address(USDC),
-              address(WNATIVE),
-              address(assets[underweightVaults[i]]),
-              rebBuyQty / 1e12,
-              address(this)
-            );
-
-            uint256 amountToReceiver = calculateNetAmountAfterFee(multiHopSwapResult);
-            uint256 remainingToReceiver = multiHopSwapResult - amountToReceiver;
-            uint256 amountToRouter = calculateNetAmountAfterFee(remainingToReceiver);
-            uint256 amountToTreasury = remainingToReceiver - amountToRouter;
-
-            require(
-              IERC20Upgradeable(asset).balanceOf(address(this)) >= amountToReceiver,
-              'Balance under amountToTransfer'
-            );
-
-            IERC20Upgradeable(asset).transfer(receiver, amountToReceiver);
-            IERC20Upgradeable(asset).transfer(address(baluniRouter), amountToRouter);
-            IERC20Upgradeable(asset).transfer(treasury, amountToTreasury);
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * @dev Returns the valuation of a given amount of a token.
-   * @param amount The amount of the token.
-   * @param token The address of the token.
-   * @return The valuation of the token amount.
-   */
-  function getTokenValuation(uint256 amount, address token) internal view returns (uint256) {
-    return baluniRouter.tokenValuation(amount, token);
+  function fetchVariables()
+    external
+    view
+    returns (
+      uint256 _multiplier,
+      address _baluniRouter,
+      address _USDC,
+      address _WNATIVE,
+      address _uniswapRouter,
+      address _uniswapFactory
+    )
+  {
+    return (
+      multiplier,
+      address(baluniRouter),
+      address(USDC),
+      address(WNATIVE),
+      address(uniswapRouter),
+      address(uniswapFactory)
+    );
   }
 
   /**
@@ -263,118 +120,167 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
    * @return A boolean indicating the success of the rebalance operation.
    */
   function rebalance(
-    address[] memory assets,
-    uint256[] memory weights,
+    address[] calldata assets,
+    uint256[] calldata weights,
     address sender,
     address receiver
   ) external override returns (bool) {
-    uint256 totalValue = calculateTotalValue(assets);
-    adjustWeights(assets, weights, totalValue, sender, receiver);
+    RebalanceVars memory vars = _checkRebalance(assets, weights, 0, sender);
+
+    for (uint256 i = 0; i < vars.overweightVaults.length; i++) {
+      if (vars.overweightAmounts[i] > 0) {
+        address asset = assets[vars.overweightVaults[i]];
+
+        require(IERC20(asset).balanceOf(sender) >= vars.overweightAmounts[i], 'Balance under overweight amounts');
+
+        IERC20(asset).transferFrom(sender, address(this), vars.overweightAmounts[i]);
+
+        secureApproval(asset, address(uniswapRouter), vars.overweightAmounts[i]);
+
+        if (asset == address(WNATIVE)) {
+          vars.amountOut += _singleSwap(asset, address(USDC), vars.overweightAmounts[i], address(this));
+        } else {
+          vars.amountOut += _multiHopSwap(
+            asset,
+            address(WNATIVE),
+            address(USDC),
+            vars.overweightAmounts[i],
+            address(this)
+          );
+        }
+      }
+    }
+
+    require(USDC.balanceOf(address(this)) >= vars.amountOut, 'Insufficient USDC Balance');
+
+    for (uint256 i = 0; i < vars.underweightVaults.length; i++) {
+      if (vars.underweightAmounts[i] > 0) {
+        address asset = assets[vars.underweightVaults[i]];
+
+        uint256 rebaseActiveWgt = (vars.underweightAmounts[i] * 10000) / vars.totalActiveWeight;
+        uint256 rebBuyQty = (rebaseActiveWgt * USDC.balanceOf(address(this)) * 1e12) / 10000;
+
+        if (asset == address(USDC)) {
+          IERC20(USDC).transfer(receiver, rebBuyQty / 1e12);
+          continue;
+        }
+
+        if (rebBuyQty > 0 && rebBuyQty <= USDC.balanceOf(address(this)) * 1e12) {
+          secureApproval(address(USDC), address(uniswapRouter), rebBuyQty / 1e12);
+          require(USDC.balanceOf(address(this)) >= rebBuyQty / 1e12, 'Balance under RebuyQty');
+
+          address treasury = baluniRouter.getTreasury();
+
+          if (asset == address(WNATIVE)) {
+            vars.amountOut = _singleSwap(address(USDC), address(WNATIVE), rebBuyQty / 1e12, address(this));
+          } else {
+            vars.amountOut = _multiHopSwap(address(USDC), address(WNATIVE), asset, rebBuyQty / 1e12, address(this));
+          }
+
+          uint256 amountToReceiver = calculateNetAmountAfterFee(vars.amountOut);
+          uint256 remainingToReceiver = vars.amountOut - amountToReceiver;
+          uint256 amountToRouter = calculateNetAmountAfterFee(remainingToReceiver);
+          uint256 amountToTreasury = remainingToReceiver - amountToRouter;
+
+          require(IERC20(asset).balanceOf(address(this)) >= amountToReceiver, 'Balance under amountToTransfer');
+
+          IERC20(asset).transfer(receiver, amountToReceiver);
+          IERC20(asset).transfer(address(baluniRouter), amountToRouter);
+          IERC20(asset).transfer(treasury, amountToTreasury);
+        }
+      }
+    }
     return true;
   }
 
   /**
-   * @dev Checks if rebalancing is required based on the asset weights and limit.
+   * @dev Checks if a rebalance is needed based on the given assets, weights, limit, and sender.
+   * @param assets The array of addresses representing the assets to be rebalanced.
+   * @param weights The array of weights corresponding to the assets.
+   * @param limit The maximum limit for the rebalance.
+   * @param sender The address of the sender.
+   * @return A struct containing the rebalance variables.
+   */
+  function checkRebalance(
+    address[] calldata assets,
+    uint256[] calldata weights,
+    uint256 limit,
+    address sender
+  ) public view override returns (RebalanceVars memory) {
+    return _checkRebalance(assets, weights, limit, sender);
+  }
+
+  /**
+   * @dev Internal function to check if rebalancing is required for a given set of assets and weights.
    * @param assets The array of asset addresses.
    * @param weights The array of target weights for each asset.
    * @param limit The maximum percentage difference allowed between the current weight and target weight.
-   * @param sender The address of the account holding the assets.
-   * @return A boolean indicating whether rebalancing is required.
+   * @param sender The address of the sender.
+   * @return A `RebalanceVars` struct containing the rebalance information.
    */
-  function checkRebalance(
-    address[] memory assets,
-    uint256[] memory weights,
+  function _checkRebalance(
+    address[] calldata assets,
+    uint256[] calldata weights,
     uint256 limit,
     address sender
-  ) external view override returns (RebalanceType) {
-    require(IERC20Upgradeable(address(baluniRouter)).balanceOf(sender) > 1 ether, 'You need to hold at least 1 BALUNI');
+  ) internal view returns (RebalanceVars memory) {
+    uint256 totalValue = calculateTotalValue(assets, sender);
+    RebalanceVars memory vars = RebalanceVars(
+      assets.length,
+      totalValue,
+      0,
+      0,
+      0,
+      0,
+      0,
+      new uint256[](assets.length * 2),
+      new uint256[](assets.length * 2),
+      new uint256[](assets.length * 2),
+      new uint256[](assets.length * 2)
+    );
 
-    RebalanceVars memory vars;
+    for (uint256 i = 0; i < assets.length; i++) {
+      uint256 balance = IERC20(assets[i]).balanceOf(sender);
+      uint256 decimals = IERC20Metadata(assets[i]).decimals();
+      uint256 tokensTotalValue;
 
-    vars.len = assets.length;
-    vars.totalValue = calculateTotalValue(assets);
-    vars.overweightVaults = new uint256[](vars.len * 2);
-    vars.overweightAmounts = new uint256[](vars.len * 2);
-    vars.underweightVaults = new uint256[](vars.len * 2);
-    vars.underweightAmounts = new uint256[](vars.len * 2);
+      uint256 price = baluniRouter.tokenValuation(1 * 10 ** decimals, assets[i]);
 
-    for (uint256 i = 0; i < vars.len; i++) {
-      address asset = assets[i];
-      if (asset == address(USDC)) continue;
+      if (assets[i] == address(USDC)) {
+        tokensTotalValue = balance * 1e12; // Adjust for USDC decimals (assumed to be 6)
+      } else {
+        tokensTotalValue = (price * balance * (10 ** (18 - decimals))) / 1e18; // Correctly adjust for token decimals
+      }
 
-      (uint256 overweightAmount, uint256 overweightPercent, bool overweight) = calculateWeights(
-        asset,
-        weights[i],
-        vars.totalValue,
-        sender
-      );
+      uint256 targetWeight = weights[i];
+      uint256 currentWeight = (tokensTotalValue * 10000) / totalValue;
+      bool overweight = currentWeight > targetWeight;
+      uint256 overweightPercent = overweight ? currentWeight - targetWeight : targetWeight - currentWeight;
 
-      uint256 price = IBaluniV1Router(baluniRouter).tokenValuation(
-        1 * 10 ** IERC20MetadataUpgradeable(asset).decimals(),
-        asset
-      );
       if (overweight && overweightPercent > limit) {
-        processOverweight(i, overweightAmount, overweightPercent, price, vars);
+        uint256 overweightAmount = (overweightPercent * totalValue) / 10000;
+
+        vars.finalUsdBalance += overweightAmount;
+
+        overweightAmount = (overweightAmount * 1e18) / price;
+        overweightAmount = overweightAmount / (10 ** (18 - decimals));
+        vars.overweightVaults[vars.overweightVaultsLength] = i;
+        vars.overweightAmounts[vars.overweightVaultsLength] = overweightAmount;
+        vars.overweightVaultsLength++;
       } else if (!overweight && overweightPercent > limit) {
-        processUnderweight(i, overweightPercent, vars);
+        vars.totalActiveWeight += overweightPercent;
+        vars.underweightVaults[vars.underweightVaultsLength] = i;
+        vars.underweightAmounts[vars.underweightVaultsLength] = overweightPercent;
+        vars.underweightVaultsLength++;
       }
     }
 
-    return determineRebalanceType(vars);
-  }
+    vars.overweightVaults = _resize(vars.overweightVaults, vars.overweightVaultsLength);
+    vars.overweightAmounts = _resize(vars.overweightAmounts, vars.overweightVaultsLength);
+    vars.underweightVaults = _resize(vars.underweightVaults, vars.underweightVaultsLength);
+    vars.underweightAmounts = _resize(vars.underweightAmounts, vars.underweightVaultsLength);
 
-  function calculateWeights(
-    address asset,
-    uint256 targetWeight,
-    uint256 totalValue,
-    address sender
-  ) private view returns (uint256, uint256, bool) {
-    uint256 balance = IERC20Upgradeable(asset).balanceOf(sender);
-    uint256 decimals = IERC20MetadataUpgradeable(asset).decimals();
-    uint256 totalTokensValuation = getTokenValuation(balance, asset);
-
-    uint256 currentWeight = (totalTokensValuation * 10000) / totalValue;
-    bool overweight = currentWeight > targetWeight;
-    uint256 overweightPercent = overweight ? currentWeight - targetWeight : targetWeight - currentWeight;
-
-    uint256 overweightAmount = (overweightPercent * totalValue) / 10000;
-    overweightAmount =
-      (overweightAmount * 1e18) /
-      IBaluniV1Router(baluniRouter).tokenValuation(1 * 10 ** decimals, asset);
-    if (decimals != 18) {
-      overweightAmount /= 10 ** (18 - decimals);
-    }
-
-    return (overweightAmount, overweightPercent, overweight);
-  }
-
-  function processOverweight(
-    uint256 index,
-    uint256 overweightAmount,
-    uint256 overweightPercent,
-    uint256 price,
-    RebalanceVars memory vars
-  ) private pure {
-    vars.finalUsdBalance += overweightAmount;
-    vars.overweightVaults[vars.overweightVaultsLength] = index;
-    vars.overweightAmounts[vars.overweightVaultsLength] = overweightAmount;
-    vars.overweightVaultsLength++;
-  }
-
-  function processUnderweight(uint256 index, uint256 overweightPercent, RebalanceVars memory vars) private pure {
-    vars.underweightVaults[vars.underweightVaultsLength] = index;
-    vars.underweightAmounts[vars.underweightVaultsLength] = overweightPercent;
-    vars.underweightVaultsLength++;
-  }
-
-  function determineRebalanceType(RebalanceVars memory vars) private pure returns (RebalanceType) {
-    if (vars.overweightVaultsLength > 1) {
-      return RebalanceType.Overweight;
-    } else if (vars.underweightVaultsLength > 1) {
-      return RebalanceType.Underweight;
-    } else {
-      return RebalanceType.NoRebalance;
-    }
+    return vars;
   }
 
   /**
@@ -400,7 +306,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
    * @notice This function is internal and should not be called directly.
    */
   function secureApproval(address token, address spender, uint256 amount) internal {
-    IERC20Upgradeable _token = IERC20Upgradeable(token);
+    IERC20 _token = IERC20(token);
     _token.approve(spender, amount);
   }
 
@@ -426,8 +332,8 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
   ) external returns (uint256 amountOut) {
     require(msg.sender != address(this), 'Wrong sender');
     require(amount > 0, 'Amount is 0');
-    require(IERC20Upgradeable(token0).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
-    IERC20Upgradeable(token0).transferFrom(msg.sender, address(this), amount);
+    require(IERC20(token0).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
+    IERC20(token0).transferFrom(msg.sender, address(this), amount);
     secureApproval(token0, address(uniswapRouter), amount);
     return _singleSwap(token0, token1, amount, receiver);
   }
@@ -456,8 +362,8 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
   ) external returns (uint256 amountOut) {
     require(msg.sender != address(this), 'Wrong sender');
     require(amount > 0, 'Amount is 0');
-    require(IERC20Upgradeable(token0).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
-    IERC20Upgradeable(token0).transferFrom(msg.sender, address(this), amount);
+    require(IERC20(token0).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
+    IERC20(token0).transferFrom(msg.sender, address(this), amount);
     secureApproval(token0, address(uniswapRouter), amount);
     return _multiHopSwap(token0, token1, token2, amount, receiver);
   }
@@ -481,9 +387,9 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
       tokenOut: token1,
       fee: 3000,
       recipient: address(receiver),
-      deadline: block.timestamp + 300, // Adding a 5-minute buffer
+      deadline: block.timestamp + 60, // Adding a 5-minute buffer
       amountIn: tokenBalance,
-      amountOutMinimum: 0,
+      amountOutMinimum: 1,
       sqrtPriceLimitX96: 0
     });
 
@@ -511,9 +417,9 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
       path: abi.encodePacked(token0, uint24(3000), token1, uint24(3000), token2),
       recipient: address(receiver),
-      deadline: block.timestamp + 300, // Adding a 5-minute buffer
+      deadline: block.timestamp + 60, // Adding a 5-minute buffer
       amountIn: tokenBalance,
-      amountOutMinimum: 0
+      amountOutMinimum: 1
     });
     uint256 amountOut = uniswapRouter.exactInput(params);
     require(amountOut >= 0, 'Uniswap swap failed to meet minimum amount out');
@@ -543,13 +449,18 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
    * @param assets An array of asset addresses.
    * @return The total value of the assets held by the caller.
    */
-  function calculateTotalValue(address[] memory assets) private view returns (uint256) {
-    uint256 totalValue = 0;
+  function calculateTotalValue(address[] memory assets, address user) private view returns (uint256) {
+    uint256 _tokenValue = 0;
     for (uint256 i = 0; i < assets.length; i++) {
-      uint256 balance = IERC20Upgradeable(assets[i]).balanceOf(msg.sender);
-      uint256 tokenValue = getTokenValuation(balance, assets[i]);
-      totalValue += tokenValue;
+      uint256 balance = IERC20(assets[i]).balanceOf(user);
+
+      if (assets[i] == address(USDC)) {
+        _tokenValue += balance * 1e12;
+      } else {
+        _tokenValue += baluniRouter.tokenValuation(balance, assets[i]);
+      }
     }
-    return totalValue;
+
+    return _tokenValue;
   }
 }

@@ -24,7 +24,12 @@ abstract contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, Ownable
 
   function initialize() public initializer {
     __UUPSUpgradeable_init();
-    __Ownable_init();
+    __Ownable_init(msg.sender);
+  }
+
+  function reinitialize(uint64 version) public reinitializer(version) {
+    __UUPSUpgradeable_init();
+    __Ownable_init(msg.sender);
   }
 
   /**

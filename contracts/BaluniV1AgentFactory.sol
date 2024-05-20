@@ -37,7 +37,7 @@ pragma solidity 0.8.25;
  *                           _.-' :      ``.
  *                           \ r=._\        `.
  */
-import '@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol';
+import './libs/ClonesUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
@@ -66,7 +66,16 @@ contract BaluniV1AgentFactory is Initializable, OwnableUpgradeable, UUPSUpgradea
    * @dev Initializes the contract by calling the initializers of the parent contracts.
    */
   function initialize() public initializer {
-    __Ownable_init();
+    __Ownable_init(msg.sender);
+    __UUPSUpgradeable_init();
+
+    // Create a new BaluniV1Agent instance and set it as the implementation address
+    BaluniV1Agent newAgent = new BaluniV1Agent(address(this));
+    implementation = address(newAgent);
+  }
+
+  function reinitialize(uint64 version) public reinitializer(version) {
+    __Ownable_init(msg.sender);
     __UUPSUpgradeable_init();
 
     // Create a new BaluniV1Agent instance and set it as the implementation address

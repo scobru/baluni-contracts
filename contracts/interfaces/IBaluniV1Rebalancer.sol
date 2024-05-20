@@ -8,16 +8,30 @@ interface IBaluniV1Rebalancer {
     NoRebalance
   }
 
+  struct RebalanceVars {
+    uint256 len;
+    uint256 totalValue;
+    uint256 finalUsdBalance;
+    uint256 overweightVaultsLength;
+    uint256 underweightVaultsLength;
+    uint256 totalActiveWeight;
+    uint256 amountOut;
+    uint256[] overweightVaults;
+    uint256[] overweightAmounts;
+    uint256[] underweightVaults;
+    uint256[] underweightAmounts;
+  }
+
   function checkRebalance(
-    address[] memory assets,
-    uint256[] memory weights,
+    address[] calldata assets,
+    uint256[] calldata weights,
     uint256 limit,
     address sender
-  ) external view returns (RebalanceType);
+  ) external view returns (RebalanceVars memory);
 
   function rebalance(
-    address[] memory assets,
-    uint256[] memory weights,
+    address[] calldata assets,
+    uint256[] calldata weights,
     address sender,
     address receiver
   ) external returns (bool);

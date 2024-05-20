@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GNU AGPLv3
 pragma solidity 0.8.25;
 
-import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
@@ -22,8 +22,8 @@ interface IBaluniV1Router {
 }
 
 contract BaluniV1MarketOracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
-  IERC20Upgradeable public BALUNI;
-  IERC20Upgradeable public USDC;
+  IERC20 public BALUNI;
+  IERC20 public USDC;
   IBaluniV1Router public baluniRouter;
   address public oracle;
 
@@ -32,10 +32,19 @@ contract BaluniV1MarketOracle is Initializable, OwnableUpgradeable, UUPSUpgradea
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
   function initialize(address _baluni, address _usdc, address _oracle) public initializer {
-    __Ownable_init();
+    __Ownable_init(msg.sender);
     __UUPSUpgradeable_init();
-    BALUNI = IERC20Upgradeable(_baluni);
-    USDC = IERC20Upgradeable(_usdc);
+    BALUNI = IERC20(_baluni);
+    USDC = IERC20(_usdc);
+    baluniRouter = IBaluniV1Router(_baluni);
+    oracle = _oracle;
+  }
+
+  function reinitialize(address _baluni, address _usdc, address _oracle, uint64 version) public reinitializer(version) {
+    __Ownable_init(msg.sender);
+    __UUPSUpgradeable_init();
+    BALUNI = IERC20(_baluni);
+    USDC = IERC20(_usdc);
     baluniRouter = IBaluniV1Router(_baluni);
     oracle = _oracle;
   }

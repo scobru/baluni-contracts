@@ -9,14 +9,11 @@ pragma solidity 0.8.25;
 
 import './BaluniV1Pool.sol';
 import './BaluniV1PoolFactory.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
 abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
-  using SafeERC20Upgradeable for IERC20Upgradeable;
-
   // A reference to the BaluniV1PoolFactory contract.
   BaluniV1PoolFactory public poolFactory;
 
@@ -26,7 +23,13 @@ abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUp
    */
   function initialize(address _poolFactory) public initializer {
     __UUPSUpgradeable_init();
-    __Ownable_init();
+    __Ownable_init(msg.sender);
+    poolFactory = BaluniV1PoolFactory(_poolFactory);
+  }
+
+  function reinitialize(address _poolFactory, uint64 version) public reinitializer(version) {
+    __UUPSUpgradeable_init();
+    __Ownable_init(msg.sender);
     poolFactory = BaluniV1PoolFactory(_poolFactory);
   }
 
@@ -42,11 +45,11 @@ abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUp
     require(amount > 0, 'Amount must be greater than zero');
 
     BaluniV1Pool pool = BaluniV1Pool(poolAddress);
-    IERC20Upgradeable(fromToken).safeTransferFrom(msg.sender, address(this), amount);
-    IERC20Upgradeable(fromToken).approve(poolAddress, amount);
+    IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
+    IERC20(fromToken).approve(poolAddress, amount);
 
     uint256 amountOut = pool.swap(fromToken, toToken, amount);
-    IERC20Upgradeable(toToken).safeTransfer(msg.sender, amountOut);
+    IERC20(toToken).transfer(msg.sender, amountOut);
 
     return amountOut;
   }
@@ -62,11 +65,11 @@ abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUp
     require(amount1 > 0 || amount2 > 0, 'Amounts must be greater than zero');
 
     BaluniV1Pool pool = BaluniV1Pool(poolAddress);
-    IERC20Upgradeable(pool.asset1()).safeTransferFrom(msg.sender, address(this), amount1);
-    IERC20Upgradeable(pool.asset2()).safeTransferFrom(msg.sender, address(this), amount2);
+    IERC20(pool.asset1()).transferFrom(msg.sender, address(this), amount1);
+    IERC20(pool.asset2()).transferFrom(msg.sender, address(this), amount2);
 
-    IERC20Upgradeable(pool.asset1()).approve(poolAddress, amount1);
-    IERC20Upgradeable(pool.asset2()).approve(poolAddress, amount2);
+    IERC20(pool.asset1()).approve(poolAddress, amount1);
+    IERC20(pool.asset2()).approve(poolAddress, amount2);
 
     uint256 liquidity = pool.addLiquidity(amount1, amount2);
     pool.transfer(msg.sender, liquidity);
@@ -88,14 +91,8 @@ abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUp
 
     pool.exit(share);
 
-    IERC20Upgradeable(pool.asset1()).safeTransfer(
-      msg.sender,
-      IERC20Upgradeable(pool.asset1()).balanceOf(address(this))
-    );
-    IERC20Upgradeable(pool.asset2()).safeTransfer(
-      msg.sender,
-      IERC20Upgradeable(pool.asset2()).balanceOf(address(this))
-    );
+    IERC20(pool.asset1()).transfer(msg.sender, IERC20(pool.asset1()).balanceOf(address(this)));
+    IERC20(pool.asset2()).transfer(msg.sender, IERC20(pool.asset2()).balanceOf(address(this)));
   }
 
   /**

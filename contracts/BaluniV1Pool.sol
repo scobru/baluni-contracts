@@ -2,16 +2,29 @@
 pragma solidity 0.8.25;
 
 import './interfaces/IBaluniV1Rebalancer.sol';
-import './interfaces/IOracle.sol';
 
-import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+
+interface AggregatorV3Interface {
+  function latestAnswer() external view returns (int256);
+
+  function latestTimestamp() external view returns (uint256);
+
+  function latestRound() external view returns (uint256);
+
+  function getAnswer(uint256 roundId) external view returns (int256);
+
+  function getTimestamp(uint256 roundId) external view returns (uint256);
+
+  function decimals() external view returns (uint8);
+
+  event AnswerUpdated(int256 indexed current, uint256 indexed roundId, uint256 updatedAt);
+  event NewRound(uint256 indexed roundId, address indexed startedBy, uint256 startedAt);
+}
 
 contract BaluniV1Pool is
   Initializable,
@@ -20,13 +33,13 @@ contract BaluniV1Pool is
   ReentrancyGuardUpgradeable,
   UUPSUpgradeable
 {
-  using SafeERC20Upgradeable for IERC20Upgradeable;
-
   IBaluniV1Rebalancer public rebalancer;
-  IERC20Upgradeable public asset1;
-  IERC20Upgradeable public asset2;
-  IOracle public oracle;
+  IERC20 public asset1;
+  IERC20 public asset2;
+  AggregatorV3Interface public oracle;
   uint256 public constant SWAP_FEE_BPS = 30;
+
+  event RebalancePerformed(address indexed by, uint256 deviationAsset1, uint256 deviationAsset2);
 
   function _authorizeUpgrade(address) internal override onlyOwner {}
 
@@ -38,15 +51,35 @@ contract BaluniV1Pool is
    * @param _asset2 The address of the second asset contract.
    */
   function initialize(address _oracle, address _rebalancer, address _asset1, address _asset2) public initializer {
-    __Ownable_init();
+    __Ownable_init(msg.sender);
     __ERC20_init('Baluni LP', 'BALUNI-LP');
     __ReentrancyGuard_init();
     __UUPSUpgradeable_init();
 
     rebalancer = IBaluniV1Rebalancer(_rebalancer);
-    asset1 = IERC20Upgradeable(_asset1);
-    asset2 = IERC20Upgradeable(_asset2);
-    oracle = IOracle(_oracle);
+    asset1 = IERC20(_asset1);
+    asset2 = IERC20(_asset2);
+    oracle = AggregatorV3Interface(_oracle);
+    asset1.approve(address(rebalancer), type(uint256).max);
+    asset2.approve(address(rebalancer), type(uint256).max);
+  }
+
+  function reinitialize(
+    address _oracle,
+    address _rebalancer,
+    address _asset1,
+    address _asset2,
+    uint64 version
+  ) public reinitializer(version) {
+    __Ownable_init(msg.sender);
+    __ERC20_init('Baluni LP', 'BALUNI-LP');
+    __ReentrancyGuard_init();
+    __UUPSUpgradeable_init();
+
+    rebalancer = IBaluniV1Rebalancer(_rebalancer);
+    asset1 = IERC20(_asset1);
+    asset2 = IERC20(_asset2);
+    oracle = AggregatorV3Interface(_oracle);
     asset1.approve(address(rebalancer), type(uint256).max);
     asset2.approve(address(rebalancer), type(uint256).max);
   }
@@ -56,31 +89,31 @@ contract BaluniV1Pool is
    * @param fromToken The address of the token being converted from.
    * @param toToken The address of the token being converted to.
    * @param amountAfterFee The amount to be converted after applying a fee.
-   * @return The received amount after applying the conversion rate and fee.
+   * @return receivedAmount The received amount after applying the conversion rate and fee.
    */
   function _calculateReceivedAmount(
     address fromToken,
     address toToken,
     uint256 amountAfterFee
-  ) internal view returns (uint256) {
-    uint256 rate = oracle.getRate(IERC20Upgradeable(fromToken), IERC20Upgradeable(toToken), false);
-    uint8 fromDecimals = IERC20MetadataUpgradeable(fromToken).decimals();
-    uint8 toDecimals = IERC20MetadataUpgradeable(toToken).decimals();
+  ) internal view returns (uint256 receivedAmount) {
+    //uint256 rate = oracle.getRate(IERC20(fromToken), IERC20(toToken), false);
+
+    uint256 rate = uint256(oracle.latestAnswer()); // Convert int256 to uint256
+    uint8 decimals = oracle.decimals();
+    uint256 adjustedRate = rate * (10 ** (18 - oracle.decimals())); // Adjust for the decimals
+
+    uint8 fromDecimals = IERC20Metadata(fromToken).decimals();
+    uint8 toDecimals = IERC20Metadata(toToken).decimals();
     require(fromDecimals <= 18, 'FromToken has more than 18 decimals');
     require(toDecimals <= 18, 'ToToken has more than 18 decimals');
 
-    uint256 receivedAmount;
-
+    uint256 adjustedAmount = amountAfterFee * adjustedRate;
     if (fromDecimals > toDecimals) {
-      receivedAmount =
-        ((amountAfterFee * rate * (10 ** (fromDecimals - toDecimals))) / 1e18) *
-        (10 ** 18 - fromDecimals);
+      receivedAmount = (adjustedAmount * (10 ** (fromDecimals - toDecimals))) / 1e18;
     } else if (toDecimals > fromDecimals) {
-      receivedAmount =
-        ((amountAfterFee * rate) / (10 ** (toDecimals - fromDecimals)) / 1e18) *
-        (10 ** 18 - fromDecimals);
+      receivedAmount = adjustedAmount / (10 ** (toDecimals - fromDecimals)) / 1e18;
     } else {
-      receivedAmount = (amountAfterFee * rate) / 1e18;
+      receivedAmount = adjustedAmount / 1e18;
     }
 
     return receivedAmount;
@@ -102,17 +135,16 @@ contract BaluniV1Pool is
     require(fromToken != toToken, 'Cannot swap the same token');
     require(amount > 0, 'Amount must be greater than zero');
 
-    IERC20Upgradeable(fromToken).safeTransferFrom(msg.sender, address(this), amount);
+    IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
 
     uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
     uint256 amountAfterFee = amount - fee;
     uint256 receivedAmount = _calculateReceivedAmount(fromToken, toToken, amountAfterFee);
-    require(IERC20Upgradeable(toToken).balanceOf(address(this)) >= receivedAmount, 'Insufficient balance');
+    require(IERC20(toToken).balanceOf(address(this)) >= receivedAmount, 'Insufficient balance');
 
-    IERC20Upgradeable(toToken).safeTransfer(msg.sender, receivedAmount);
+    IERC20(toToken).transfer(msg.sender, receivedAmount);
     emit Swap(msg.sender, fromToken, toToken, amount, receivedAmount);
 
-    performRebalanceIfNeeded();
     return receivedAmount;
   }
 
@@ -154,8 +186,8 @@ contract BaluniV1Pool is
    * @return The amount of tokens (`toMint`) minted and transferred to the caller.
    */
   function addLiquidity(uint256 amount1, uint256 amount2) external nonReentrant returns (uint256) {
-    asset1.safeTransferFrom(msg.sender, address(this), amount1);
-    asset2.safeTransferFrom(msg.sender, address(this), amount2);
+    asset1.transferFrom(msg.sender, address(this), amount1);
+    asset2.transferFrom(msg.sender, address(this), amount2);
 
     uint256 amount1InAsset2 = _calculateReceivedAmount(address(asset1), address(asset2), amount1);
     uint256 totalValueInAsset2 = amount1InAsset2 + amount2;
@@ -164,7 +196,7 @@ contract BaluniV1Pool is
     uint256 toMint;
 
     if (totalSupply == 0) {
-      toMint = (totalValueInAsset2 * 1e18) / 10 ** IERC20MetadataUpgradeable(address(asset2)).decimals();
+      toMint = (totalValueInAsset2 * 1e18) / 10 ** IERC20Metadata(address(asset2)).decimals();
     } else {
       uint256 totalLiquidity = totalLiquidityInAsset2();
       toMint = (totalValueInAsset2 * totalSupply) / totalLiquidity;
@@ -172,6 +204,7 @@ contract BaluniV1Pool is
 
     _mint(msg.sender, toMint);
     emit LiquidityAdded(msg.sender, amount1, amount2, toMint);
+
     return toMint;
   }
 
@@ -198,8 +231,8 @@ contract BaluniV1Pool is
     uint256 asset2Share = (asset2Balance * share) / totalSupply;
 
     _burn(msg.sender, share);
-    asset1.safeTransfer(msg.sender, asset1Share);
-    asset2.safeTransfer(msg.sender, asset2Share);
+    asset1.transfer(msg.sender, asset1Share);
+    asset2.transfer(msg.sender, asset2Share);
 
     emit LiquidityRemoved(msg.sender, asset1Share, asset2Share, share);
   }
@@ -251,18 +284,59 @@ contract BaluniV1Pool is
    * - The `weights` array must contain the corresponding weights for the assets.
    * - The `rebalanceStatus` must not be `NoRebalance`.
    */
-  function performRebalanceIfNeeded() internal {
-    address[] memory assets = new address[](2);
-    uint256[] memory weights = new uint256[](2);
-    assets[0] = address(asset1);
-    assets[1] = address(asset2);
-    weights[0] = 5000;
-    weights[1] = 5000;
+  function performRebalanceIfNeeded() external {
+    _performRebalanceIfNeeded();
+  }
 
-    IBaluniV1Rebalancer.RebalanceType rebalanceStatus = rebalancer.checkRebalance(assets, weights, 100, address(this));
-    if (rebalanceStatus != IBaluniV1Rebalancer.RebalanceType.NoRebalance) {
+  function _performRebalanceIfNeeded() internal {
+    require(balanceOf(msg.sender) > 0, 'Caller has no shares');
+    uint256 weights0 = 5000;
+    uint256 weights1 = 5000;
+
+    uint256 totalValueInAsset2 = totalLiquidityInAsset2();
+    uint256 asset1ValueInAsset2 = _calculateReceivedAmount(
+      address(asset1),
+      address(asset2),
+      asset1.balanceOf(address(this))
+    );
+    uint256 asset2Balance = asset2.balanceOf(address(this));
+
+    uint256 currentWeightAsset1 = (asset1ValueInAsset2 * 10000) / totalValueInAsset2;
+    uint256 currentWeightAsset2 = (asset2Balance * 10000) / totalValueInAsset2;
+
+    uint256 deviationAsset1 = currentWeightAsset1 > weights0
+      ? currentWeightAsset1 - 5000
+      : weights0 - currentWeightAsset1;
+    uint256 deviationAsset2 = currentWeightAsset2 > weights1
+      ? currentWeightAsset2 - weights1
+      : weights1 - currentWeightAsset2;
+
+    uint256 rebalanceThreshold = 100; // 5% deviation threshold
+
+    if (deviationAsset1 > rebalanceThreshold || deviationAsset2 > rebalanceThreshold) {
+      address[] memory assets = new address[](2);
+      uint256[] memory weights = new uint256[](2);
+      assets[0] = address(asset1);
+      assets[1] = address(asset2);
+      weights[0] = weights0;
+      weights[1] = weights1;
+
       rebalancer.rebalance(assets, weights, address(this), address(this));
+      emit RebalancePerformed(msg.sender, deviationAsset1, deviationAsset2);
+    } else {
+      revert('No rebalance needed');
     }
+
+    // Old Method
+    // IBaluniV1Rebalancer.RebalanceVars memory rebalanceStatus = rebalancer.checkRebalance(
+    //   assets,
+    //   weights,
+    //   100,
+    //   address(this)
+    // );
+    // if (rebalanceStatus.overweightVaults.length > 0 && rebalanceStatus.underweightVaults.length > 0) {
+    //   rebalancer.rebalance(assets, weights, address(this), address(this));
+    // }
   }
 
   event Swap(
