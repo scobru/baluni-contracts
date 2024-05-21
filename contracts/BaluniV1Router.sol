@@ -48,9 +48,10 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import './interfaces/IBaluniV1AgentFactory.sol';
 import './interfaces/IBaluniV1Agent.sol';
 import './interfaces/IBaluniV1MarketOracle.sol';
+import './interfaces/IBaluniV1Rebalancer.sol';
 import './libs/EnumerableSetUpgradeable.sol';
 
-interface IOracle {
+interface I1inchSpotAgg {
   function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate);
 }
 
@@ -74,12 +75,14 @@ contract BaluniV1Router is
   EnumerableSetUpgradeable.AddressSet private tokens;
   IERC20 private USDC;
   IERC20Metadata private WNATIVE;
-  IOracle private oracle;
+  I1inchSpotAgg private oracle;
   ISwapRouter private uniswapRouter;
   IUniswapV3Factory private uniswapFactory;
   IBaluniV1AgentFactory public agentFactory;
-
   IBaluniV1MarketOracle public marketOracle;
+  IBaluniV1Rebalancer public rebalancer;
+
+  address public treasury;
 
   using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
@@ -99,9 +102,10 @@ contract BaluniV1Router is
   function initialize(
     address _usdc,
     address _wnative,
-    address _oracle,
+    address _1inchSpotAgg,
     address _uniRouter,
-    address _uniFactory
+    address _uniFactory,
+    address _rebalancer
   ) public initializer {
     __ERC20_init('Baluni', 'BALUNI');
     __Ownable_init(msg.sender);
@@ -114,17 +118,19 @@ contract BaluniV1Router is
     _BPS_BASE = 10000;
     USDC = IERC20(_usdc);
     WNATIVE = IERC20Metadata(_wnative);
-    oracle = IOracle(_oracle); // 1inch Spot Aggregator
+    oracle = I1inchSpotAgg(_1inchSpotAgg); // 1inch Spot Aggregator
     uniswapRouter = ISwapRouter(_uniRouter);
     uniswapFactory = IUniswapV3Factory(_uniFactory);
     EnumerableSetUpgradeable.add(tokens, address(USDC));
+    rebalancer = IBaluniV1Rebalancer(_rebalancer);
+    treasury = msg.sender;
   }
 
   /**
    * @dev Reinitializes the BaluniV1Router contract with the specified parameters.
    * @param _usdc The address of the USDC token contract.
    * @param _wnative The address of the WNative token contract.
-   * @param _oracle The address of the 1inch Spot Aggregator oracle contract.
+   * @param _1inchSpotAgg The address of the 1inch Spot Aggregator oracle contract.
    * @param _uniRouter The address of the Uniswap router contract.
    * @param _uniFactory The address of the Uniswap factory contract.
    * @param version The version of the contract.
@@ -132,9 +138,10 @@ contract BaluniV1Router is
   function reinitialize(
     address _usdc,
     address _wnative,
-    address _oracle,
+    address _1inchSpotAgg,
     address _uniRouter,
     address _uniFactory,
+    address _rebalancer,
     uint64 version
   ) public reinitializer(version) {
     // __UUPSUpgradeable_init();
@@ -144,10 +151,12 @@ contract BaluniV1Router is
     _BPS_BASE = 10000;
     USDC = IERC20(_usdc);
     WNATIVE = IERC20Metadata(_wnative);
-    oracle = IOracle(_oracle); // 1inch Spot Aggregator
+    oracle = I1inchSpotAgg(_1inchSpotAgg); // 1inch Spot Aggregator
     uniswapRouter = ISwapRouter(_uniRouter);
     uniswapFactory = IUniswapV3Factory(_uniFactory);
     EnumerableSetUpgradeable.add(tokens, address(USDC));
+    rebalancer = IBaluniV1Rebalancer(_rebalancer);
+    treasury = msg.sender;
   }
 
   /**
@@ -164,7 +173,7 @@ contract BaluniV1Router is
    * @return The address of the contract owner.
    */
   function getTreasury() public view returns (address) {
-    return owner();
+    return treasury;
   }
 
   /**
@@ -209,6 +218,25 @@ contract BaluniV1Router is
   function changeBpsFee(uint256 _newFee) external onlyOwner {
     _BPS_FEE = _newFee;
     emit ChangeBpsFee(_newFee);
+  }
+
+  /**
+   * @dev Changes the treasury address.
+   * Can only be called by the contract owner.
+   * @param _newTreasury The new treasury address.
+   */
+  function changeTreasury(address _newTreasury) external onlyOwner {
+    treasury = _newTreasury;
+  }
+
+  /**
+   * @dev Changes the address of the rebalancer contract.
+   * Can only be called by the contract owner.
+   *
+   * @param _newRebalancer The new address of the rebalancer contract.
+   */
+  function changeRebalancer(address _newRebalancer) external onlyOwner {
+    rebalancer = IBaluniV1Rebalancer(_newRebalancer);
   }
 
   /**
@@ -416,6 +444,24 @@ contract BaluniV1Router is
   }
 
   /**
+   * @dev Calls the `rebalance` function of the `rebalancer` contract.
+   * @param assets An array of addresses representing the assets to rebalance.
+   * @param weights An array of uint256 values representing the weights of the assets.
+   * @param sender The address of the sender.
+   * @param receiver The address of the receiver.
+   * @param limit The maximum number of assets to rebalance.
+   */
+  function callRebalance(
+    address[] calldata assets,
+    uint256[] calldata weights,
+    address sender,
+    address receiver,
+    uint256 limit
+  ) external {
+    rebalancer.rebalance(assets, weights, sender, receiver, limit);
+  }
+
+  /**
    * @dev Calculates the amount of USDC required to mint a given amount of BAL tokens.
    * @param balAmountToMint The amount of BAL tokens to be minted.
    * @return The amount of USDC required to mint the specified amount of BAL tokens.
@@ -471,6 +517,10 @@ contract BaluniV1Router is
     return _calculateBaluniToUSDC(amount);
   }
 
+  /**
+   * @dev Fetches the market prices of BALUNI tokens.
+   * @return The unit price and market price of BALUNI tokens.
+   */
   function fetchMarketPrices() external view returns (uint256, uint256) {
     uint256 unitPrice = marketOracle._unitPriceBALUNI();
     uint256 marketPrice = marketOracle._priceBALUNI() * 1e12;
@@ -508,7 +558,7 @@ contract BaluniV1Router is
 
     if (token == address(USDC)) return amount * 1e12;
 
-    try IOracle(oracle).getRate(IERC20(token), IERC20(USDC), false) returns (uint256 _rate) {
+    try I1inchSpotAgg(oracle).getRate(IERC20(token), IERC20(USDC), false) returns (uint256 _rate) {
       rate = _rate;
     } catch {
       return 0;
