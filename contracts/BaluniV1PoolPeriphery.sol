@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GNU AGPLv3
 pragma solidity 0.8.25;
 
-import './BaluniV1Pool.sol';
-import './BaluniV1PoolFactory.sol';
+import './interfaces/IBaluniV1Pool.sol';
+import './interfaces/IBaluniV1PoolFactory.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 
 /**
  * @title BaluniV1Periphery
@@ -14,7 +16,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
  */
 contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
   // A reference to the BaluniV1PoolFactory contract.
-  BaluniV1PoolFactory public poolFactory;
+  IBaluniV1PoolFactory public poolFactory;
 
   /**
    * @dev Initializes the contract by setting the pool factory address.
@@ -23,7 +25,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
   function initialize(address _poolFactory) public initializer {
     __UUPSUpgradeable_init();
     __Ownable_init(msg.sender);
-    poolFactory = BaluniV1PoolFactory(_poolFactory);
+    poolFactory = IBaluniV1PoolFactory(_poolFactory);
   }
 
   /**
@@ -34,7 +36,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
   function reinitialize(address _poolFactory, uint64 version) public reinitializer(version) {
     __UUPSUpgradeable_init();
     __Ownable_init(msg.sender);
-    poolFactory = BaluniV1PoolFactory(_poolFactory);
+    poolFactory = IBaluniV1PoolFactory(_poolFactory);
   }
 
   /**
@@ -54,7 +56,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
   function swap(address fromToken, address toToken, uint256 amount) external returns (uint256) {
     require(amount > 0, 'Amount must be greater than zero');
     address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
-    BaluniV1Pool pool = BaluniV1Pool(poolAddress);
+    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
     IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
     IERC20(fromToken).approve(poolAddress, amount);
 
@@ -78,7 +80,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
   ) external returns (uint256) {
     require(amount1 > 0 || amount2 > 0, 'Amounts must be greater than zero');
     address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
-    BaluniV1Pool pool = BaluniV1Pool(poolAddress);
+    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
     IERC20(pool.asset1()).transferFrom(msg.sender, address(this), amount1);
     IERC20(pool.asset2()).transferFrom(msg.sender, address(this), amount2);
 
@@ -99,7 +101,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     require(share > 0, 'Share must be greater than zero');
     address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
 
-    BaluniV1Pool pool = BaluniV1Pool(poolAddress);
+    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
     pool.transferFrom(msg.sender, address(this), share);
     pool.approve(poolAddress, share);
 
@@ -118,13 +120,13 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
    */
   function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
     address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
-    BaluniV1Pool pool = BaluniV1Pool(poolAddress);
+    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
     return pool.getAmountOut(fromToken, toToken, amount);
   }
 
   function perfromRebalanceIfNeeded(address fromToken, address toToken) external {
     address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
-    BaluniV1Pool pool = BaluniV1Pool(poolAddress);
+    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
     pool.performRebalanceIfNeeded();
   }
 }

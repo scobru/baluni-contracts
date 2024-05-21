@@ -155,7 +155,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // console.log("BaluniV1Pool upgraded to:", instancePool.target);
 
   const BaluniV1PoolPeriphery = await ethers.getContractFactory("BaluniV1PoolPeriphery");
-  await upgrades.forceImport("0xC9C6073494fD9524Dbe08B91E6106285F983237b", BaluniV1PoolPeriphery);
+  //await upgrades.forceImport("0xC9C6073494fD9524Dbe08B91E6106285F983237b", BaluniV1PoolPeriphery);
   const baluniPeriphery = await upgrades.upgradeProxy(
     "0xC9C6073494fD9524Dbe08B91E6106285F983237b",
     BaluniV1PoolPeriphery,
@@ -163,7 +163,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
       kind: "uups",
       call: {
         fn: "reinitialize",
-        args: ["0x6D059183aa33198476C2D19A056AD1D9e8D3FeE1", 2],
+        args: ["0x6D059183aa33198476C2D19A056AD1D9e8D3FeE1", 3],
       },
     },
   );
