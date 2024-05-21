@@ -20,6 +20,7 @@ interface IBaluniV1Rebalancer {
     uint256[] overweightAmounts;
     uint256[] underweightVaults;
     uint256[] underweightAmounts;
+    uint256[] balances;
   }
 
   function checkRebalance(
