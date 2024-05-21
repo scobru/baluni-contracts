@@ -111,18 +111,13 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
 
   /**
    * @dev Gets the amount of tokens received after a swap in a BaluniV1Pool.
-   * @param poolAddress The address of the BaluniV1Pool contract.
    * @param fromToken The address of the token to swap from.
    * @param toToken The address of the token to swap to.
    * @param amount The amount of tokens to swap.
    * @return The amount of tokens received after the swap.
    */
-  function getAmountOut(
-    address poolAddress,
-    address fromToken,
-    address toToken,
-    uint256 amount
-  ) external view returns (uint256) {
+  function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
+    address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
     BaluniV1Pool pool = BaluniV1Pool(poolAddress);
     return pool.getAmountOut(fromToken, toToken, amount);
   }

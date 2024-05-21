@@ -124,12 +124,14 @@ Baluni is a decentralized finance (DeFi) protocol that offers an advanced algori
 
 - `PriceUpdated`: Emitted when the price of BALUNI is updated.
 
-### Polygon 
+### Deployment Polygon 
 
 BaluniV1AgentFactory deployed to: 0x50953ba8BD92523168a63711DBf534fE4F619d0A
 BaluniV1Router deployed to: 0x8DD108DDC24A6b07Bc9191DE5f0337f240c4e0c0
 BaluniV1Rebalance deployed to: 0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac
+
 BaluniV1MarketOracle deployed to: 0x3D22f6bdE20E8647B96d0BAbc21b9BB610FB53A5
 BaluniV1PoolFactory deployed to: 0x6D059183aa33198476C2D19A056AD1D9e8D3FeE1
 BaluniV1PoolPeriphery deployed to: 0xC9C6073494fD9524Dbe08B91E6106285F983237b
+
 Pool USDT-USDC deployed to: 0xF5fa4f458A095396Fa3DfFfE9e7D
