@@ -3,11 +3,8 @@ pragma solidity 0.8.25;
 
 import './interfaces/IBaluniV1Rebalancer.sol';
 
-import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
 interface AggregatorV3Interface {
   function latestAnswer() external view returns (int256);
@@ -26,22 +23,14 @@ interface AggregatorV3Interface {
   event NewRound(uint256 indexed roundId, address indexed startedBy, uint256 startedAt);
 }
 
-contract BaluniV1Pool is
-  Initializable,
-  OwnableUpgradeable,
-  ERC20Upgradeable,
-  ReentrancyGuardUpgradeable,
-  UUPSUpgradeable
-{
+contract BaluniV1Pool is ERC20, ReentrancyGuard {
   IBaluniV1Rebalancer public rebalancer;
   IERC20 public asset1;
   IERC20 public asset2;
   AggregatorV3Interface public oracle;
   uint256 public constant SWAP_FEE_BPS = 30;
 
-  event RebalancePerformed(address indexed by, uint256 deviationAsset1, uint256 deviationAsset2);
-
-  function _authorizeUpgrade(address) internal override onlyOwner {}
+  event RebalancePerformed(address indexed by, address[] assets);
 
   /**
    * @dev Initializes the BaluniV1Pool contract.
@@ -50,32 +39,12 @@ contract BaluniV1Pool is
    * @param _asset1 The address of the first asset contract.
    * @param _asset2 The address of the second asset contract.
    */
-  function initialize(address _oracle, address _rebalancer, address _asset1, address _asset2) public initializer {
-    __Ownable_init(msg.sender);
-    __ERC20_init('Baluni LP', 'BALUNI-LP');
-    __ReentrancyGuard_init();
-    __UUPSUpgradeable_init();
-
-    rebalancer = IBaluniV1Rebalancer(_rebalancer);
-    asset1 = IERC20(_asset1);
-    asset2 = IERC20(_asset2);
-    oracle = AggregatorV3Interface(_oracle);
-    asset1.approve(address(rebalancer), type(uint256).max);
-    asset2.approve(address(rebalancer), type(uint256).max);
-  }
-
-  function reinitialize(
+  constructor(
     address _oracle,
     address _rebalancer,
     address _asset1,
-    address _asset2,
-    uint64 version
-  ) public reinitializer(version) {
-    __Ownable_init(msg.sender);
-    __ERC20_init('Baluni LP', 'BALUNI-LP');
-    __ReentrancyGuard_init();
-    __UUPSUpgradeable_init();
-
+    address _asset2
+  ) ERC20('Baluni LP', 'BALUNI-LP') ReentrancyGuard() {
     rebalancer = IBaluniV1Rebalancer(_rebalancer);
     asset1 = IERC20(_asset1);
     asset2 = IERC20(_asset2);
@@ -99,7 +68,6 @@ contract BaluniV1Pool is
     //uint256 rate = oracle.getRate(IERC20(fromToken), IERC20(toToken), false);
 
     uint256 rate = uint256(oracle.latestAnswer()); // Convert int256 to uint256
-    uint8 decimals = oracle.decimals();
     uint256 adjustedRate = rate * (10 ** (18 - oracle.decimals())); // Adjust for the decimals
 
     uint8 fromDecimals = IERC20Metadata(fromToken).decimals();
@@ -288,6 +256,11 @@ contract BaluniV1Pool is
     _performRebalanceIfNeeded();
   }
 
+  /**
+   * @dev Returns the deviation of the current weights of asset1 and asset2 from the target weights.
+   * @return deviationAsset1 The deviation of the current weight of asset1 from the target weight.
+   * @return deviationAsset2 The deviation of the current weight of asset2 from the target weight.
+   */
   function getDeviation() external view returns (uint256, uint256) {
     uint256 weights0 = 5000;
     uint256 weights1 = 5000;
@@ -313,55 +286,34 @@ contract BaluniV1Pool is
     return (deviationAsset1, deviationAsset2);
   }
 
+  /**
+   * @dev Performs rebalance if needed based on the deviation of asset weights from the target weights.
+   * @notice This function checks if the caller has any shares, calculates the current weights of assets,
+   * and compares them with the target weights. If the deviation exceeds the threshold, a rebalance is performed
+   * by calling the `rebalance` function of the `rebalancer` contract.
+   * @notice The rebalance is performed using the assets and weights specified in the `assets` and `weights` arrays.
+   * @notice Emits a `RebalancePerformed` event if a rebalance is performed.
+   * @notice Reverts with an error message if no rebalance is needed.
+   */
   function _performRebalanceIfNeeded() internal {
-    require(balanceOf(msg.sender) > 0, 'Caller has no shares');
-    uint256 weights0 = 5000;
-    uint256 weights1 = 5000;
+    uint256[] memory weights = new uint256[](2);
+    weights[0] = 5000;
+    weights[1] = 5000;
 
-    uint256 totalValueInAsset2 = totalLiquidityInAsset2();
-    uint256 asset1ValueInAsset2 = _calculateReceivedAmount(
-      address(asset1),
-      address(asset2),
-      asset1.balanceOf(address(this))
-    );
-    uint256 asset2Balance = asset2.balanceOf(address(this));
+    address[] memory assets = new address[](2);
+    assets[0] = address(asset1);
+    assets[1] = address(asset2);
 
-    uint256 currentWeightAsset1 = (asset1ValueInAsset2 * 10000) / totalValueInAsset2;
-    uint256 currentWeightAsset2 = (asset2Balance * 10000) / totalValueInAsset2;
+    rebalancer.rebalance(assets, weights, address(this), address(this), 100);
+    emit RebalancePerformed(msg.sender, assets);
+  }
 
-    uint256 deviationAsset1 = currentWeightAsset1 > weights0
-      ? currentWeightAsset1 - 5000
-      : weights0 - currentWeightAsset1;
-    uint256 deviationAsset2 = currentWeightAsset2 > weights1
-      ? currentWeightAsset2 - weights1
-      : weights1 - currentWeightAsset2;
-
-    uint256 rebalanceThreshold = 100; // 5% deviation threshold
-
-    if (deviationAsset1 > rebalanceThreshold || deviationAsset2 > rebalanceThreshold) {
-      address[] memory assets = new address[](2);
-      uint256[] memory weights = new uint256[](2);
-      assets[0] = address(asset1);
-      assets[1] = address(asset2);
-      weights[0] = weights0;
-      weights[1] = weights1;
-
-      rebalancer.rebalance(assets, weights, address(this), address(this));
-      emit RebalancePerformed(msg.sender, deviationAsset1, deviationAsset2);
-    } else {
-      revert('No rebalance needed');
-    }
-
-    // Old Method
-    // IBaluniV1Rebalancer.RebalanceVars memory rebalanceStatus = rebalancer.checkRebalance(
-    //   assets,
-    //   weights,
-    //   100,
-    //   address(this)
-    // );
-    // if (rebalanceStatus.overweightVaults.length > 0 && rebalanceStatus.underweightVaults.length > 0) {
-    //   rebalancer.rebalance(assets, weights, address(this), address(this));
-    // }
+  /**
+   * @dev Returns the current reserves of asset1 and asset2 held by the contract.
+   * @return A tuple containing the balances of asset1 and asset2 respectively.
+   */
+  function getReserves() external view returns (uint256, uint256) {
+    return (asset1.balanceOf(address(this)), asset2.balanceOf(address(this)));
   }
 
   event Swap(

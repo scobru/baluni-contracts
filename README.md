@@ -1,82 +1,96 @@
-# Baluni Protocol Overview
+## Baluni Protocol Overview
 
 Baluni is a decentralized finance (DeFi) protocol that offers an advanced algorithm for rebalancing ERC20 tokens. It provides a mechanism for users to mint and burn Baluni tokens, which are backed by a variety of collateral held within the protocol. The protocol also accumulates fees from various operations, and these fees are deposited into the router contract. Users can receive their share of these accumulated fees by participating in the minting and burning process.
 
 ## Core Components
 
-### BaluniV1Router
+### `BaluniV1Router`
 
-**Description:** The central contract of the Baluni protocol, `BaluniV1Router` manages token operations and interactions with Uniswap. It handles minting, burning, swapping of tokens, and fee management.
+**Description:** The central contract of the Baluni protocol. It manages token operations and interactions with Uniswap, handling minting, burning, swapping of tokens, and fee management.
 
 **Key Functions:**
-- `initialize()`: Sets up the contract with necessary parameters including USDC and WNATIVE token addresses, oracle, Uniswap router, and factory addresses.
+
+- `initialize()`: Sets up the contract with necessary parameters.
 - `mintWithUSDC()`: Allows users to mint Baluni tokens using USDC.
-- `mintWithERC20()`: Allows users to mint Baluni tokens using other ERC20 tokens based on their valuation.
-- `burnERC20()`: Burns Baluni tokens and retrieves a proportional share of underlying assets from the contract.
-- `burnUSDC()`: Burns Baluni tokens, performs token swaps, and retrieves USDC in return.
-- `execute()`: Executes a series of calls to a BaluniV1Agent contract and handles token returns.
-- `liquidate()`: Liquidates specified tokens by swapping them for USDC.
-- `performArbitrage()`: Executes arbitrage based on the market price and unit price of Baluni tokens.
+- `mintWithERC20()`: Allows users to mint Baluni tokens using other ERC20 tokens.
+- `burnERC20()`: Burns Baluni tokens and retrieves a proportional share of underlying assets.
+- `burnUSDC()`: Burns Baluni tokens, performs token swaps, and retrieves USDC.
+- `execute()`: Executes calls to a `BaluniV1Agent` contract.
+- `liquidate()`: Liquidates specified tokens for USDC.
+- `performArbitrage()`: Executes arbitrage based on market conditions.
 
-### BaluniV1Rebalancer
+### `BaluniV1Rebalancer`
 
-**Description:** Manages the rebalancing of assets within the protocol to maintain optimal portfolio allocation. It adjusts the weights of different assets based on predefined criteria.
+**Description:** Manages the rebalancing of assets within the protocol to maintain optimal portfolio allocation.
 
 **Key Functions:**
+
 - `rebalance()`: Rebalances assets according to specified weights.
-- `checkRebalance()`: Checks if rebalancing is required based on current asset weights and a specified threshold.
+- `checkRebalance()`: Checks if rebalancing is required.
 
-### BaluniV1AgentFactory
+### `BaluniV1AgentFactory`
 
-**Description:** Creates and manages `BaluniV1Agent` contracts that execute batch calls and token operations on behalf of users.
+**Description:** Creates and manages `BaluniV1Agent` contracts for executing batch calls and token operations.
 
 **Key Functions:**
+
 - `getOrCreateAgent()`: Retrieves or creates an agent contract for a user.
-- `getAgentAddress()`: Returns the address of the agent contract associated with a user.
+- `getAgentAddress()`: Returns the address of a user's agent contract.
 
-### BaluniV1Agent
+### `BaluniV1Agent`
 
-**Description:** Executes batch calls and token operations on behalf of the user. It ensures efficient handling of complex transactions.
+**Description:** Executes batch calls and token operations on behalf of users.
 
 **Key Functions:**
+
 - `execute()`: Executes a batch of calls and performs token operations.
-- `_chargeFees()`: Charges fees for the tokens returned to the user.
-- `_returnTokens()`: Returns remaining tokens to the owner after executing the batch operations.
+- `_chargeFees()`: Charges fees for returned tokens.
+- `_returnTokens()`: Returns remaining tokens to the owner.
 
 ## Key Features
 
-### Minting and Burning Baluni Tokens
-
-- **Minting:** Users can mint Baluni tokens by depositing USDC or other ERC20 tokens into the protocol. The amount of Baluni tokens minted is based on the total valuation of the collateral.
-- **Burning:** Users can burn Baluni tokens to receive a proportional share of the collateral held in the protocol, including any accumulated fees.
-
-### Rebalancing Algorithm
-
-The protocol offers an algorithm to automatically rebalance the user's portfolio of ERC20 tokens. This ensures that the portfolio maintains optimal asset allocation according to predefined weights.
-
-### Fee Management and Distribution
-
-Fees collected from various operations are deposited into the router contract. To claim their share of these fees, users need to mint Baluni tokens and then burn them. The protocol distributes the fees proportionally based on the amount of Baluni tokens burned.
+- **Minting and Burning Baluni Tokens:**  Users can mint Baluni tokens by depositing collateral and burn them to receive a share of the underlying assets and fees.
+- **Rebalancing Algorithm:** Automatically rebalances user portfolios for optimal asset allocation.
+- **Fee Management and Distribution:**  Collects fees and distributes them to users who burn Baluni tokens.
 
 ## Process to Receive Protocol Fees
 
-1. **Minting Baluni Tokens:**
-   - Users mint Baluni tokens by depositing USDC or other ERC20 tokens into the `BaluniV1Router` contract.
-   - The protocol calculates the required amount of collateral based on the total valuation and mints the corresponding amount of Baluni tokens.
+1. **Mint Baluni Tokens:** Deposit USDC or ERC20 tokens.
+2. **Burn Baluni Tokens:** Receive a share of collateral and accumulated fees.
 
-2. **Burning Baluni Tokens:**
-   - Users burn the minted Baluni tokens to receive their share of the accumulated fees.
-   - Upon burning, the protocol calculates the user's share of the collateral and any accumulated fees, then transfers these assets back to the user.
+## Additional Contracts
 
-By offering an advanced rebalancing algorithm, efficient fee management, and a robust system for minting and burning tokens, the Baluni protocol provides users with a comprehensive toolset for managing their ERC20 token portfolios effectively.
+### `BaluniV1PoolFactory`
 
+**Description:** A factory contract responsible for creating and managing `BaluniV1Pool` instances.
 
-## Deployments
+**Key Functions:**
+
+- `createPool()`: Creates a new pool for a pair of assets.
+- `getAllPools()`: Returns an array of all created pools.
+- `getPoolsCount()`: Returns the total number of pools.
+- `getPoolAssets()`: Retrieves the assets of a specific pool.
+- `getPoolByAssets()`: Retrieves a pool by its asset pair.
+
+### `BaluniV1PoolPeriphery`
+
+**Description:** A periphery contract for interacting with `BaluniV1Pool` contracts, providing user-friendly functions for swapping, adding/removing liquidity, and getting price information.
+
+**Key Functions:**
+
+- `swap()`: Swaps tokens through a pool.
+- `addLiquidity()`: Adds liquidity to a pool.
+- `removeLiquidity()`: Removes liquidity from a pool.
+- `getAmountOut()`: Gets the estimated output amount for a swap.
+- `performRebalanceIfNeeded()`: Triggers a rebalance if necessary.
 
 ### Polygon 
 
 BaluniV1AgentFactory deployed to: 0x50953ba8BD92523168a63711DBf534fE4F619d0A
 BaluniV1Router deployed to: 0x8DD108DDC24A6b07Bc9191DE5f0337f240c4e0c0
 BaluniV1Rebalance deployed to: 0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac
-BaluniV1tablePool deployed to: 0x0b67798A6e2858Ba03F75348bb7d45f36dF6F2f8
 BaluniV1MarketOracle deployed to: 0x3D22f6bdE20E8647B96d0BAbc21b9BB610FB53A5
+
+BaluniV1PoolFactory deployed to: 0x6D059183aa33198476C2D19A056AD1D9e8D3FeE1
+BaluniV1PoolPeriphery deployed to: 0xC9C6073494fD9524Dbe08B91E6106285F983237b
+Pool USDT-USDC deployed to: 0xF5fa4f458A095396Fa3DfFfE9e7D

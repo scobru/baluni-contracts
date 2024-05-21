@@ -6,7 +6,7 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-abstract contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
   // Array to keep track of all pools created
   BaluniV1Pool[] public allPools;
 
@@ -33,15 +33,27 @@ abstract contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, Ownable
   }
 
   /**
+   * @dev Internal function to authorize an upgrade to a new implementation contract.
+   * @param newImplementation The address of the new implementation contract.
+   * @notice This function can only be called by the contract owner.
+   */
+  function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+  /**
    * @dev Creates a new pool with the specified parameters.
-   * @param oracle The address of the oracle contract.
+   * @param _aggregatorV3Interface The address of the oracle contract.
    * @param rebalancer The address of the rebalancer contract.
    * @param asset1 The address of the first asset.
    * @param asset2 The address of the second asset.
    * @return The address of the newly created pool.
    */
-  function createPool(address oracle, address rebalancer, address asset1, address asset2) external returns (address) {
-    require(oracle != address(0), 'Oracle address cannot be zero');
+  function createPool(
+    address _aggregatorV3Interface,
+    address rebalancer,
+    address asset1,
+    address asset2
+  ) external onlyOwner returns (address) {
+    require(_aggregatorV3Interface != address(0), 'Oracle address cannot be zero');
     require(rebalancer != address(0), 'Rebalancer address cannot be zero');
     require(asset1 != address(0) && asset2 != address(0), 'Asset addresses cannot be zero');
     require(asset1 != asset2, 'Assets cannot be the same');
@@ -50,15 +62,14 @@ abstract contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, Ownable
     require(address(getPool[asset1][asset2]) == address(0), 'Pool already exists for this pair');
 
     // Create a new pool instance
-    BaluniV1Pool newPool = new BaluniV1Pool();
-    newPool.initialize(oracle, rebalancer, asset1, asset2);
+    BaluniV1Pool newPool = new BaluniV1Pool(_aggregatorV3Interface, rebalancer, asset1, asset2);
 
     // Update the pool tracking
     allPools.push(newPool);
     getPool[asset1][asset2] = newPool;
     getPool[asset2][asset1] = newPool; // To ensure both asset1-asset2 and asset2-asset1 point to the same pool
 
-    emit PoolCreated(address(newPool), asset1, asset2, oracle, rebalancer);
+    emit PoolCreated(address(newPool), asset1, asset2, _aggregatorV3Interface, rebalancer);
 
     return address(newPool);
   }
@@ -87,5 +98,9 @@ abstract contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, Ownable
   function getPoolAssets(address poolAddress) external view returns (address, address) {
     BaluniV1Pool pool = BaluniV1Pool(poolAddress);
     return (address(pool.asset1()), address(pool.asset2()));
+  }
+
+  function getPoolByAssets(address asset1, address asset2) external view returns (address) {
+    return address(getPool[asset1][asset2]);
   }
 }

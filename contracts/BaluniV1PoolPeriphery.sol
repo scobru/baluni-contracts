@@ -13,7 +13,7 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
   // A reference to the BaluniV1PoolFactory contract.
   BaluniV1PoolFactory public poolFactory;
 
@@ -34,16 +34,22 @@ abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUp
   }
 
   /**
+   * @dev Internal function to authorize an upgrade to a new implementation contract.
+   * @param newImplementation The address of the new implementation contract.
+   * @notice This function can only be called by the contract owner.
+   */
+  function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+  /**
    * @dev Swaps tokens in a BaluniV1Pool.
-   * @param poolAddress The address of the BaluniV1Pool contract.
    * @param fromToken The address of the token to swap from.
    * @param toToken The address of the token to swap to.
    * @param amount The amount of tokens to swap.
    * @return The amount of tokens received after the swap.
    */
-  function swap(address poolAddress, address fromToken, address toToken, uint256 amount) external returns (uint256) {
+  function swap(address fromToken, address toToken, uint256 amount) external returns (uint256) {
     require(amount > 0, 'Amount must be greater than zero');
-
+    address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
     BaluniV1Pool pool = BaluniV1Pool(poolAddress);
     IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
     IERC20(fromToken).approve(poolAddress, amount);
@@ -56,14 +62,18 @@ abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUp
 
   /**
    * @dev Adds liquidity to a BaluniV1Pool.
-   * @param poolAddress The address of the BaluniV1Pool contract.
    * @param amount1 The amount of the first asset to add.
    * @param amount2 The amount of the second asset to add.
    * @return The amount of liquidity tokens received after adding liquidity.
    */
-  function addLiquidity(address poolAddress, uint256 amount1, uint256 amount2) external returns (uint256) {
+  function addLiquidity(
+    uint256 amount1,
+    address fromToken,
+    uint256 amount2,
+    address toToken
+  ) external returns (uint256) {
     require(amount1 > 0 || amount2 > 0, 'Amounts must be greater than zero');
-
+    address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
     BaluniV1Pool pool = BaluniV1Pool(poolAddress);
     IERC20(pool.asset1()).transferFrom(msg.sender, address(this), amount1);
     IERC20(pool.asset2()).transferFrom(msg.sender, address(this), amount2);
@@ -79,11 +89,11 @@ abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUp
 
   /**
    * @dev Removes liquidity from a BaluniV1Pool.
-   * @param poolAddress The address of the BaluniV1Pool contract.
    * @param share The amount of liquidity tokens to remove.
    */
-  function removeLiquidity(address poolAddress, uint256 share) external {
+  function removeLiquidity(address fromToken, address toToken, uint256 share) external {
     require(share > 0, 'Share must be greater than zero');
+    address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
 
     BaluniV1Pool pool = BaluniV1Pool(poolAddress);
     pool.transferFrom(msg.sender, address(this), share);
@@ -111,5 +121,11 @@ abstract contract BaluniV1Periphery is Initializable, OwnableUpgradeable, UUPSUp
   ) external view returns (uint256) {
     BaluniV1Pool pool = BaluniV1Pool(poolAddress);
     return pool.getAmountOut(fromToken, toToken, amount);
+  }
+
+  function perfromRebalanceIfNeeded(address fromToken, address toToken) external {
+    address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
+    BaluniV1Pool pool = BaluniV1Pool(poolAddress);
+    pool.performRebalanceIfNeeded();
   }
 }

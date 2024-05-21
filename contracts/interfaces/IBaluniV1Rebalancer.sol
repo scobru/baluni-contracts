@@ -34,6 +34,7 @@ interface IBaluniV1Rebalancer {
     address[] calldata assets,
     uint256[] calldata weights,
     address sender,
-    address receiver
-  ) external returns (bool);
+    address receiver,
+    uint256 limit
+  ) external;
 }
