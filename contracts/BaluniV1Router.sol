@@ -120,6 +120,15 @@ contract BaluniV1Router is
     EnumerableSetUpgradeable.add(tokens, address(USDC));
   }
 
+  /**
+   * @dev Reinitializes the BaluniV1Router contract with the specified parameters.
+   * @param _usdc The address of the USDC token contract.
+   * @param _wnative The address of the WNative token contract.
+   * @param _oracle The address of the 1inch Spot Aggregator oracle contract.
+   * @param _uniRouter The address of the Uniswap router contract.
+   * @param _uniFactory The address of the Uniswap factory contract.
+   * @param version The version of the contract.
+   */
   function reinitialize(
     address _usdc,
     address _wnative,
@@ -141,11 +150,19 @@ contract BaluniV1Router is
     EnumerableSetUpgradeable.add(tokens, address(USDC));
   }
 
+  /**
+   * @dev Initializes the market oracle contract.
+   * @param _marketOracle The address of the market oracle contract.
+   */
   function initializeMarketOracle(address _marketOracle) public initializer {
     require(address(marketOracle) == address(0), 'Market Oracle Already Initialized');
     marketOracle = IBaluniV1MarketOracle(_marketOracle);
   }
 
+  /**
+   * @dev Returns the address of the contract owner (treasury).
+   * @return The address of the contract owner.
+   */
   function getTreasury() public view returns (address) {
     return owner();
   }

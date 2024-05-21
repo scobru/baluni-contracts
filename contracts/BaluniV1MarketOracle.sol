@@ -31,6 +31,12 @@ contract BaluniV1MarketOracle is Initializable, OwnableUpgradeable, UUPSUpgradea
 
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
+  /**
+   * @dev Initializes the contract with the specified addresses.
+   * @param _baluni The address of the BALUNI token contract.
+   * @param _usdc The address of the USDC token contract.
+   * @param _oracle The address of the oracle contract.
+   */
   function initialize(address _baluni, address _usdc, address _oracle) public initializer {
     __Ownable_init(msg.sender);
     __UUPSUpgradeable_init();
@@ -40,6 +46,13 @@ contract BaluniV1MarketOracle is Initializable, OwnableUpgradeable, UUPSUpgradea
     oracle = _oracle;
   }
 
+  /**
+   * @dev Reinitializes the contract with the specified addresses and version.
+   * @param _baluni The address of the BALUNI token contract.
+   * @param _usdc The address of the USDC token contract.
+   * @param _oracle The address of the oracle contract.
+   * @param version The version of the contract.
+   */
   function reinitialize(address _baluni, address _usdc, address _oracle, uint64 version) public reinitializer(version) {
     __Ownable_init(msg.sender);
     __UUPSUpgradeable_init();
@@ -49,18 +62,34 @@ contract BaluniV1MarketOracle is Initializable, OwnableUpgradeable, UUPSUpgradea
     oracle = _oracle;
   }
 
+  /**
+   * @dev Sets the static oracle address.
+   * @param _address The address of the static oracle.
+   */
   function setStaticOracle(address _address) external onlyOwner {
     oracle = _address;
   }
 
+  /**
+   * @dev Returns the price of BALUNI.
+   * @return The price of BALUNI.
+   */
   function priceBALUNI() external view returns (uint256) {
     return _priceBALUNI();
   }
 
+  /**
+   * @dev Returns the unit price of BALUNI.
+   * @return The unit price of BALUNI.
+   */
   function unitPriceBALUNI() external view returns (uint256) {
     return _unitPriceBALUNI();
   }
 
+  /**
+   * @dev Returns the price of BALUNI token in USDC.
+   * @return The price of BALUNI token in USDC.
+   */
   function _priceBALUNI() public view returns (uint256) {
     require(oracle != address(0), 'Oracle address is not set');
 
@@ -85,6 +114,10 @@ contract BaluniV1MarketOracle is Initializable, OwnableUpgradeable, UUPSUpgradea
     return price;
   }
 
+  /**
+   * @dev Returns the unit price of BALUNI token.
+   * @return The unit price of BALUNI token.
+   */
   function _unitPriceBALUNI() public view returns (uint256) {
     require(address(baluniRouter) != address(0), 'Router address is not set');
 

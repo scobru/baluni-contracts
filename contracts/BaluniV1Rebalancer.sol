@@ -55,6 +55,14 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
   ISwapRouter internal uniswapRouter;
   IUniswapV3Factory internal uniswapFactory;
 
+  /**
+   * @dev Initializes the contract with the specified addresses and sets the multiplier value.
+   * @param _baluniRouter The address of the BaluniV1Router contract.
+   * @param _usdc The address of the USDC token contract.
+   * @param _wnative The address of the WNATIVE token contract.
+   * @param _uniRouter The address of the Uniswap router contract.
+   * @param _uniFactory The address of the Uniswap factory contract.
+   */
   function initialize(
     address _baluniRouter,
     address _usdc,
@@ -62,16 +70,30 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     address _uniRouter,
     address _uniFactory
   ) public initializer {
+    // Initialize the contract
     __UUPSUpgradeable_init();
     __Ownable_init(msg.sender);
+
+    // Set the token contracts and router contracts
     USDC = IERC20(_usdc);
     WNATIVE = IERC20Metadata(_wnative);
     uniswapRouter = ISwapRouter(_uniRouter);
     uniswapFactory = IUniswapV3Factory(_uniFactory);
     baluniRouter = IBaluniV1Router(_baluniRouter);
+
+    // Set the multiplier value
     multiplier = 1e12;
   }
 
+  /**
+   * @dev Reinitializes the contract with the specified addresses and sets the multiplier value.
+   * @param _baluniRouter The address of the BaluniV1Router contract.
+   * @param _usdc The address of the USDC token contract.
+   * @param _wnative The address of the WNATIVE token contract.
+   * @param _uniRouter The address of the Uniswap router contract.
+   * @param _uniFactory The address of the Uniswap factory contract.
+   * @param version The version of the contract.
+   */
   function reinitialize(
     address _baluniRouter,
     address _usdc,
@@ -80,11 +102,14 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     address _uniFactory,
     uint64 version
   ) public reinitializer(version) {
+    // Set the token contracts and router contracts
     USDC = IERC20(_usdc);
     WNATIVE = IERC20Metadata(_wnative);
     uniswapRouter = ISwapRouter(_uniRouter);
     uniswapFactory = IUniswapV3Factory(_uniFactory);
     baluniRouter = IBaluniV1Router(_baluniRouter);
+
+    // Set the multiplier value
     multiplier = 1e12;
   }
 

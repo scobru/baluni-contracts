@@ -1,10 +1,4 @@
 // SPDX-License-Identifier: GNU AGPLv3
-
-/**
- * @title BaluniV1Periphery
- * @dev This contract serves as the periphery contract for interacting with BaluniV1Pool contracts.
- * It provides functions for swapping tokens, adding liquidity, removing liquidity, and getting the amount out for a given swap.
- */
 pragma solidity 0.8.25;
 
 import './BaluniV1Pool.sol';
@@ -13,6 +7,11 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
+/**
+ * @title BaluniV1Periphery
+ * @dev This contract serves as the periphery contract for interacting with BaluniV1Pool contracts.
+ * It provides functions for swapping tokens, adding liquidity, removing liquidity, and getting the amount out for a given swap.
+ */
 contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
   // A reference to the BaluniV1PoolFactory contract.
   BaluniV1PoolFactory public poolFactory;
@@ -27,6 +26,11 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     poolFactory = BaluniV1PoolFactory(_poolFactory);
   }
 
+  /**
+   * @dev Reinitializes the contract with the specified `_poolFactory` address and `version`.
+   * @param _poolFactory The address of the BaluniV1PoolFactory contract.
+   * @param version The version of the contract.
+   */
   function reinitialize(address _poolFactory, uint64 version) public reinitializer(version) {
     __UUPSUpgradeable_init();
     __Ownable_init(msg.sender);

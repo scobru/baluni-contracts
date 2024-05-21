@@ -1,0 +1,22 @@
+graph TD
+    subgraph User
+        A[Deposit USDC] --> B[Receive Baluni Tokens]
+        B --> C[Use Baluni Tokens]
+        C --> D[Burn Baluni Tokens]
+        D --> E[Receive Collateral + Fees]
+        J[Interact with Router] --> K[Create/Get Agent]
+    end
+
+    subgraph BaluniV1Router
+        B[Receive Baluni Tokens] --> F[Mint Baluni Tokens]
+        D[Burn Baluni Tokens] --> G[Burn Baluni Tokens]
+        F --> H[Manage Collateral & Fees]
+        K[Create/Get Agent] --> L[Execute]
+    end
+
+    subgraph BaluniV1Agent 
+        L --> M[Execute Batch Operations]
+        M[Execute Batch Operations] -->  H[Manage Collateral & Fees]
+    end
+
+    

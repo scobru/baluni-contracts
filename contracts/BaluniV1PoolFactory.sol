@@ -22,11 +22,20 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
     address rebalancer
   );
 
+  /**
+   * @dev Initializes the contract.
+   * It calls the initializers of the parent contracts.
+   */
   function initialize() public initializer {
     __UUPSUpgradeable_init();
     __Ownable_init(msg.sender);
   }
 
+  /**
+   * @dev Reinitializes the contract with a specific version.
+   * It calls the initializers of the parent contracts.
+   * @param version The version to be set.
+   */
   function reinitialize(uint64 version) public reinitializer(version) {
     __UUPSUpgradeable_init();
     __Ownable_init(msg.sender);
@@ -100,6 +109,12 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
     return (address(pool.asset1()), address(pool.asset2()));
   }
 
+  /**
+   * @dev Returns the address of the pool contract for the given assets.
+   * @param asset1 The address of the first asset.
+   * @param asset2 The address of the second asset.
+   * @return The address of the pool contract.
+   */
   function getPoolByAssets(address asset1, address asset2) external view returns (address) {
     return address(getPool[asset1][asset2]);
   }

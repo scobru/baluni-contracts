@@ -84,13 +84,52 @@ Baluni is a decentralized finance (DeFi) protocol that offers an advanced algori
 - `getAmountOut()`: Gets the estimated output amount for a swap.
 - `performRebalanceIfNeeded()`: Triggers a rebalance if necessary.
 
+## `BaluniV1Pool` Contract
+
+**Description:** This contract represents a liquidity pool for a pair of ERC20 tokens within the Baluni Protocol. It facilitates the exchange of these tokens, allows users to provide liquidity and earn fees, and enables the rebalancing of pool assets for optimal allocation.
+
+**Key Functions:**
+
+- `swap()`: Allows users to swap one token for another within the pool, charging a fee.
+- `getAmountOut()`: Calculates the expected output amount for a given swap.
+- `addLiquidity()`: Enables users to add liquidity to the pool in exchange for LP tokens.
+- `exit()`: Allows users to withdraw their liquidity from the pool.
+- `totalLiquidityInAsset1/2()`: Calculates the total liquidity value in terms of each asset.
+- `performRebalanceIfNeeded()`: Triggers rebalancing of pool assets if necessary.
+- `getDeviation()`: Calculates the deviation of the current pool asset weights from the target weights.
+- `_performRebalanceIfNeeded()`: Internal function to handle the rebalancing process.
+- `getReserves()`: Returns the current reserves of both assets in the pool.
+
+**Events:**
+
+- `Swap`: Emitted when a swap occurs.
+- `LiquidityAdded`: Emitted when liquidity is added to the pool.
+- `LiquidityRemoved`: Emitted when liquidity is removed from the pool.
+- `RebalancePerformed`: Emitted when a rebalance operation is executed.
+
+## `BaluniV1MarketOracle` Contract
+
+**Description:** This contract acts as the market oracle for the Baluni Protocol. It determines the price of BALUNI tokens in relation to USDC using an external oracle and Uniswap V3 pool data.
+
+**Key Functions:**
+
+- `initialize()/reinitialize()`: Initializes/reinitializes the contract with BALUNI, USDC, and oracle addresses.
+- `setStaticOracle()`: Allows the owner to update the static oracle address.
+- `priceBALUNI()`: Returns the price of BALUNI in USDC.
+- `unitPriceBALUNI()`: Returns the unit price of BALUNI from the Baluni Router.
+- `_priceBALUNI()`: Internal function to fetch the BALUNI price from the oracle.
+- `_unitPriceBALUNI()`: Internal function to get the BALUNI unit price from the router.
+
+**Events:**
+
+- `PriceUpdated`: Emitted when the price of BALUNI is updated.
+
 ### Polygon 
 
 BaluniV1AgentFactory deployed to: 0x50953ba8BD92523168a63711DBf534fE4F619d0A
 BaluniV1Router deployed to: 0x8DD108DDC24A6b07Bc9191DE5f0337f240c4e0c0
 BaluniV1Rebalance deployed to: 0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac
 BaluniV1MarketOracle deployed to: 0x3D22f6bdE20E8647B96d0BAbc21b9BB610FB53A5
-
 BaluniV1PoolFactory deployed to: 0x6D059183aa33198476C2D19A056AD1D9e8D3FeE1
 BaluniV1PoolPeriphery deployed to: 0xC9C6073494fD9524Dbe08B91E6106285F983237b
 Pool USDT-USDC deployed to: 0xF5fa4f458A095396Fa3DfFfE9e7D
