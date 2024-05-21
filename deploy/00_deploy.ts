@@ -126,7 +126,7 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     kind: "uups",
     call: {
       fn: "reinitialize",
-      args: ["0x8DD108DDC24A6b07Bc9191DE5f0337f240c4e0c0", USDC, WNATIVE, uniswapRouter, uniswapFactory, 20],
+      args: ["0x8DD108DDC24A6b07Bc9191DE5f0337f240c4e0c0", USDC, WNATIVE, uniswapRouter, uniswapFactory, 21],
     },
   });
   const instanceRebalancer = await rebalancer?.waitForDeployment();

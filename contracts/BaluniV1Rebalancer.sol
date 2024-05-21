@@ -131,7 +131,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
       if (vars.overweightAmounts[i] > 0) {
         address asset = assets[vars.overweightVaults[i]];
 
-        require(IERC20(asset).balanceOf(sender) >= vars.overweightAmounts[i], 'Balance under overweight amounts');
+        require(vars.balances[i] >= vars.overweightAmounts[i], 'Balance under overweight amounts');
 
         IERC20(asset).transferFrom(sender, address(this), vars.overweightAmounts[i]);
 
@@ -168,7 +168,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
 
         if (rebBuyQty > 0 && rebBuyQty <= usdBalance * 1e12) {
           secureApproval(address(USDC), address(uniswapRouter), rebBuyQty / 1e12);
-          require(USDC.balanceOf(address(this)) >= rebBuyQty / 1e12, 'Balance under RebuyQty');
+          require(usdBalance >= rebBuyQty / 1e12, 'Balance under RebuyQty');
 
           //address treasury = baluniRouter.getTreasury();
 
@@ -247,20 +247,21 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
       new uint256[](assets.length),
       new uint256[](assets.length),
       new uint256[](assets.length),
+      new uint256[](assets.length),
       new uint256[](assets.length)
     );
 
     for (uint256 i = 0; i < assets.length; i++) {
-      uint256 balance = IERC20(assets[i]).balanceOf(sender);
+      vars.balances[i] = IERC20(assets[i]).balanceOf(sender);
       uint256 decimals = IERC20Metadata(assets[i]).decimals();
       uint256 tokensTotalValue;
 
       uint256 price = baluniRouter.tokenValuation(1 * 10 ** decimals, assets[i]);
 
       if (assets[i] == address(USDC)) {
-        tokensTotalValue = balance * 1e12; // Adjust for USDC decimals (assumed to be 6)
+        tokensTotalValue = vars.balances[i] * 1e12; // Adjust for USDC decimals (assumed to be 6)
       } else {
-        tokensTotalValue = (price * balance * (10 ** (18 - decimals))) / 1e18; // Correctly adjust for token decimals
+        tokensTotalValue = (price * vars.balances[i] * (10 ** (18 - decimals))) / 1e18; // Correctly adjust for token decimals
       }
 
       uint256 targetWeight = weights[i];

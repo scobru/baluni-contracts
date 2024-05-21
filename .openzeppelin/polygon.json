@@ -20723,6 +20723,161 @@
           ]
         }
       }
+    },
+    "b43faefdd63bd92a0568bba5a6d20821e6c2d52fd5b394e6e846365da55ce11d": {
+      "address": "0x4f5FB1b8B89c499536EcC7e0C6a5747eAfCde611",
+      "txHash": "0xc9463cf0c2e80644a89c1d6abc2a2d1a7a7ce1ecf20d5371457a13b79e3ab766",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "multiplier",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256",
+            "contract": "BaluniV1Rebalancer",
+            "src": "contracts\\BaluniV1Rebalancer.sol:50"
+          },
+          {
+            "label": "baluniRouter",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Router)5968",
+            "contract": "BaluniV1Rebalancer",
+            "src": "contracts\\BaluniV1Rebalancer.sol:52"
+          },
+          {
+            "label": "USDC",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IERC20)1960",
+            "contract": "BaluniV1Rebalancer",
+            "src": "contracts\\BaluniV1Rebalancer.sol:53"
+          },
+          {
+            "label": "WNATIVE",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_contract(IERC20Metadata)1986",
+            "contract": "BaluniV1Rebalancer",
+            "src": "contracts\\BaluniV1Rebalancer.sol:54"
+          },
+          {
+            "label": "uniswapRouter",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_contract(ISwapRouter)2546",
+            "contract": "BaluniV1Rebalancer",
+            "src": "contracts\\BaluniV1Rebalancer.sol:55"
+          },
+          {
+            "label": "uniswapFactory",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_contract(IUniswapV3Factory)2432",
+            "contract": "BaluniV1Rebalancer",
+            "src": "contracts\\BaluniV1Rebalancer.sol:56"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1Router)5968": {
+            "label": "contract IBaluniV1Router",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20)1960": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20Metadata)1986": {
+            "label": "contract IERC20Metadata",
+            "numberOfBytes": "20"
+          },
+          "t_contract(ISwapRouter)2546": {
+            "label": "contract ISwapRouter",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IUniswapV3Factory)2432": {
+            "label": "contract IUniswapV3Factory",
+            "numberOfBytes": "20"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
     }
   }
 }
