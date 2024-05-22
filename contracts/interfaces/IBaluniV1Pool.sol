@@ -8,6 +8,10 @@ interface IBaluniV1Pool {
 
   function asset2() external view returns (address);
 
+  function weight1() external view returns (uint256);
+
+  function weight2() external view returns (uint256);
+
   function oracle() external view returns (address);
 
   function SWAP_FEE_BPS() external view returns (uint256);
@@ -20,13 +24,19 @@ interface IBaluniV1Pool {
 
   function exit(uint256 share) external;
 
-  function totalLiquidityInAsset1() external view returns (uint256);
+  function totalLiquidityAsset1() external view returns (uint256);
 
-  function totalLiquidityInAsset2() external view returns (uint256);
+  function totalLiquidityAsset2() external view returns (uint256);
+
+  function totalLiquidityStable() external view returns (uint256);
+
+  function valuationAsset1() external view returns (uint256);
+
+  function valuationAsset2() external view returns (uint256);
 
   function performRebalanceIfNeeded() external;
 
-  function getDeviation() external view returns (uint256, uint256);
+  function getDeviation() external view returns (bool, uint256, bool, uint256);
 
   function getReserves() external view returns (uint256, uint256);
 

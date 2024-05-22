@@ -1,10 +1,49 @@
 // SPDX-License-Identifier: GNU AGPLv3
 pragma solidity 0.8.25;
+/**
+ *  __                  __                      __
+ * /  |                /  |                    /  |
+ * $$ |____    ______  $$ | __    __  _______  $$/
+ * $$      \  /      \ $$ |/  |  /  |/       \ /  |
+ * $$$$$$$  | $$$$$$  |$$ |$$ |  $$ |$$$$$$$  |$$ |
+ * $$ |  $$ | /    $$ |$$ |$$ |  $$ |$$ |  $$ |$$ |
+ * $$ |__$$ |/$$$$$$$ |$$ |$$ \__$$ |$$ |  $$ |$$ |
+ * $$    $$/ $$    $$ |$$ |$$    $$/ $$ |  $$ |$$ |
+ * $$$$$$$/   $$$$$$$/ $$/  $$$$$$/  $$/   $$/ $$/
+ *
+ *
+ *                  ,-""""-.
+ *                ,'      _ `.
+ *               /       )_)  \
+ *              :              :
+ *              \              /
+ *               \            /
+ *                `.        ,'
+ *                  `.    ,'
+ *                    `.,'
+ *                     /\`.   ,-._
+ *                         `-'    \__
+ *                              .
+ *               s                \
+ *                                \\
+ *                                 \\
+ *                                  >\/7
+ *                              _.-(6'  \
+ *                             (=___._/` \
+ *                                  )  \ |
+ *                                 /   / |
+ *                                /    > /
+ *                               j    < _\
+ *                           _.-' :      ``.
+ *                           \ r=._\        `.
+ */
 
 import './BaluniV1Pool.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+
+import './interfaces/IBaluniV1Pool.sol';
 
 contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
   // Array to keep track of all pools created
@@ -52,16 +91,20 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
    * @dev Creates a new pool with the specified parameters.
    * @param _aggregatorV3Interface The address of the oracle contract.
    * @param rebalancer The address of the rebalancer contract.
-   * @param asset1 The address of the first asset.
-   * @param asset2 The address of the second asset.
+   * @param assets The addresses of the assets.
+   * @param weights The weights of the assets.
+   * @param trigger The trigger value for rebalancing.
    * @return The address of the newly created pool.
    */
   function createPool(
     address _aggregatorV3Interface,
     address rebalancer,
-    address asset1,
-    address asset2
+    address[] memory assets,
+    uint256[] memory weights,
+    uint256 trigger
   ) external onlyOwner returns (address) {
+    address asset1 = assets[0];
+    address asset2 = assets[1];
     require(_aggregatorV3Interface != address(0), 'Oracle address cannot be zero');
     require(rebalancer != address(0), 'Rebalancer address cannot be zero');
     require(asset1 != address(0) && asset2 != address(0), 'Asset addresses cannot be zero');
@@ -71,7 +114,7 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
     require(address(getPool[asset1][asset2]) == address(0), 'Pool already exists for this pair');
 
     // Create a new pool instance
-    BaluniV1Pool newPool = new BaluniV1Pool(_aggregatorV3Interface, rebalancer, asset1, asset2);
+    BaluniV1Pool newPool = new BaluniV1Pool(_aggregatorV3Interface, rebalancer, assets, weights, trigger);
 
     // Update the pool tracking
     allPools.push(newPool);
@@ -117,5 +160,30 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
    */
   function getPoolByAssets(address asset1, address asset2) external view returns (address) {
     return address(getPool[asset1][asset2]);
+  }
+
+  /**
+   * @dev Returns an array of pool addresses that contain the specified token.
+   * @param token The address of the token to search for in the pools.
+   * @return An array of pool addresses that contain the specified token.
+   */
+  function getPoolsByAsset(address token) external view returns (address[] memory) {
+    address[] memory pools = new address[](allPools.length);
+    uint256 count = 0;
+
+    for (uint256 i = 0; i < allPools.length; i++) {
+      IBaluniV1Pool pool = IBaluniV1Pool(pools[i]);
+      if (pool.asset1() == token || pool.asset2() == token) {
+        pools[count] = address(pool);
+        count++;
+      }
+    }
+
+    address[] memory result = new address[](count);
+    for (uint256 i = 0; i < count; i++) {
+      result[i] = pools[i];
+    }
+
+    return result;
   }
 }

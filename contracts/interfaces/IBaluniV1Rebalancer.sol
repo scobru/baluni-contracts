@@ -37,4 +37,6 @@ interface IBaluniV1Rebalancer {
     address receiver,
     uint256 limit
   ) external;
+
+  function getBaluniRouter() external view returns (address);
 }

@@ -3,4 +3,5 @@ pragma solidity 0.8.25;
 
 interface IBaluniV1PoolFactory {
   function getPoolByAssets(address asset1, address asset2) external view returns (address);
+  function getPoolsByAsset(address token) external view returns (address[] memory);
 }

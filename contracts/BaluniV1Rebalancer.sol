@@ -477,4 +477,22 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
 
     return _tokenValue;
   }
+
+  /**
+   * @dev Changes the Baluni router address.
+   * Can only be called by the contract owner.
+   *
+   * @param _newRouter The new address of the Baluni router.
+   */
+  function changeBaluniRouter(address _newRouter) external onlyOwner {
+    baluniRouter = IBaluniV1Router(_newRouter);
+  }
+
+  /**
+   * @dev Returns the address of the Baluni Router contract.
+   * @return The address of the Baluni Router contract.
+   */
+  function getBaluniRouter() external view returns (address) {
+    return address(baluniRouter);
+  }
 }
