@@ -34,7 +34,7 @@ interface IBaluniV1Pool {
 
   function valuationAsset2() external view returns (uint256);
 
-  function performRebalanceIfNeeded() external;
+  function performRebalanceIfNeeded(address _sender) external;
 
   function getDeviation() external view returns (bool, uint256, bool, uint256);
 

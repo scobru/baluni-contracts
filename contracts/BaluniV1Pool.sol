@@ -301,9 +301,9 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * - The `weights` array must contain the corresponding weights for the assets.
    * - The `rebalanceStatus` must not be `NoRebalance`.
    */
-  function performRebalanceIfNeeded() external {
+  function performRebalanceIfNeeded(address _sender) external {
     uint256 requiredBalance = (totalSupply() * 1000) / 10000;
-    require(balanceOf(msg.sender) >= requiredBalance, 'Under 5% LP share');
+    require(balanceOf(_sender) >= requiredBalance, 'Under 5% LP share');
     _performRebalanceIfNeeded();
   }
 
@@ -344,7 +344,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     uint8 decimal1 = IERC20Metadata(address(asset1)).decimals();
     uint8 decimal2 = IERC20Metadata(address(asset2)).decimals();
     uint256 priceAsset1 = baluniRouter.tokenValuation(1 * 10 ** decimal1, address(asset1));
-    uint256 priceAsset2 = baluniRouter.tokenValuation(1 * 10 ** decimal1, address(asset2));
+    uint256 priceAsset2 = baluniRouter.tokenValuation(1 * 10 ** decimal2, address(asset2));
     uint256 factor1 = 10 ** 18 - decimal1;
     uint256 factor2 = 10 ** 18 - decimal2;
     uint256 totalUsdValuationAsset1 = ((IERC20(asset1).balanceOf(address(this)) * factor1) * priceAsset1) / ONE;
