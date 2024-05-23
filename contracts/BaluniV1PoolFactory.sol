@@ -46,20 +46,11 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import './interfaces/IBaluniV1Pool.sol';
 
 contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable {
-  // Array to keep track of all pools created
-  BaluniV1Pool[] public allPools;
-
   // Mapping to keep track of all pools for a specific pair of assets
-  mapping(address => mapping(address => BaluniV1Pool)) public getPool;
+  address[] public allPools;
+  mapping(address => mapping(address => address)) public getPool;
 
-  // Event to emit when a new pool is created
-  event PoolCreated(
-    address indexed pool,
-    address indexed asset1,
-    address indexed asset2,
-    address oracle,
-    address rebalancer
-  );
+  event PoolCreated(address indexed pool, address[] assets, address rebalancer);
 
   /**
    * @dev Initializes the contract.
@@ -89,7 +80,6 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
 
   /**
    * @dev Creates a new pool with the specified parameters.
-   * @param _aggregatorV3Interface The address of the oracle contract.
    * @param rebalancer The address of the rebalancer contract.
    * @param assets The addresses of the assets.
    * @param weights The weights of the assets.
@@ -97,31 +87,35 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
    * @return The address of the newly created pool.
    */
   function createPool(
-    address _aggregatorV3Interface,
     address rebalancer,
     address[] memory assets,
     uint256[] memory weights,
     uint256 trigger
   ) external onlyOwner returns (address) {
-    address asset1 = assets[0];
-    address asset2 = assets[1];
-    require(_aggregatorV3Interface != address(0), 'Oracle address cannot be zero');
     require(rebalancer != address(0), 'Rebalancer address cannot be zero');
-    require(asset1 != address(0) && asset2 != address(0), 'Asset addresses cannot be zero');
-    require(asset1 != asset2, 'Assets cannot be the same');
+    require(assets.length > 1, 'At least two assets are required');
+    require(assets.length == weights.length, 'Assets and weights length mismatch');
 
-    // Check if a pool already exists for this pair of assets
-    require(address(getPool[asset1][asset2]) == address(0), 'Pool already exists for this pair');
+    // Check if a pool already exists for this set of assets
+    for (uint256 i = 0; i < assets.length; i++) {
+      for (uint256 j = i + 1; j < assets.length; j++) {
+        require(address(getPool[assets[i]][assets[j]]) == address(0), 'Pool already exists for this pair');
+      }
+    }
 
     // Create a new pool instance
-    BaluniV1Pool newPool = new BaluniV1Pool(_aggregatorV3Interface, rebalancer, assets, weights, trigger);
+    BaluniV1Pool newPool = new BaluniV1Pool(rebalancer, assets, weights, trigger);
 
     // Update the pool tracking
-    allPools.push(newPool);
-    getPool[asset1][asset2] = newPool;
-    getPool[asset2][asset1] = newPool; // To ensure both asset1-asset2 and asset2-asset1 point to the same pool
+    allPools.push(address(newPool));
+    for (uint256 i = 0; i < assets.length; i++) {
+      for (uint256 j = i + 1; j < assets.length; j++) {
+        getPool[assets[i]][assets[j]] = address(newPool);
+        getPool[assets[j]][assets[i]] = address(newPool); // Ensure both directions point to the same pool
+      }
+    }
 
-    emit PoolCreated(address(newPool), asset1, asset2, _aggregatorV3Interface, rebalancer);
+    emit PoolCreated(address(newPool), assets, rebalancer);
 
     return address(newPool);
   }
@@ -130,7 +124,7 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
    * @dev Returns an array of all pools created by the factory.
    * @return An array of BaluniV1Pool instances.
    */
-  function getAllPools() external view returns (BaluniV1Pool[] memory) {
+  function getAllPools() external view returns (address[] memory) {
     return allPools;
   }
 
@@ -147,9 +141,9 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
    * @param poolAddress The address of the pool.
    * @return The addresses of the assets in the pool.
    */
-  function getPoolAssets(address poolAddress) external view returns (address, address) {
+  function getPoolAssets(address poolAddress) external view returns (address[] memory) {
     BaluniV1Pool pool = BaluniV1Pool(poolAddress);
-    return (address(pool.asset1()), address(pool.asset2()));
+    return pool.getAssets();
   }
 
   /**
@@ -173,9 +167,18 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
 
     for (uint256 i = 0; i < allPools.length; i++) {
       IBaluniV1Pool pool = IBaluniV1Pool(pools[i]);
-      if (pool.asset1() == token || pool.asset2() == token) {
-        pools[count] = address(pool);
-        count++;
+      address[] memory assets = pool.getAssets();
+
+      for (uint256 j = 0; j < assets.length; j++) {
+        if (assets[j] == token) {
+          pools[count] = address(pool);
+          count++;
+          break;
+        }
+      }
+
+      if (count == pools.length) {
+        break;
       }
     }
 

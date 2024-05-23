@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GNU AGPLv3
 pragma solidity 0.8.25;
+import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 
 interface IBaluniV1Rebalancer {
   enum RebalanceType {
@@ -39,4 +40,6 @@ interface IBaluniV1Rebalancer {
   ) external;
 
   function getBaluniRouter() external view returns (address);
+
+  function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate);
 }

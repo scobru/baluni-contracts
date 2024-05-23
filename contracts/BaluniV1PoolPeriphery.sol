@@ -1,59 +1,19 @@
 // SPDX-License-Identifier: GNU AGPLv3
 
 pragma solidity 0.8.25;
-/**
- *  __                  __                      __
- * /  |                /  |                    /  |
- * $$ |____    ______  $$ | __    __  _______  $$/
- * $$      \  /      \ $$ |/  |  /  |/       \ /  |
- * $$$$$$$  | $$$$$$  |$$ |$$ |  $$ |$$$$$$$  |$$ |
- * $$ |  $$ | /    $$ |$$ |$$ |  $$ |$$ |  $$ |$$ |
- * $$ |__$$ |/$$$$$$$ |$$ |$$ \__$$ |$$ |  $$ |$$ |
- * $$    $$/ $$    $$ |$$ |$$    $$/ $$ |  $$ |$$ |
- * $$$$$$$/   $$$$$$$/ $$/  $$$$$$/  $$/   $$/ $$/
- *
- *
- *                  ,-""""-.
- *                ,'      _ `.
- *               /       )_)  \
- *              :              :
- *              \              /
- *               \            /
- *                `.        ,'
- *                  `.    ,'
- *                    `.,'
- *                     /\`.   ,-._
- *                         `-'    \__
- *                              .
- *               s                \
- *                                \\
- *                                 \\
- *                                  >\/7
- *                              _.-(6'  \
- *                             (=___._/` \
- *                                  )  \ |
- *                                 /   / |
- *                                /    > /
- *                               j    < _\
- *                           _.-' :      ``.
- *                           \ r=._\        `.
- */
 
-import './interfaces/IBaluniV1Pool.sol';
 import './interfaces/IBaluniV1PoolFactory.sol';
+import './interfaces/IBaluniV1Pool.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 
 /**
- * @title BaluniV1Periphery
+ * @title BaluniV1PoolPeriphery
  * @dev This contract serves as the periphery contract for interacting with BaluniV1Pool contracts.
  * It provides functions for swapping tokens, adding liquidity, removing liquidity, and getting the amount out for a given swap.
  */
 contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
-  // A reference to the BaluniV1PoolFactory contract.
   IBaluniV1PoolFactory public poolFactory;
 
   /**
@@ -67,13 +27,10 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
   }
 
   /**
-   * @dev Reinitializes the contract with the specified `_poolFactory` address and `version`.
+   * @dev Initializes the contract by setting the pool factory address.
    * @param _poolFactory The address of the BaluniV1PoolFactory contract.
-   * @param version The version of the contract.
    */
   function reinitialize(address _poolFactory, uint64 version) public reinitializer(version) {
-    __UUPSUpgradeable_init();
-    __Ownable_init(msg.sender);
     poolFactory = IBaluniV1PoolFactory(_poolFactory);
   }
 
@@ -94,36 +51,10 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
   function swap(address fromToken, address toToken, uint256 amount) external returns (uint256) {
     require(amount > 0, 'Amount must be greater than zero');
 
-    // Get all pools containing the toToken
-    address[] memory poolsContainingToken = poolFactory.getPoolsByAsset(toToken);
-
-    for (uint256 i = 0; i < poolsContainingToken.length; i++) {
-      IBaluniV1Pool _pool = IBaluniV1Pool(poolsContainingToken[i]);
-      (bool direction1, uint256 deviationAsset1, bool direction2, uint256 deviationAsset2) = _pool.getDeviation();
-
-      // Check if toToken is in excess
-      if (
-        _pool.asset1() == toToken &&
-        deviationAsset1 > _pool.weight1() &&
-        direction1 &&
-        IERC20(_pool.asset1()).balanceOf(address(_pool)) > amount
-      ) {
-        // Perform swap in this pool if toToken is in excess
-        return _performSwapInPool(_pool, fromToken, toToken, amount);
-      } else if (
-        _pool.asset2() == toToken &&
-        deviationAsset2 > _pool.weight2() &&
-        direction2 &&
-        IERC20(_pool.asset2()).balanceOf(address(_pool)) > amount
-      ) {
-        // Perform swap in this pool if toToken is in excess
-        return _performSwapInPool(_pool, fromToken, toToken, amount);
-      }
-    }
-
-    // Default swap in the main pool if no other pools have excess toToken
+    // Get the pool address for the given tokens
     address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
     IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+
     IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
     IERC20(fromToken).approve(poolAddress, amount);
 
@@ -135,47 +66,37 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
 
   /**
    * @dev Adds liquidity to a BaluniV1Pool.
-   * @param amount1 The amount of the first asset to add.
-   * @param amount2 The amount of the second asset to add.
-   * @return The amount of liquidity tokens received after adding liquidity.
+   * @param amounts An array of amounts for each asset to add as liquidity.
    */
-  function addLiquidity(
-    uint256 amount1,
-    address fromToken,
-    uint256 amount2,
-    address toToken
-  ) external returns (uint256) {
-    require(amount1 > 0 || amount2 > 0, 'Amounts must be greater than zero');
-    address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
+  function addLiquidity(uint256[] calldata amounts, address poolAddress) external {
     IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
-    IERC20(pool.asset1()).transferFrom(msg.sender, address(this), amount1);
-    IERC20(pool.asset2()).transferFrom(msg.sender, address(this), amount2);
+    address[] memory assets = pool.getAssets(); // Get the assets in the pool
 
-    IERC20(pool.asset1()).approve(poolAddress, amount1);
-    IERC20(pool.asset2()).approve(poolAddress, amount2);
+    for (uint256 i = 0; i < assets.length; i++) {
+      address asset = assets[i];
+      uint256 amount = amounts[i];
 
-    uint256 liquidity = pool.addLiquidity(amount1, amount2);
-    pool.transfer(msg.sender, liquidity);
+      IERC20(asset).transferFrom(msg.sender, address(this), amount);
+      IERC20(asset).approve(poolAddress, amount);
+    }
 
-    return liquidity;
+    uint256 balanceB4 = IERC20(address(pool)).balanceOf(address(this));
+    pool.addLiquidity(amounts);
+    uint256 balanceAfter = IERC20(address(pool)).balanceOf(address(this));
+    uint256 liquidityTokens = balanceAfter - balanceB4;
+    IERC20(address(pool)).transfer(msg.sender, liquidityTokens);
   }
 
   /**
    * @dev Removes liquidity from a BaluniV1Pool.
    * @param share The amount of liquidity tokens to remove.
+   * @param poolAddress The address of the BaluniV1Pool.
    */
-  function removeLiquidity(address fromToken, address toToken, uint256 share) external {
+  function removeLiquidity(uint256 share, address poolAddress) external {
     require(share > 0, 'Share must be greater than zero');
-    address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
-
-    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
-    pool.transferFrom(msg.sender, address(this), share);
-    pool.approve(poolAddress, share);
-
-    pool.exit(share);
-
-    IERC20(pool.asset1()).transfer(msg.sender, IERC20(pool.asset1()).balanceOf(address(this)));
-    IERC20(pool.asset2()).transfer(msg.sender, IERC20(pool.asset2()).balanceOf(address(this)));
+    IERC20(address(poolAddress)).transferFrom(msg.sender, address(this), share);
+    IERC20(address(poolAddress)).approve(poolAddress, share);
+    IBaluniV1Pool(poolAddress).exit(share);
   }
 
   /**
@@ -196,7 +117,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
    * @param fromToken The address of the token to rebalance from.
    * @param toToken The address of the token to rebalance to.
    */
-  function perfromRebalanceIfNeeded(address fromToken, address toToken) external {
+  function performRebalanceIfNeeded(address fromToken, address toToken) external {
     address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
     IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
     pool.performRebalanceIfNeeded(msg.sender);
@@ -212,31 +133,14 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
   }
 
   /**
-   * @dev Performs a swap in the BaluniV1Pool.
-   * @param pool The BaluniV1Pool contract address.
-   * @param fromToken The address of the token to swap from.
-   * @param toToken The address of the token to swap to.
-   * @param amount The amount of tokens to swap.
-   * @return The amount of tokens received after the swap.
+   * @dev Returns the version of the contract.
+   * @return The version string.
    */
-  function _performSwapInPool(
-    IBaluniV1Pool pool,
-    address fromToken,
-    address toToken,
-    uint256 amount
-  ) internal returns (uint256) {
-    // Transfer tokens from the sender to this contract
-    IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
+  function getVersion() external view returns (uint64) {
+    return _getInitializedVersion();
+  }
 
-    // Approve the pool to spend the transferred tokens
-    IERC20(fromToken).approve(address(pool), amount);
-
-    // Perform the swap in the pool
-    uint256 amountOut = pool.swap(fromToken, toToken, amount);
-
-    // Transfer the swapped tokens back to the sender
-    IERC20(toToken).transfer(msg.sender, amountOut);
-
-    return amountOut;
+  function changePoolFactory(address _poolFactory) external onlyOwner {
+    poolFactory = IBaluniV1PoolFactory(_poolFactory);
   }
 }

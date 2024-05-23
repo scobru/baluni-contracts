@@ -131,5 +131,6 @@ BaluniV1Router deployed to: 0x8DD108DDC24A6b07Bc9191DE5f0337f240c4e0c0
 BaluniV1Rebalance deployed to: 0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac
 
 BaluniV1MarketOracle deployed to: 0x3D22f6bdE20E8647B96d0BAbc21b9BB610FB53A5
-BaluniV1PoolFactory deployed to: 0x60eb0FFFAC3352Aa154f65eb0146234e13997903
-BaluniV1PoolPeriphery deployed to: 0x6895322d6fB8A657844A3BF2Bf57778d74447517
+
+BaluniV1PoolFactory deployed to: 0x8D0821eE6336651359B5b9333D1EC48994Df88F1
+BaluniV1PoolPeriphery deployed to: 0x2FDE5939BE912e11f55ef04623b34Fb76E980Eed

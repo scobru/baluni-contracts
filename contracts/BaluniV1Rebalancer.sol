@@ -38,13 +38,16 @@ pragma solidity 0.8.25;
  *                           \ r=._\        `.
  */
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import './interfaces/IBaluniV1Router.sol';
 import './interfaces/IBaluniV1Rebalancer.sol';
+
+interface I1inchSpotAgg {
+  function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate);
+}
 
 contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeable, IBaluniV1Rebalancer {
   uint256 internal multiplier;
@@ -54,6 +57,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
   IERC20Metadata internal WNATIVE;
   ISwapRouter internal uniswapRouter;
   IUniswapV3Factory internal uniswapFactory;
+  I1inchSpotAgg internal _1InchSpotAgg;
 
   /**
    * @dev Initializes the contract with the specified addresses and sets the multiplier value.
@@ -68,7 +72,8 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     address _usdc,
     address _wnative,
     address _uniRouter,
-    address _uniFactory
+    address _uniFactory,
+    address _1InchSpotAggAddress
   ) public initializer {
     // Initialize the contract
     __UUPSUpgradeable_init();
@@ -80,6 +85,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     uniswapRouter = ISwapRouter(_uniRouter);
     uniswapFactory = IUniswapV3Factory(_uniFactory);
     baluniRouter = IBaluniV1Router(_baluniRouter);
+    _1InchSpotAgg = I1inchSpotAgg(_1InchSpotAggAddress);
 
     // Set the multiplier value
     multiplier = 1e12;
@@ -494,5 +500,31 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
    */
   function getBaluniRouter() external view returns (address) {
     return address(baluniRouter);
+  }
+
+  /**
+   * @dev Returns the weighted rate between two tokens.
+   * @param srcToken The source token.
+   * @param dstToken The destination token.
+   * @param useWrappers Boolean indicating whether to use wrappers.
+   * @return weightedRate The weighted rate between the source and destination tokens.
+   */
+  function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate) {
+    uint256 rate;
+    uint8 token0Decimal = IERC20Metadata(address(srcToken)).decimals();
+    uint8 token1Decimal = IERC20Metadata(address(dstToken)).decimals();
+    uint256 amount = 1 * 18 ** token0Decimal;
+
+    try _1InchSpotAgg.getRate(IERC20(srcToken), IERC20(dstToken), false) returns (uint256 _rate) {
+      rate = _rate;
+    } catch {
+      return 0;
+    }
+
+    if (token0Decimal == token1Decimal) return ((amount * 1e12) * (rate)) / 1e18;
+    uint256 factor = (10 ** (token0Decimal - token1Decimal));
+
+    if (token0Decimal < 18) return ((amount * factor) * (rate * factor)) / 1e18;
+    return ((amount) * (rate * factor)) / 1e18;
   }
 }
