@@ -132,5 +132,5 @@ BaluniV1Rebalance deployed to: 0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac
 
 BaluniV1MarketOracle deployed to: 0x3D22f6bdE20E8647B96d0BAbc21b9BB610FB53A5
 
-BaluniV1PoolFactory deployed to: 0x8D0821eE6336651359B5b9333D1EC48994Df88F1
-BaluniV1PoolPeriphery deployed to: 0x2FDE5939BE912e11f55ef04623b34Fb76E980Eed
+BaluniV1PoolFactory deployed to: 0x7F23b16538a8bE0876106a45483F2965Bdab43e8
+BaluniV1PoolPeriphery deployed to: 0x02EA366078956a5fb0801E36213da31CFc9335fe
