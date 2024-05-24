@@ -107,8 +107,10 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     uint256 amountAfterFee
   ) internal view returns (uint256 receivedAmount) {
     uint256 rate = rebalancer.getRate(IERC20(fromToken), IERC20(toToken), false);
+
     uint8 fromDecimals = IERC20Metadata(fromToken).decimals();
     uint8 toDecimals = IERC20Metadata(toToken).decimals();
+
     uint256 adjustedAmount = amountAfterFee * rate;
 
     if (fromDecimals > toDecimals) {
@@ -181,12 +183,14 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
       IERC20(asset).transferFrom(msg.sender, address(this), amount);
       balances[asset] += amount;
       uint8 decimals = IERC20Metadata(asset).decimals();
+
       uint256 scalingFactor = 10 ** (18 - decimals);
+      uint256 scalingAmount = amount * scalingFactor;
 
       if (asset == assets[0]) {
-        totalValueInFirstAsset += amount * scalingFactor;
+        totalValueInFirstAsset += scalingAmount;
       } else {
-        uint256 amountInFirstAsset = _convertTokenWithRate(asset, assets[0], amount);
+        uint256 amountInFirstAsset = _convertTokenWithRate(asset, assets[0], amount * scalingAmount);
         totalValueInFirstAsset += amountInFirstAsset;
       }
     }
