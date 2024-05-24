@@ -132,8 +132,5 @@ BaluniV1Rebalance deployed to: 0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac
 
 BaluniV1MarketOracle deployed to: 0x3D22f6bdE20E8647B96d0BAbc21b9BB610FB53A5
 
-BaluniV1PoolFactory deployed to: 0x7F23b16538a8bE0876106a45483F2965Bdab43e8
-BaluniV1PoolPeriphery deployed to: 0x02EA366078956a5fb0801E36213da31CFc9335fe
-
-const poolFactory = "0xA31b4F7906D14A28E6341D9E467f8d43940Dc2E1";
-  const poolPeriphery = "0x4Fc5A937535A27424eAc8C2589Fc000b497CA40b";
+BaluniV1PoolFactory deployed to: 0x30f53fC5C458B4F3000F69FC26a14e10f36275E8
+BaluniV1PoolPeriphery deployed to: 0x3aA8790067aD1bA861209fFCA133664B1E922084

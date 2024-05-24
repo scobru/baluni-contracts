@@ -12,15 +12,15 @@ import erc20ABI from "../abis/common/ERC20.json";
 
 /// Deploy -----------------------------------------------------------------------
 const USDC = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
-// const WNATIVE = "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270";
+const WNATIVE = "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270";
 const USDT = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f";
 const AAVE = "0xc2132d05d31c914a87c6611c10748aeb04b58e8f";
 const WBTC = "0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6";
 const LINK = "0x53e0bca35ec356bd5dddfebbd1fc0fd03fabad39";
 const WETH = "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619";
-// const oracle = "0x0AdDd25a91563696D8567Df78D5A01C9a991F9B8"; // 1inch Spot Aggregator
-// const uniswapRouter = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
-// const uniswapFactory = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
+const _1INCHSPOTAGG = "0x0AdDd25a91563696D8567Df78D5A01C9a991F9B8"; // 1inch Spot Aggregator
+const uniswapRouter = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
+const uniswapFactory = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
 
 const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   /// Deployment ---------------------------------------------------------------------
@@ -68,30 +68,30 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // console.log("Set Agent Factory in Router");
   // await instanceRouter.changeAgentFactory(instanceAgentFactory.target);
 
-  const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
-  const baluniV1PoolFactory = await upgrades.deployProxy(BaluniV1PoolFactory, [], { kind: "uups" });
-  const instancePoolFactory = await baluniV1PoolFactory?.waitForDeployment();
-  console.log("BaluniV1PoolFactory deployed to:", instancePoolFactory.target);
-  await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [USDT, USDC], [5000, 5000], 100);
-  await instancePoolFactory.createPool(
-    "0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac",
-    [AAVE, WETH, LINK],
-    [3000, 5000, 2000],
-    100,
-  );
-  await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [WBTC, WETH], [7000, 3000], 100);
-  await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [WETH, USDC], [5000, 5000], 100);
+  // const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
+  // const baluniV1PoolFactory = await upgrades.deployProxy(BaluniV1PoolFactory, [], { kind: "uups" });
+  // const instancePoolFactory = await baluniV1PoolFactory?.waitForDeployment();
+  // console.log("BaluniV1PoolFactory deployed to:", instancePoolFactory.target);
+  // await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [USDT, USDC], [5000, 5000], 100);
+  // await instancePoolFactory.createPool(
+  //   "0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac",
+  //   [AAVE, WETH, LINK],
+  //   [3000, 5000, 2000],
+  //   100,
+  // );
+  // await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [WBTC, WETH], [7000, 3000], 100);
+  // await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [WETH, USDC], [5000, 5000], 100);
 
-  const BaluniV1PoolPeriphery = await ethers.getContractFactory("BaluniV1PoolPeriphery");
-  const baluniV1PoolPeriphery = await upgrades.deployProxy(
-    BaluniV1PoolPeriphery,
-    [instancePoolFactory.target], // PoolFactory
-    {
-      kind: "uups",
-    },
-  );
-  const instancePoolPeriphery = await baluniV1PoolPeriphery?.waitForDeployment();
-  console.log("BaluniV1PoolPeriphery deployed to:", instancePoolPeriphery.target);
+  // const BaluniV1PoolPeriphery = await ethers.getContractFactory("BaluniV1PoolPeriphery");
+  // const baluniV1PoolPeriphery = await upgrades.deployProxy(
+  //   BaluniV1PoolPeriphery,
+  //   [instancePoolFactory.target], // PoolFactory
+  //   {
+  //     kind: "uups",
+  //   },
+  // );
+  // const instancePoolPeriphery = await baluniV1PoolPeriphery?.waitForDeployment();
+  // console.log("BaluniV1PoolPeriphery deployed to:", instancePoolPeriphery.target);
 
   // const BaluniV1MarketOracle = await ethers.getContractFactory("BaluniV1MarketOracle");
   // const baluniOracle = await upgrades.deployProxy(BaluniV1PoolPeriphery], {
@@ -138,12 +138,20 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // console.log("BaluniV1Router upgraded to:", instanceRouter.target);
 
   // const BaluniV1Rebalancer = await ethers.getContractFactory("BaluniV1Rebalancer");
-  // //await upgrades.forceImport("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", BaluniV1Rebalancer);
+  // await upgrades.forceImport("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", BaluniV1Rebalancer);
   // const rebalancer = await upgrades.upgradeProxy("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", BaluniV1Rebalancer, {
   //   kind: "uups",
   //   call: {
   //     fn: "reinitialize",
-  //     args: ["0x8DD108DDC24A6b07Bc9191DE5f0337f240c4e0c0", USDC, WNATIVE, uniswapRouter, uniswapFactory, 37],
+  //     args: [
+  //       "0x8DD108DDC24A6b07Bc9191DE5f0337f240c4e0c0",
+  //       USDC,
+  //       WNATIVE,
+  //       uniswapRouter,
+  //       uniswapFactory,
+  //       _1INCHSPOTAGG,
+  //       39,
+  //     ],
   //   },
   // });
   // const instanceRebalancer = await rebalancer?.waitForDeployment();
@@ -161,21 +169,21 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // const instancePool = await baluniPool?.waitForDeployment();
   // console.log("BaluniV1Pool upgraded to:", instancePool.target);
 
-  // const BaluniV1PoolPeriphery = await ethers.getContractFactory("BaluniV1PoolPeriphery");
-  // //await upgrades.forceImport("0xaa7758d5E0C3c8cafd72da2c54EBd70f031e40cf", BaluniV1PoolPeriphery);
-  // const baluniPeriphery = await upgrades.upgradeProxy(
-  //   "0xaa7758d5E0C3c8cafd72da2c54EBd70f031e40cf",
-  //   BaluniV1PoolPeriphery,
-  //   {
-  //     kind: "uups",
-  //     call: {
-  //       fn: "reinitialize",
-  //       args: ["0x981ec361ac6B34E234525be4F9074339866195CF", 2],
-  //     },
-  //   },
-  // );
-  // const instancePeriphery = await baluniPeriphery?.waitForDeployment();
-  // console.log("BaluniV1Periphery upgraded to:", instancePeriphery.target);
+  const BaluniV1PoolPeriphery = await ethers.getContractFactory("BaluniV1PoolPeriphery");
+  //await upgrades.forceImport("0xaa7758d5E0C3c8cafd72da2c54EBd70f031e40cf", BaluniV1PoolPeriphery);
+  const baluniPeriphery = await upgrades.upgradeProxy(
+    "0x3aA8790067aD1bA861209fFCA133664B1E922084",
+    BaluniV1PoolPeriphery,
+    {
+      kind: "uups",
+      call: {
+        fn: "reinitialize",
+        args: ["0x30f53fC5C458B4F3000F69FC26a14e10f36275E8", 2],
+      },
+    },
+  );
+  const instancePeriphery = await baluniPeriphery?.waitForDeployment();
+  console.log("BaluniV1Periphery upgraded to:", instancePeriphery.target);
 
   // const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
   // await upgrades.forceImport("0x6D059183aa33198476C2D19A056AD1D9e8D3FeE1", BaluniV1PoolFactory);

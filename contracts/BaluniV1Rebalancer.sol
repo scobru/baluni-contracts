@@ -106,6 +106,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     address _wnative,
     address _uniRouter,
     address _uniFactory,
+    address _1InchSpotAggAddress,
     uint64 version
   ) public reinitializer(version) {
     // Set the token contracts and router contracts
@@ -114,6 +115,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     uniswapRouter = ISwapRouter(_uniRouter);
     uniswapFactory = IUniswapV3Factory(_uniFactory);
     baluniRouter = IBaluniV1Router(_baluniRouter);
+    _1InchSpotAgg = I1inchSpotAgg(_1InchSpotAggAddress);
 
     // Set the multiplier value
     multiplier = 1e12;
@@ -511,20 +513,12 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
    */
   function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate) {
     uint256 rate;
-    uint8 token0Decimal = IERC20Metadata(address(srcToken)).decimals();
-    uint8 token1Decimal = IERC20Metadata(address(dstToken)).decimals();
-    uint256 amount = 1 * 18 ** token0Decimal;
-
-    try _1InchSpotAgg.getRate(IERC20(srcToken), IERC20(dstToken), false) returns (uint256 _rate) {
+    try _1InchSpotAgg.getRate(IERC20(srcToken), IERC20(dstToken), useWrappers) returns (uint256 _rate) {
       rate = _rate;
     } catch {
       return 0;
     }
 
-    if (token0Decimal == token1Decimal) return ((amount * 1e12) * (rate)) / 1e18;
-    uint256 factor = (10 ** (token0Decimal - token1Decimal));
-
-    if (token0Decimal < 18) return ((amount * factor) * (rate * factor)) / 1e18;
-    return ((amount) * (rate * factor)) / 1e18;
+    return rate;
   }
 }

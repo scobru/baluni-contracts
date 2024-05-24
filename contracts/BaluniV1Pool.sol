@@ -98,30 +98,33 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @dev Calculates the received amount after applying a fee, based on the conversion rate between two tokens.
    * @param fromToken The address of the token being converted from.
    * @param toToken The address of the token being converted to.
-   * @param amountAfterFee The amount to be converted after applying a fee.
-   * @return receivedAmount The received amount after applying the conversion rate and fee.
+   * @param amount The amount to be converted after applying a fee.
+   * @return scaledAmount The received amount after applying the conversion rate and fee.
    */
-  function _convertTokenWithRate(
+  function _convertTokenWithRateScaled(
     address fromToken,
     address toToken,
-    uint256 amountAfterFee
-  ) internal view returns (uint256 receivedAmount) {
-    uint256 rate = rebalancer.getRate(IERC20(fromToken), IERC20(toToken), false);
-
+    uint256 amount
+  ) internal view returns (uint256 scaledAmount) {
     uint8 fromDecimals = IERC20Metadata(fromToken).decimals();
     uint8 toDecimals = IERC20Metadata(toToken).decimals();
 
-    uint256 adjustedAmount = amountAfterFee * rate;
+    uint256 rate = rebalancer.getRate(IERC20(fromToken), IERC20(toToken), false);
+    uint256 amountAfterFee = amount * 10 ** 18 - fromDecimals;
 
     if (fromDecimals > toDecimals) {
-      receivedAmount = (adjustedAmount * (10 ** (fromDecimals - toDecimals))) / ONE;
+      uint256 scaledFactor = (10 ** (fromDecimals - toDecimals));
+      uint256 scaledRate = rate * scaledFactor;
+      scaledAmount = (amountAfterFee * scaledRate) / 1e18;
     } else if (toDecimals > fromDecimals) {
-      receivedAmount = adjustedAmount / (10 ** (toDecimals - fromDecimals)) / ONE;
+      uint256 scaledFactor = (10 ** (toDecimals - fromDecimals));
+      uint256 scaledRate = rate * scaledFactor;
+      scaledAmount = (amountAfterFee * scaledRate) / 1e18;
     } else {
-      receivedAmount = adjustedAmount / ONE;
+      scaledAmount = (amountAfterFee * rate) / 1e18;
     }
 
-    return receivedAmount;
+    return scaledAmount;
   }
 
   /**
@@ -137,7 +140,9 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
     uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
     uint256 amountAfterFee = amount - fee;
-    uint256 receivedAmount = _convertTokenWithRate(fromToken, toToken, amountAfterFee);
+    uint256 decimals = IERC20Metadata(toToken).decimals();
+    uint256 scalingFactor = 10 ** 18 - decimals;
+    uint256 receivedAmount = _convertTokenWithRateScaled(fromToken, toToken, amountAfterFee) / scalingFactor;
     require(IERC20(toToken).balanceOf(address(this)) >= receivedAmount, 'Insufficient Liquidity');
     IERC20(toToken).transfer(msg.sender, receivedAmount);
     emit Swap(msg.sender, fromToken, toToken, amount, receivedAmount);
@@ -162,8 +167,11 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     require(amount > 0, 'Amount must be greater than zero');
     uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
     uint256 amountAfterFee = amount - fee;
-
-    return _convertTokenWithRate(fromToken, toToken, amountAfterFee);
+    uint256 decimals = IERC20Metadata(toToken).decimals();
+    uint256 scalingFactor = 10 ** 18 - decimals;
+    uint256 amountOutScaled = _convertTokenWithRateScaled(fromToken, toToken, amountAfterFee);
+    if (decimals != 18) return amountOutScaled / scalingFactor;
+    return amountOutScaled;
   }
 
   /**
@@ -177,23 +185,23 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     uint256 totalSupply = totalSupply();
     uint256 totalValueInFirstAsset = 0;
 
+    uint8 decimals = IERC20Metadata(assets[0]).decimals();
+    uint256 scalingFactor = 10 ** (18 - decimals);
+
     for (uint256 i = 0; i < assets.length; i++) {
       address asset = assets[i];
       uint256 amount = amounts[i];
+
       IERC20(asset).transferFrom(msg.sender, address(this), amount);
       balances[asset] += amount;
-      uint8 decimals = IERC20Metadata(asset).decimals();
 
-      uint256 scalingFactor = 10 ** (18 - decimals);
-      uint256 scalingAmount = amount * scalingFactor;
-      uint256 fee = (scalingAmount * SWAP_FEE_BPS) / 10000;
-      uint256 amountAfterFeeScaled = scalingAmount - fee;
+      uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
+      uint256 amountAfterFee = amount - fee;
 
       if (asset == assets[0]) {
-        totalValueInFirstAsset += amountAfterFeeScaled;
-      } else {
-        uint256 amountInFirstAsset = _convertTokenWithRate(asset, assets[0], amountAfterFeeScaled);
-        totalValueInFirstAsset += amountInFirstAsset;
+        totalValueInFirstAsset += amountAfterFee * scalingFactor;
+      } else if (asset != assets[0]) {
+        totalValueInFirstAsset = _convertTokenWithRateScaled(asset, assets[0], amountAfterFee);
       }
     }
 
@@ -202,11 +210,17 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     if (totalSupply == 0) {
       toMint = totalValueInFirstAsset;
     } else {
-      uint256 totalLiquidity = totalLiquidityInToken(assets[0]);
-      toMint = (totalValueInFirstAsset * totalSupply) / totalLiquidity;
+      uint256 totalLiquidity = totalLiquidityInTokenScaled(assets[0]);
+      toMint = ((totalValueInFirstAsset) * totalSupply) / totalLiquidity;
     }
+    require(toMint != 0, 'Mint qty is 0');
+    uint256 b4 = balanceOf(msg.sender);
 
     _mint(msg.sender, toMint);
+
+    uint256 b = balanceOf(msg.sender) - b4;
+    require(b == toMint, 'Mint Failed');
+
     emit LiquidityAdded(msg.sender, amounts, toMint);
 
     return toMint;
@@ -217,7 +231,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @param token The address of the token for which to calculate the total liquidity.
    * @return The total liquidity in terms of the specified token.
    */
-  function totalLiquidityInToken(address token) public view returns (uint256) {
+  function totalLiquidityInTokenScaled(address token) public view returns (uint256) {
     uint256 totalLiquidity = 0;
 
     for (uint256 i = 0; i < assets.length; i++) {
@@ -230,7 +244,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
       if (t == token) {
         valueInToken = balance * scalingFactor;
       } else {
-        valueInToken = _convertTokenWithRate(t, token, balance * scalingFactor);
+        valueInToken = _convertTokenWithRateScaled(t, token, balance);
       }
       totalLiquidity += valueInToken;
     }

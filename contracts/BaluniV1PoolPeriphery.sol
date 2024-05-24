@@ -114,11 +114,9 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
 
   /**
    * @dev Performs rebalance if needed for the given tokens.
-   * @param fromToken The address of the token to rebalance from.
-   * @param toToken The address of the token to rebalance to.
+   * @param poolAddress The address of the token pool to rebalance.
    */
-  function performRebalanceIfNeeded(address fromToken, address toToken) external {
-    address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
+  function performRebalanceIfNeeded(address poolAddress) external {
     IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
     pool.performRebalanceIfNeeded(msg.sender);
   }
