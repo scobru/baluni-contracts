@@ -68,25 +68,24 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // console.log("Set Agent Factory in Router");
   // await instanceRouter.changeAgentFactory(instanceAgentFactory.target);
 
-  // const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
-  // const baluniV1PoolFactory = await upgrades.deployProxy(BaluniV1PoolFactory, [], { kind: "uups" });
-  // const instancePoolFactory = await baluniV1PoolFactory?.waitForDeployment();
-  // console.log("BaluniV1PoolFactory deployed to:", instancePoolFactory.target);
-
-  // await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [USDT, USDC], [5000, 5000], 100);
-  // await instancePoolFactory.createPool(
-  //   "0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac",
-  //   [AAVE, WETH, LINK],
-  //   [3000, 5000, 2000],
-  //   100,
-  // );
-  // await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [WBTC, WETH], [7000, 3000], 100);
-  // await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [WETH, USDC], [5000, 5000], 100);
+  const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
+  const baluniV1PoolFactory = await upgrades.deployProxy(BaluniV1PoolFactory, [], { kind: "uups" });
+  const instancePoolFactory = await baluniV1PoolFactory?.waitForDeployment();
+  console.log("BaluniV1PoolFactory deployed to:", instancePoolFactory.target);
+  await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [USDT, USDC], [5000, 5000], 100);
+  await instancePoolFactory.createPool(
+    "0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac",
+    [AAVE, WETH, LINK],
+    [3000, 5000, 2000],
+    100,
+  );
+  await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [WBTC, WETH], [7000, 3000], 100);
+  await instancePoolFactory.createPool("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", [WETH, USDC], [5000, 5000], 100);
 
   const BaluniV1PoolPeriphery = await ethers.getContractFactory("BaluniV1PoolPeriphery");
   const baluniV1PoolPeriphery = await upgrades.deployProxy(
     BaluniV1PoolPeriphery,
-    ["0x7F23b16538a8bE0876106a45483F2965Bdab43e8"], // PoolFactory
+    [instancePoolFactory.target], // PoolFactory
     {
       kind: "uups",
     },

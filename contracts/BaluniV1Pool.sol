@@ -186,11 +186,13 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
       uint256 scalingFactor = 10 ** (18 - decimals);
       uint256 scalingAmount = amount * scalingFactor;
+      uint256 fee = (scalingAmount * SWAP_FEE_BPS) / 10000;
+      uint256 amountAfterFeeScaled = scalingAmount - fee;
 
       if (asset == assets[0]) {
-        totalValueInFirstAsset += scalingAmount;
+        totalValueInFirstAsset += amountAfterFeeScaled;
       } else {
-        uint256 amountInFirstAsset = _convertTokenWithRate(asset, assets[0], amount * scalingAmount);
+        uint256 amountInFirstAsset = _convertTokenWithRate(asset, assets[0], amountAfterFeeScaled);
         totalValueInFirstAsset += amountInFirstAsset;
       }
     }
@@ -198,7 +200,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     uint256 toMint;
 
     if (totalSupply == 0) {
-      toMint = (totalValueInFirstAsset * ONE) / (10 ** IERC20Metadata(assets[0]).decimals());
+      toMint = totalValueInFirstAsset;
     } else {
       uint256 totalLiquidity = totalLiquidityInToken(assets[0]);
       toMint = (totalValueInFirstAsset * totalSupply) / totalLiquidity;
@@ -228,48 +230,12 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
       if (t == token) {
         valueInToken = balance * scalingFactor;
       } else {
-        valueInToken = _convertTokenWithRate(t, token, balance) * scalingFactor;
+        valueInToken = _convertTokenWithRate(t, token, balance * scalingFactor);
       }
       totalLiquidity += valueInToken;
     }
 
     return totalLiquidity;
-  }
-
-  /**
-   * @dev Adds liquidity to the pool by transferring a single specified amount of an asset from the caller's address to the contract.
-   * The function calculates the received amount in terms of the first asset and mints new LP tokens proportionally.
-   * @param asset The ERC20 token to be added as liquidity.
-   * @param amount The amount of the asset to be added as liquidity.
-   * @return The amount of LP tokens minted and transferred to the caller.
-   */
-  function addLiquiditySingleAsset(IERC20 asset, uint256 amount) external nonReentrant returns (uint256) {
-    require(amount > 0, 'Amount must be greater than zero');
-    require(isAssetSupported(address(asset)), 'Unsupported asset');
-
-    asset.transferFrom(msg.sender, address(this), amount);
-    uint256 totalValueInFirstAsset;
-
-    if (address(asset) == assets[0]) {
-      totalValueInFirstAsset = amount * (10 ** (18 - IERC20Metadata(address(asset)).decimals()));
-    } else {
-      totalValueInFirstAsset = _convertTokenWithRate(address(asset), assets[0], amount);
-    }
-
-    uint256 totalSupply = totalSupply();
-    uint256 toMint;
-
-    if (totalSupply == 0) {
-      toMint = (totalValueInFirstAsset * ONE) / (10 ** IERC20Metadata(assets[0]).decimals());
-    } else {
-      uint256 totalLiquidity = totalLiquidityInToken(assets[0]);
-      toMint = (totalValueInFirstAsset * totalSupply) / totalLiquidity;
-    }
-
-    _mint(msg.sender, toMint);
-    emit LiquidityAdded(msg.sender, new uint256[](assets.length), toMint);
-
-    return toMint;
   }
 
   /**
