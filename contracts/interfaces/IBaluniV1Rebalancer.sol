@@ -42,4 +42,12 @@ interface IBaluniV1Rebalancer {
   function getBaluniRouter() external view returns (address);
 
   function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate);
+
+  function getTreasury() external view returns (address);
+
+  function getUSDCAddress() external view returns (address);
+
+  function getWNATIVEAddress() external view returns (address);
+
+  function getRateToEth(IERC20 srcToken, bool useWrappers) external view returns (uint256 weightedRate);
 }

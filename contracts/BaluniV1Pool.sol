@@ -55,8 +55,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
   uint256 public constant SWAP_FEE_BPS = 30;
 
-  mapping(address => uint256) public balances;
-
   event RebalancePerformed(address indexed by, address[] assets);
   event LiquidityRemoved(address indexed user, uint256[] amounts, uint256 sharesBurned);
 
@@ -97,34 +95,43 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
   /**
    * @dev Calculates the received amount after applying a fee, based on the conversion rate between two tokens.
    * @param fromToken The address of the token being converted from.
-   * @param toToken The address of the token being converted to.
    * @param amount The amount to be converted after applying a fee.
    * @return scaledAmount The received amount after applying the conversion rate and fee.
    */
-  function _convertTokenWithRateScaled(
-    address fromToken,
-    address toToken,
-    uint256 amount
-  ) internal view returns (uint256 scaledAmount) {
-    uint8 fromDecimals = IERC20Metadata(fromToken).decimals();
-    uint8 toDecimals = IERC20Metadata(toToken).decimals();
+  function _convertTokenWithRateScaled(address fromToken, uint256 amount) internal view returns (uint256 scaledAmount) {
+    uint256 rate;
+    address WNATIVE = rebalancer.getWNATIVEAddress();
+    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+    uint8 toDecimal = IERC20Metadata(WNATIVE).decimals();
 
-    uint256 rate = rebalancer.getRate(IERC20(fromToken), IERC20(toToken), false);
-    uint256 amountAfterFee = amount * 10 ** 18 - fromDecimals;
-
-    if (fromDecimals > toDecimals) {
-      uint256 scaledFactor = (10 ** (fromDecimals - toDecimals));
-      uint256 scaledRate = rate * scaledFactor;
-      scaledAmount = (amountAfterFee * scaledRate) / 1e18;
-    } else if (toDecimals > fromDecimals) {
-      uint256 scaledFactor = (10 ** (toDecimals - fromDecimals));
-      uint256 scaledRate = rate * scaledFactor;
-      scaledAmount = (amountAfterFee * scaledRate) / 1e18;
-    } else {
-      scaledAmount = (amountAfterFee * rate) / 1e18;
+    try rebalancer.getRateToEth(IERC20(fromToken), false) returns (uint256 _rate) {
+      rate = _rate;
+    } catch {
+      return 0;
     }
 
-    return scaledAmount;
+    uint256 factor;
+    uint256 numerator = 10 ** fromDecimal;
+    uint256 demonimator = ONE;
+
+    rate = (rate * numerator) / demonimator;
+
+    if (fromDecimal > toDecimal) {
+      factor = 10 ** (fromDecimal - toDecimal);
+      amount = amount * factor;
+    } else if (fromDecimal < toDecimal) {
+      factor = 10 ** (toDecimal - fromDecimal);
+      amount = amount * factor;
+    } else {
+      if (fromDecimal == 18) {
+        return ((amount) * (rate)) / ONE;
+      } else {
+        factor = 10 ** 18 - fromDecimal;
+        amount = amount * factor;
+      }
+    }
+
+    return ((amount) * (rate)) / ONE;
   }
 
   /**
@@ -138,11 +145,37 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     require(fromToken != toToken, 'Cannot swap the same token');
     require(amount > 0, 'Amount must be greater than zero');
     IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
+
+    // Calculate the fee and adjust the amount after fee
     uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
     uint256 amountAfterFee = amount - fee;
-    uint256 decimals = IERC20Metadata(toToken).decimals();
-    uint256 scalingFactor = 10 ** 18 - decimals;
-    uint256 receivedAmount = _convertTokenWithRateScaled(fromToken, toToken, amountAfterFee) / scalingFactor;
+
+    // Get decimals for fromToken and toToken
+    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+    uint8 toDecimal = IERC20Metadata(toToken).decimals();
+
+    uint256 rate;
+    try rebalancer.getRate(IERC20(fromToken), IERC20(toToken), false) returns (uint256 _rate) {
+      rate = _rate;
+    } catch {
+      return 0;
+    }
+
+    uint256 adjustedAmount;
+    if (fromDecimal > toDecimal) {
+      uint256 factor = 10 ** (fromDecimal - toDecimal);
+      adjustedAmount = amountAfterFee / factor; // Correct division for scaling down
+    } else if (fromDecimal < toDecimal) {
+      uint256 factor = 10 ** (toDecimal - fromDecimal);
+      adjustedAmount = amountAfterFee;
+      rate = rate * factor; // Correct multiplication for scaling up
+    } else {
+      adjustedAmount = amountAfterFee;
+    }
+
+    // Calculate the received amount
+    uint256 receivedAmount = (adjustedAmount * rate) / (10 ** toDecimal);
+
     require(IERC20(toToken).balanceOf(address(this)) >= receivedAmount, 'Insufficient Liquidity');
     IERC20(toToken).transfer(msg.sender, receivedAmount);
     emit Swap(msg.sender, fromToken, toToken, amount, receivedAmount);
@@ -165,13 +198,38 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
   function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
     require(fromToken != toToken, 'Cannot swap the same token');
     require(amount > 0, 'Amount must be greater than zero');
+
+    // Calculate the fee and adjust the amount after fee
     uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
     uint256 amountAfterFee = amount - fee;
-    uint256 decimals = IERC20Metadata(toToken).decimals();
-    uint256 scalingFactor = 10 ** 18 - decimals;
-    uint256 amountOutScaled = _convertTokenWithRateScaled(fromToken, toToken, amountAfterFee);
-    if (decimals != 18) return amountOutScaled / scalingFactor;
-    return amountOutScaled;
+
+    // Get decimals for fromToken and toToken
+    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+    uint8 toDecimal = IERC20Metadata(toToken).decimals();
+
+    uint256 rate;
+    try rebalancer.getRate(IERC20(fromToken), IERC20(toToken), false) returns (uint256 _rate) {
+      rate = _rate;
+    } catch {
+      return 0;
+    }
+
+    uint256 adjustedAmount;
+    if (fromDecimal > toDecimal) {
+      uint256 factor = 10 ** (fromDecimal - toDecimal);
+      adjustedAmount = amountAfterFee / factor; // Correct division for scaling down
+    } else if (fromDecimal < toDecimal) {
+      uint256 factor = 10 ** (toDecimal - fromDecimal);
+      adjustedAmount = amountAfterFee;
+      rate = rate * factor; // Correct multiplication for scaling up
+    } else {
+      adjustedAmount = amountAfterFee;
+    }
+
+    // Calculate the amount out
+    uint256 amountOut = (adjustedAmount * rate) / (10 ** toDecimal);
+
+    return amountOut;
   }
 
   /**
@@ -182,36 +240,30 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    */
   function addLiquidity(uint256[] calldata amounts) external nonReentrant returns (uint256) {
     require(amounts.length == assets.length, 'Amounts length mismatch');
-    uint256 totalSupply = totalSupply();
-    uint256 totalValueInFirstAsset = 0;
 
-    uint8 decimals = IERC20Metadata(assets[0]).decimals();
+    uint256 totalSupply = totalSupply();
+    uint256 totalValueInUSDC = 0;
+    address USDC = rebalancer.getUSDCAddress();
+
+    uint8 decimals = IERC20Metadata(USDC).decimals();
     uint256 scalingFactor = 10 ** (18 - decimals);
 
     for (uint256 i = 0; i < assets.length; i++) {
       address asset = assets[i];
       uint256 amount = amounts[i];
-
       IERC20(asset).transferFrom(msg.sender, address(this), amount);
-      balances[asset] += amount;
-
-      uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
-      uint256 amountAfterFee = amount - fee;
-
-      if (asset == assets[0]) {
-        totalValueInFirstAsset += amountAfterFee * scalingFactor;
-      } else if (asset != assets[0]) {
-        totalValueInFirstAsset = _convertTokenWithRateScaled(asset, assets[0], amountAfterFee);
-      }
+      uint256 valuation = _convertTokenWithRateScaled(asset, amount);
+      totalValueInUSDC += valuation;
     }
 
     uint256 toMint;
 
     if (totalSupply == 0) {
-      toMint = totalValueInFirstAsset;
+      toMint = totalValueInUSDC;
     } else {
-      uint256 totalLiquidity = totalLiquidityInTokenScaled(assets[0]);
-      toMint = ((totalValueInFirstAsset) * totalSupply) / totalLiquidity;
+      (uint256 totalLiquidity, ) = _computeTotalValuation();
+
+      toMint = ((totalValueInUSDC) * totalSupply) / totalLiquidity;
     }
     require(toMint != 0, 'Mint qty is 0');
     uint256 b4 = balanceOf(msg.sender);
@@ -224,46 +276,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     emit LiquidityAdded(msg.sender, amounts, toMint);
 
     return toMint;
-  }
-
-  /**
-   * @dev Calculates the total liquidity in terms of a specified token.
-   * @param token The address of the token for which to calculate the total liquidity.
-   * @return The total liquidity in terms of the specified token.
-   */
-  function totalLiquidityInTokenScaled(address token) public view returns (uint256) {
-    uint256 totalLiquidity = 0;
-
-    for (uint256 i = 0; i < assets.length; i++) {
-      address t = assets[i];
-      uint256 balance = balances[t];
-      uint8 decimals = IERC20Metadata(t).decimals();
-      uint256 scalingFactor = 10 ** (18 - decimals);
-
-      uint256 valueInToken;
-      if (t == token) {
-        valueInToken = balance * scalingFactor;
-      } else {
-        valueInToken = _convertTokenWithRateScaled(t, token, balance);
-      }
-      totalLiquidity += valueInToken;
-    }
-
-    return totalLiquidity;
-  }
-
-  /**
-   * @dev Checks if the given asset is supported by the pool.
-   * @param asset The address of the asset to check.
-   * @return True if the asset is supported, false otherwise.
-   */
-  function isAssetSupported(address asset) public view returns (bool) {
-    for (uint256 i = 0; i < assets.length; i++) {
-      if (assets[i] == asset) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -291,8 +303,12 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
       amounts[i] = (assetBalance * share) / totalSupply;
     }
 
+    uint256 fee = (share * SWAP_FEE_BPS) / 10000;
+    uint256 shareAfterFee = share - fee;
+
     // Burn the shares
     _burn(msg.sender, share);
+    transfer(rebalancer.getTreasury(), shareAfterFee);
 
     // Transfer each asset to the user
     for (uint256 i = 0; i < assets.length; i++) {
@@ -301,14 +317,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
     emit LiquidityRemoved(recipient, amounts, share);
   }
-
-  /**
-   * @dev Returns the total liquidity in asset1.
-   * It calculates the total balance of asset1 held by the contract,
-   * and also calculates the value of asset2 in terms of asset1.
-   * The total liquidity is the sum of the asset1 balance and the value of asset2 in asset1.
-   * @return The total liquidity in asset1.
-   */
 
   /**
    * @dev Performs a rebalance if needed.
@@ -333,7 +341,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @return deviations An array of uint256 values representing the deviation of each asset's current weight from the target weight.
    */
   function getDeviation() external view returns (bool[] memory directions, uint256[] memory deviations) {
-    (uint256 totalUsdValuation, uint256[] memory usdValuations) = _computeValuation();
+    (uint256 totalUsdValuation, uint256[] memory usdValuations) = _computeTotalValuation();
     uint256 numAssets = assets.length;
 
     directions = new bool[](numAssets);
@@ -360,8 +368,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @param assetIndex The index of the asset in the assets array.
    * @return The valuation of the specified asset in USD.
    */
-  function assetToStable(uint256 assetIndex) external view returns (uint256) {
-    (, uint256[] memory usdValuations) = _computeValuation();
+  function assetsLiquidityInWNATIVE(uint256 assetIndex) external view returns (uint256) {
+    (, uint256[] memory usdValuations) = _computeTotalValuation();
     require(assetIndex < usdValuations.length, 'Invalid asset index');
     return usdValuations[assetIndex];
   }
@@ -370,8 +378,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @dev Returns the total valuation in USD.
    * @return The total valuation in USD.
    */
-  function totalLiquidityStable() external view returns (uint256) {
-    (uint256 totalVal, ) = _computeValuation();
+  function totalLiquidityInWNATIVE() external view returns (uint256) {
+    (uint256 totalVal, ) = _computeTotalValuation();
     return totalVal;
   }
 
@@ -381,8 +389,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * If the total supply is 0, the unit price is 0.
    * @return The unit price of the pool in USD.
    */
-  function getUnitPriceStable() external view returns (uint256) {
-    (uint256 totalVal, ) = _computeValuation();
+  function getUnitPriceWNATIVE() external view returns (uint256) {
+    (uint256 totalVal, ) = _computeTotalValuation();
     uint256 totalSupply = totalSupply();
     if (totalSupply == 0) {
       return 0;
@@ -393,23 +401,19 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
   /**
    * @dev Computes the valuation of the assets in the pool.
    * @return totalValuation The total valuation of the assets in USD.
-   * @return usdValuations An array of USD valuations for each asset.
+   * @return valuations An array of USD valuations for each asset.
    */
-  function _computeValuation() internal view returns (uint256 totalValuation, uint256[] memory usdValuations) {
+  function _computeTotalValuation() internal view returns (uint256 totalValuation, uint256[] memory valuations) {
     uint256 numAssets = assets.length;
-    usdValuations = new uint256[](numAssets);
-    IBaluniV1Router baluniRouter = IBaluniV1Router(rebalancer.getBaluniRouter());
-
+    valuations = new uint256[](numAssets);
     for (uint256 i = 0; i < numAssets; i++) {
       IERC20 asset = IERC20(assets[i]);
       uint8 decimals = IERC20Metadata(address(asset)).decimals();
-      uint256 price = baluniRouter.tokenValuation(1 * 10 ** decimals, address(asset));
-      uint256 factor = 10 ** (18 - decimals);
-      usdValuations[i] = (asset.balanceOf(address(this)) * factor * price) / ONE;
-      totalValuation += usdValuations[i];
+      uint256 valuation = _convertTokenWithRateScaled(address(asset), asset.balanceOf(address(this)));
+      valuations[i] = valuation;
+      totalValuation += valuations[i];
     }
-
-    return (totalValuation, usdValuations);
+    return (totalValuation, valuations);
   }
 
   /**

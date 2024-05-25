@@ -47,6 +47,8 @@ import './interfaces/IBaluniV1Rebalancer.sol';
 
 interface I1inchSpotAgg {
   function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate);
+
+  function getRateToEth(IERC20 srcToken, bool useWrappers) external view returns (uint256 weightedRate);
 }
 
 contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeable, IBaluniV1Rebalancer {
@@ -58,6 +60,10 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
   ISwapRouter internal uniswapRouter;
   IUniswapV3Factory internal uniswapFactory;
   I1inchSpotAgg internal _1InchSpotAgg;
+
+  address public treasury;
+  address public usdc;
+  address public wnative;
 
   /**
    * @dev Initializes the contract with the specified addresses and sets the multiplier value.
@@ -81,11 +87,15 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
 
     // Set the token contracts and router contracts
     USDC = IERC20(_usdc);
+    usdc = _usdc;
     WNATIVE = IERC20Metadata(_wnative);
     uniswapRouter = ISwapRouter(_uniRouter);
     uniswapFactory = IUniswapV3Factory(_uniFactory);
     baluniRouter = IBaluniV1Router(_baluniRouter);
     _1InchSpotAgg = I1inchSpotAgg(_1InchSpotAggAddress);
+    treasury = baluniRouter.getTreasury();
+    usdc = _usdc;
+    wnative = _wnative;
 
     // Set the multiplier value
     multiplier = 1e12;
@@ -116,7 +126,9 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     uniswapFactory = IUniswapV3Factory(_uniFactory);
     baluniRouter = IBaluniV1Router(_baluniRouter);
     _1InchSpotAgg = I1inchSpotAgg(_1InchSpotAggAddress);
-
+    treasury = baluniRouter.getTreasury();
+    usdc = _usdc;
+    wnative = _wnative;
     // Set the multiplier value
     multiplier = 1e12;
   }
@@ -514,6 +526,47 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
   function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate) {
     uint256 rate;
     try _1InchSpotAgg.getRate(IERC20(srcToken), IERC20(dstToken), useWrappers) returns (uint256 _rate) {
+      rate = _rate;
+    } catch {
+      return 0;
+    }
+
+    return rate;
+  }
+
+  /**
+   * @dev Returns the address of the treasury.
+   * @return The address of the treasury.
+   */
+  function getTreasury() external view returns (address) {
+    return treasury;
+  }
+
+  /**
+   * @dev Returns the address of the USDC token.
+   * @return The address of the USDC token.
+   */
+  function getUSDCAddress() external view returns (address) {
+    return usdc;
+  }
+
+  /**
+   * @dev Returns the address of the USDC token.
+   * @return The address of the USDC token.
+   */
+  function getWNATIVEAddress() external view returns (address) {
+    return wnative;
+  }
+
+  /**
+   * @dev Returns the rate of the `srcToken` to ETH.
+   * @param srcToken The token for which the rate is to be calculated.
+   * @param useWrappers Boolean flag indicating whether to use wrappers.
+   * @return weightedRate The calculated rate of the `srcToken` to ETH.
+   */
+  function getRateToEth(IERC20 srcToken, bool useWrappers) external view returns (uint256 weightedRate) {
+    uint256 rate;
+    try _1InchSpotAgg.getRateToEth(IERC20(srcToken), useWrappers) returns (uint256 _rate) {
       rate = _rate;
     } catch {
       return 0;
