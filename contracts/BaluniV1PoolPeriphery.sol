@@ -1,7 +1,42 @@
 // SPDX-License-Identifier: GNU AGPLv3
-
 pragma solidity 0.8.25;
-
+/**
+ *  __                  __                      __
+ * /  |                /  |                    /  |
+ * $$ |____    ______  $$ | __    __  _______  $$/
+ * $$      \  /      \ $$ |/  |  /  |/       \ /  |
+ * $$$$$$$  | $$$$$$  |$$ |$$ |  $$ |$$$$$$$  |$$ |
+ * $$ |  $$ | /    $$ |$$ |$$ |  $$ |$$ |  $$ |$$ |
+ * $$ |__$$ |/$$$$$$$ |$$ |$$ \__$$ |$$ |  $$ |$$ |
+ * $$    $$/ $$    $$ |$$ |$$    $$/ $$ |  $$ |$$ |
+ * $$$$$$$/   $$$$$$$/ $$/  $$$$$$/  $$/   $$/ $$/
+ *
+ *
+ *                  ,-""""-.
+ *                ,'      _ `.
+ *               /       )_)  \
+ *              :              :
+ *              \              /
+ *               \            /
+ *                `.        ,'
+ *                  `.    ,'
+ *                    `.,'
+ *                     /\`.   ,-._
+ *                         `-'    \__
+ *                              .
+ *               s                \
+ *                                \\
+ *                                 \\
+ *                                  >\/7
+ *                              _.-(6'  \
+ *                             (=___._/` \
+ *                                  )  \ |
+ *                                 /   / |
+ *                                /    > /
+ *                               j    < _\
+ *                           _.-' :      ``.
+ *                           \ r=._\        `.
+ */
 import './interfaces/IBaluniV1PoolFactory.sol';
 import './interfaces/IBaluniV1Pool.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -58,8 +93,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
     IERC20(fromToken).approve(poolAddress, amount);
 
-    uint256 amountOut = pool.swap(fromToken, toToken, amount, receiver);
-
+    uint256 amountOut = pool.swap(fromToken, toToken, amount, receiver);A
     return amountOut;
   }
 
@@ -142,6 +176,11 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     return _getInitializedVersion();
   }
 
+  /**
+   * @dev Changes the address of the pool factory contract.
+   * Can only be called by the contract owner.
+   * @param _poolFactory The new address of the pool factory contract.
+   */
   function changePoolFactory(address _poolFactory) external onlyOwner {
     poolFactory = IBaluniV1PoolFactory(_poolFactory);
   }

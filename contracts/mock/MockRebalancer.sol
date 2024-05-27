@@ -13,8 +13,6 @@ contract MockRebalancer {
   uint256 public constant USDT_TO_USDC_RATE = 998714700668848356;
   uint256 public constant WMATIC_TO_USDT_RATE = 747767;
   uint256 public constant WMATIC_TO_USDC_RATE = 746814;
-  address public fakeTreasuryAddress = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
-
   address public wmatic;
   address public treasury;
 

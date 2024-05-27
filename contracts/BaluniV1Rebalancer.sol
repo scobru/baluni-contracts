@@ -44,12 +44,7 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import './interfaces/IBaluniV1Router.sol';
 import './interfaces/IBaluniV1Rebalancer.sol';
-
-interface I1inchSpotAgg {
-  function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate);
-
-  function getRateToEth(IERC20 srcToken, bool useWrappers) external view returns (uint256 weightedRate);
-}
+import './interfaces/I1inchSpotAgg.sol';
 
 contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeable, IBaluniV1Rebalancer {
   uint256 internal multiplier;

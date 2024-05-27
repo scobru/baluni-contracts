@@ -55,6 +55,11 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     _;
   }
 
+  /**
+   * @dev Initializes the assets and their weights for the pool.
+   * @param _assets The array of asset addresses.
+   * @param _weights The array of weights corresponding to each asset.
+   */
   function initializeAssets(address[] memory _assets, uint256[] memory _weights) internal {
     require(_assets.length == _weights.length, 'Assets and weights length mismatch');
 
@@ -71,6 +76,12 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     }
   }
 
+  /**
+   * @dev Rebalances the weights of the pool by calculating the amounts to add for each token,
+   * transferring the calculated amounts from the user to the pool, minting the total added liquidity,
+   * updating the reserves, and emitting an event to indicate the rebalancing of weights.
+   * @param receiver The address to receive the minted liquidity tokens.
+   */
   function rebalanceWeights(address receiver) external {
     (uint256 totalValuation, uint256[] memory valuations) = _computeValuations();
 
@@ -93,6 +104,24 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     emit WeightsRebalanced(msg.sender, amountsToAdd);
   }
 
+  /**
+   * @dev Swaps `amount` of `fromToken` to `toToken` and transfers the received amount to `receiver`.
+   *
+   * Requirements:
+   * - `fromToken` and `toToken` must be different tokens.
+   * - `amount` must be greater than zero.
+   * - Sufficient liquidity of `toToken` must be available in the contract.
+   *
+   * Emits a `Swap` event with the details of the swap.
+   *
+   * Updates the reserves after the swap.
+   *
+   * @param fromToken The address of the token to swap from.
+   * @param toToken The address of the token to swap to.
+   * @param amount The amount of `fromToken` to swap.
+   * @param receiver The address to receive the swapped tokens.
+   * @return The amount of `toToken` received after the swap.
+   */
   function swap(
     address fromToken,
     address toToken,
@@ -112,6 +141,11 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return receivedAmount;
   }
 
+  /**
+   * @dev Mints new tokens and adds them to the specified address.
+   * @param to The address to which the new tokens will be minted.
+   * @return The amount of tokens minted.
+   */
   function mint(address to) external onlyPeriphery returns (uint256) {
     uint256 totalSupply = totalSupply();
     uint256 totalValue = 0;
@@ -156,6 +190,19 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return toMint;
   }
 
+  /**
+   * @dev Burns the pool tokens and transfers the underlying assets to the specified address.
+   * @param to The address to transfer the underlying assets to.
+   * @notice This function can only be called by the periphery contract.
+   * @notice The pool tokens must have a balance greater than 0.
+   * @notice The total supply of pool tokens must be greater than 0.
+   * @notice The function calculates the amounts of each underlying asset to transfer based on the share of pool tokens being burned.
+   * @notice A fee is deducted from the share of pool tokens being burned and transferred to the treasury address.
+   * @notice The function checks if the pool has sufficient liquidity before performing any transfers.
+   * @notice If any transfer fails, the function reverts the entire operation.
+   * @notice After the transfers, the function updates the reserves of the pool.
+   * @notice Emits a `Burn` event with the address and share of pool tokens burned.
+   */
   function burn(address to) external onlyPeriphery {
     uint256 share = balanceOf(address(this));
 
@@ -192,6 +239,13 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     emit Burn(to, shareAfterFee);
   }
 
+  /**
+   * @dev Calculates the amount of `toToken` that will be received when swapping `fromToken` for `toToken`.
+   * @param fromToken The address of the token being swapped from.
+   * @param toToken The address of the token being swapped to.
+   * @param amount The amount of `fromToken` being swapped.
+   * @return The amount of `toToken` that will be received.
+   */
   function getAmountOut(address fromToken, address toToken, uint256 amount) public view returns (uint256) {
     require(fromToken != toToken, 'Cannot swap the same token');
     require(amount > 0, 'Amount must be greater than zero');
@@ -236,6 +290,10 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return amountOut;
   }
 
+  /**
+   * @dev Performs rebalance if needed based on the LP share of the sender.
+   * @param _sender The address of the sender.
+   */
   function performRebalanceIfNeeded(address _sender) external {
     uint256 requiredBalance = (totalSupply() * 1000) / 10000;
     require(balanceOf(_sender) >= requiredBalance, 'Under 5% LP share');
@@ -243,6 +301,10 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     _updateReserves();
   }
 
+  /**
+   * @dev Returns the deviation between the current weights and target weights of the assets in the pool.
+   * @return directions An array of boolean values indicating whether the current weight is higher (true) or lower (false) than the target weight.
+   */
   function getDeviation() public view returns (bool[] memory directions, uint256[] memory deviations) {
     (uint256 totalUsdValuation, uint256[] memory usdValuations) = _computeTotalValuation();
     uint256 numAssets = assetInfos.length;
@@ -266,17 +328,30 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return (directions, deviations);
   }
 
+  /**
+   * @dev Returns the liquidity of a specific asset in the pool.
+   * @param assetIndex The index of the asset.
+   * @return The liquidity of the asset.
+   */
   function assetLiquidity(uint256 assetIndex) external view returns (uint256) {
     (, uint256[] memory usdValuations) = _computeTotalValuation();
     require(assetIndex < usdValuations.length, 'Invalid asset index');
     return usdValuations[assetIndex];
   }
 
+  /**
+   * @dev Returns the total liquidity of the pool.
+   * @return The total liquidity of the pool.
+   */
   function liquidity() external view returns (uint256) {
     (uint256 totalVal, ) = _computeTotalValuation();
     return totalVal;
   }
 
+  /**
+   * @dev Returns the unit price of the pool.
+   * @return The unit price of the pool.
+   */
   function unitPrice() external view returns (uint256) {
     (uint256 totalVal, ) = _computeTotalValuation();
     uint256 totalSupply = totalSupply();
@@ -286,6 +361,10 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return (totalVal * ONE) / totalSupply;
   }
 
+  /**
+   * @dev Returns an array of reserves for each asset in the pool.
+   * @return An array of reserves.
+   */
   function getReserves() public view returns (uint256[] memory) {
     uint256[] memory _reserves = new uint256[](assetInfos.length);
     for (uint256 i = 0; i < assetInfos.length; i++) {
@@ -294,6 +373,10 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return _reserves;
   }
 
+  /**
+   * @dev Retrieves the list of assets in the pool.
+   * @return An array of addresses representing the assets.
+   */
   function getAssets() external view returns (address[] memory) {
     address[] memory assets = new address[](assetInfos.length);
     for (uint256 i = 0; i < assetInfos.length; i++) {
@@ -302,6 +385,10 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return assets;
   }
 
+  /**
+   * @dev Retrieves the list of weights associated with the assets in the pool.
+   * @return An array of uint256 values representing the weights.
+   */
   function getWeights() external view returns (uint256[] memory) {
     uint256[] memory weights = new uint256[](assetInfos.length);
     for (uint256 i = 0; i < assetInfos.length; i++) {
@@ -310,6 +397,11 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return weights;
   }
 
+  /**
+   * @dev Computes the total valuation of the assets in the pool.
+   * @return totalValuation The total valuation of the assets.
+   * @return valuations An array of valuations for each asset in the pool.
+   */
   function _computeTotalValuation() internal view returns (uint256 totalValuation, uint256[] memory valuations) {
     uint256 numAssets = assetInfos.length;
     valuations = new uint256[](numAssets);
@@ -322,6 +414,13 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return (totalValuation, valuations);
   }
 
+  /**
+   * @dev Performs rebalance if needed.
+   * This function retrieves the assets and weights from the `assetInfos` array,
+   * and calls the `rebalance` function of the `rebalancer` contract with the retrieved values.
+   * It emits a `RebalancePerformed` event after the rebalance is performed.
+   * @notice This function should only be called internally.
+   */
   function _performRebalanceIfNeeded() internal {
     address[] memory assets = new address[](assetInfos.length);
     uint256[] memory weights = new uint256[](assetInfos.length);
@@ -333,6 +432,11 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     emit RebalancePerformed(msg.sender, assets);
   }
 
+  /**
+   * @dev Calculates the total added liquidity based on the amounts to add.
+   * @param amountsToAdd An array of amounts to add for each asset.
+   * @return totalAddedLiquidity The total added liquidity.
+   */
   function _calculateTotalAddedLiquidity(
     uint256[] memory amountsToAdd
   ) internal view returns (uint256 totalAddedLiquidity) {
@@ -342,6 +446,11 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return totalAddedLiquidity;
   }
 
+  /**
+   * @dev Computes the valuations of assets held in the contract.
+   * @return totalValuation The total valuation of all assets.
+   * @return valuations An array containing the valuations of each asset.
+   */
   function _computeValuations() internal view returns (uint256 totalValuation, uint256[] memory valuations) {
     valuations = new uint256[](assetInfos.length);
     for (uint256 i = 0; i < assetInfos.length; i++) {
@@ -365,6 +474,12 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
   //   return amountsToAdd;
   // }
 
+  /**
+   * @dev Calculates the amounts to add to each asset based on the total valuation and individual valuations.
+   * @param totalValuation The total valuation of the assets.
+   * @param valuations An array of individual valuations for each asset.
+   * @return amountsToAdd An array of amounts to add to each asset.
+   */
   function _calculateAmountsToAdd(
     uint256 totalValuation,
     uint256[] memory valuations
@@ -381,18 +496,11 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return amountsToAdd;
   }
 
-  function _calculateSingleAmountToAdd(
-    uint256 totalValuation,
-    uint256 valuation,
-    uint256 weight
-  ) internal pure returns (uint256 amountToAdd) {
-    uint256 targetValuation = (totalValuation * weight) / 10000;
-    if (valuation < targetValuation) {
-      amountToAdd = targetValuation - valuation;
-    }
-    return amountToAdd;
-  }
-
+  /**
+   * @dev Internal function to transfer tokens from the caller to the contract and calculate the liquidity.
+   * @param index The index of the asset in the assetInfos array.
+   * @param amountToAdd The amount of native tokens to add as liquidity.
+   */
   function _transferAndCalculateLiquidity(uint256 index, uint256 amountToAdd) internal {
     uint256 tokenAmount = _convertNativeToToken(assetInfos[index].asset, amountToAdd);
     require(tokenAmount > 0, 'Invalid token amount to add');
@@ -400,6 +508,12 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     reserves[assetInfos[index].asset] += tokenAmount;
   }
 
+  /**
+   * @dev Converts the specified amount of native token to the corresponding token amount.
+   * @param fromToken The address of the native token to convert from.
+   * @param amount The amount of native token to convert.
+   * @return The corresponding token amount.
+   */
   function _convertNativeToToken(address fromToken, uint256 amount) internal view returns (uint256) {
     uint256 rate;
 
@@ -415,10 +529,22 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return tokenAmount;
   }
 
+  /**
+   * @dev Returns the maximum of two uint8 values.
+   * @param a The first uint8 value.
+   * @param b The second uint8 value.
+   * @return The maximum value between a and b.
+   */
   function max(uint8 a, uint8 b) private pure returns (uint8) {
     return a >= b ? a : b;
   }
 
+  /**
+   * @dev Returns the minimum of two uint8 values.
+   * @param a The first uint8 value.
+   * @param b The second uint8 value.
+   * @return The minimum value between a and b.
+   */
   function min(uint8 a, uint8 b) private pure returns (uint8) {
     return a <= b ? a : b;
   }
@@ -456,6 +582,9 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return (amount * rate) / ONE;
   }
 
+  /**
+   * @dev Updates the reserves of all assets in the pool.
+   */
   function _updateReserves() internal {
     for (uint256 i = 0; i < assetInfos.length; i++) {
       address asset = assetInfos[i].asset;

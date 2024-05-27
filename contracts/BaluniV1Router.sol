@@ -50,18 +50,13 @@ import './interfaces/IBaluniV1Agent.sol';
 import './interfaces/IBaluniV1MarketOracle.sol';
 import './interfaces/IBaluniV1Rebalancer.sol';
 import './libs/EnumerableSetUpgradeable.sol';
+import './BaluniToken.sol';
 
 interface I1inchSpotAgg {
   function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate);
 }
 
-contract BaluniV1Router is
-  Initializable,
-  ERC20Upgradeable,
-  OwnableUpgradeable,
-  ReentrancyGuardUpgradeable,
-  UUPSUpgradeable
-{
+contract BaluniV1Router is Initializable, BaluniToken, OwnableUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
   struct Call {
     address to;
     uint256 value;
