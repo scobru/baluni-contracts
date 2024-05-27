@@ -39,7 +39,7 @@ interface IBaluniV1Pool {
   // Mutative
   function rebalanceWeights(address receiver) external;
 
-  function swap(address fromToken, address toToken, uint256 amount) external returns (uint256);
+  function swap(address fromToken, address toToken, uint256 amount, address receiver) external returns (uint256);
 
   function mint(address to) external returns (uint256);
 

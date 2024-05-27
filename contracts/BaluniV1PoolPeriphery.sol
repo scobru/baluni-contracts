@@ -48,7 +48,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
    * @param amount The amount of tokens to swap.
    * @return The amount of tokens received after the swap.
    */
-  function swap(address fromToken, address toToken, uint256 amount) external returns (uint256) {
+  function swap(address fromToken, address toToken, uint256 amount, address receiver) external returns (uint256) {
     require(amount > 0, 'Amount must be greater than zero');
 
     // Get the pool address for the given tokens
@@ -58,8 +58,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
     IERC20(fromToken).approve(poolAddress, amount);
 
-    uint256 amountOut = pool.swap(fromToken, toToken, amount);
-    IERC20(toToken).transfer(msg.sender, amountOut);
+    uint256 amountOut = pool.swap(fromToken, toToken, amount, receiver);
 
     return amountOut;
   }
@@ -68,7 +67,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
    * @dev Adds liquidity to a BaluniV1Pool.
    * @param amounts An array of amounts for each asset to add as liquidity.
    */
-  function addLiquidity(uint256[] calldata amounts, address poolAddress) external {
+  function addLiquidity(uint256[] calldata amounts, address poolAddress, address receiver) external {
     IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
     address[] memory assets = pool.getAssets(); // Get the assets in the pool
 
@@ -78,7 +77,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
       IERC20(asset).transferFrom(msg.sender, poolAddress, amount);
     }
 
-    pool.mint(msg.sender);
+    pool.mint(receiver);
   }
 
   /**
@@ -86,7 +85,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
    * @param share The amount of liquidity tokens to remove.
    * @param poolAddress The address of the BaluniV1Pool.
    */
-  function removeLiquidity(uint256 share, address poolAddress) external {
+  function removeLiquidity(uint256 share, address poolAddress, address receiver) external {
     require(share > 0, 'Share must be greater than zero');
     IERC20 poolToken = IERC20(poolAddress);
 
@@ -101,7 +100,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     bool success = poolToken.transferFrom(msg.sender, poolAddress, share);
     require(success, 'Transfer failed');
 
-    IBaluniV1Pool(poolAddress).burn(msg.sender);
+    IBaluniV1Pool(poolAddress).burn(receiver);
   }
 
   /**

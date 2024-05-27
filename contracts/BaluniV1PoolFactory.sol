@@ -10,26 +10,25 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
   address[] public allPools;
   mapping(address => mapping(address => address)) public getPool;
 
+  address public rebalancer;
+  address public periphery;
+
   event PoolCreated(address indexed pool, address[] assets, address rebalancer);
 
-  function initialize() public initializer {
+  function initialize(address _rebalancer) public initializer {
     __UUPSUpgradeable_init();
     __Ownable_init(msg.sender);
+    rebalancer = _rebalancer;
   }
 
-  function reinitialize(uint64 _version) public reinitializer(_version) {
-    // Reinitialize logic if necessary
+  function reinitialize(address _rebalancer, uint64 _version) public reinitializer(_version) {
+    rebalancer = _rebalancer;
   }
 
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-  function createPool(
-    address rebalancer,
-    address[] memory assets,
-    uint256[] memory weights,
-    uint256 trigger
-  ) external onlyOwner returns (address) {
-    require(rebalancer != address(0), 'Rebalancer address cannot be zero');
+  function createPool(address[] memory assets, uint256[] memory weights, uint256 trigger) external returns (address) {
+    require(periphery != address(0), 'Router not set');
     require(assets.length > 1, 'At least two assets are required');
     require(assets.length == weights.length, 'Assets and weights length mismatch');
 
@@ -39,8 +38,7 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
       }
     }
 
-    // Deploy a new BaluniV1Pool instance directly
-    BaluniV1Pool newPool = new BaluniV1Pool(rebalancer, assets, weights, trigger);
+    BaluniV1Pool newPool = new BaluniV1Pool(rebalancer, assets, weights, trigger, periphery);
 
     address poolAddress = address(newPool);
 
@@ -101,5 +99,9 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
     }
 
     return result;
+  }
+
+  function changePeriphery(address _newPeriphery) external onlyOwner {
+    periphery = _newPeriphery;
   }
 }
