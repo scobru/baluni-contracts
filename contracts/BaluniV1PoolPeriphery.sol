@@ -75,16 +75,10 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     for (uint256 i = 0; i < assets.length; i++) {
       address asset = assets[i];
       uint256 amount = amounts[i];
-
-      IERC20(asset).transferFrom(msg.sender, address(this), amount);
-      IERC20(asset).approve(poolAddress, amount);
+      IERC20(asset).transferFrom(msg.sender, poolAddress, amount);
     }
 
-    uint256 balanceB4 = IERC20(address(pool)).balanceOf(address(this));
-    pool.addLiquidity(amounts);
-    uint256 balanceAfter = IERC20(address(pool)).balanceOf(address(this));
-    uint256 liquidityTokens = balanceAfter - balanceB4;
-    IERC20(address(pool)).transfer(msg.sender, liquidityTokens);
+    pool.mint(msg.sender);
   }
 
   /**
@@ -94,9 +88,20 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
    */
   function removeLiquidity(uint256 share, address poolAddress) external {
     require(share > 0, 'Share must be greater than zero');
-    IERC20(address(poolAddress)).transferFrom(msg.sender, address(this), share);
-    IERC20(address(poolAddress)).approve(poolAddress, share);
-    IBaluniV1Pool(poolAddress).exit(share);
+    IERC20 poolToken = IERC20(poolAddress);
+
+    // Check allowance
+    uint256 allowance = poolToken.allowance(msg.sender, address(this));
+    require(allowance >= share, 'Insufficient allowance');
+
+    // Check balance
+    uint256 balance = poolToken.balanceOf(msg.sender);
+    require(balance >= share, 'Insufficient balance');
+
+    bool success = poolToken.transferFrom(msg.sender, poolAddress, share);
+    require(success, 'Transfer failed');
+
+    IBaluniV1Pool(poolAddress).burn(msg.sender);
   }
 
   /**

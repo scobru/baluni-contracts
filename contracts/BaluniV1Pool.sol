@@ -1,42 +1,5 @@
 // SPDX-License-Identifier: GNU AGPLv3
 pragma solidity 0.8.25;
-/**
- *  __                  __                      __
- * /  |                /  |                    /  |
- * $$ |____    ______  $$ | __    __  _______  $$/
- * $$      \  /      \ $$ |/  |  /  |/       \ /  |
- * $$$$$$$  | $$$$$$  |$$ |$$ |  $$ |$$$$$$$  |$$ |
- * $$ |  $$ | /    $$ |$$ |$$ |  $$ |$$ |  $$ |$$ |
- * $$ |__$$ |/$$$$$$$ |$$ |$$ \__$$ |$$ |  $$ |$$ |
- * $$    $$/ $$    $$ |$$ |$$    $$/ $$ |  $$ |$$ |
- * $$$$$$$/   $$$$$$$/ $$/  $$$$$$/  $$/   $$/ $$/
- *
- *
- *                  ,-""""-.
- *                ,'      _ `.
- *               /       )_)  \
- *              :              :
- *              \              /
- *               \            /
- *                `.        ,'
- *                  `.    ,'
- *                    `.,'
- *                     /\`.   ,-._
- *                         `-'    \__
- *                              .
- *               s                \
- *                                \\
- *                                 \\
- *                                  >\/7
- *                              _.-(6'  \
- *                             (=___._/` \
- *                                  )  \ |
- *                                 /   / |
- *                                /    > /
- *                               j    < _\
- *                           _.-' :      ``.
- *                           \ r=._\        `.
- */
 
 import './interfaces/IBaluniV1Rebalancer.sol';
 import './interfaces/IBaluniV1Router.sol';
@@ -45,137 +8,72 @@ import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
 contract BaluniV1Pool is ERC20, ReentrancyGuard {
   IBaluniV1Rebalancer public rebalancer;
-
   address[] public assets;
   uint256[] public weights;
-
   uint256 public trigger;
-  uint256 public ONE = 1e18;
-  address public factory;
-
+  uint256 public ONE;
+  address public router;
   uint256 public constant SWAP_FEE_BPS = 30;
 
   event RebalancePerformed(address indexed by, address[] assets);
-  event LiquidityRemoved(address indexed user, uint256[] amounts, uint256 sharesBurned);
+  event WeightsRebalanced(address indexed user, uint256[] amountsAdded);
+  event Burn(address indexed user, uint256 sharesBurned);
+  event Mint(address indexed to, uint256 sharesMinted);
+  event Swap(
+    address indexed user,
+    address indexed fromToken,
+    address indexed toToken,
+    uint256 amountIn,
+    uint256 amountOut
+  );
 
-  /**
-   * @dev Initializes the BaluniV1Pool contract.
-   * @param _rebalancer The address of the rebalancer contract.
-   * @param _assets The addresses of the asset contracts.
-   * @param _weights The weights of the assets.
-   * @param _trigger The trigger value.
-   */
   constructor(
     address _rebalancer,
     address[] memory _assets,
     uint256[] memory _weights,
     uint256 _trigger
-  ) ERC20('Baluni LP', 'BALUNI-LP') ReentrancyGuard() {
-    // Initialize contract variables
-    factory = msg.sender;
+  ) ERC20('Baluni LP', 'BALUNI-LP') {
+    router = msg.sender;
     rebalancer = IBaluniV1Rebalancer(_rebalancer);
     assets = _assets;
     weights = _weights;
+    ONE = 1e18;
 
-    // Validate asset addresses and weights
     for (uint i = 0; i < assets.length; i++) {
       require(assets[i] != address(0), 'Invalid asset address');
       require(_weights[i] > 0, 'Invalid weight');
       IERC20 asset = IERC20(assets[i]);
-      // Approve rebalancer to spend assets
       if (asset.allowance(address(this), address(rebalancer)) == 0) {
         asset.approve(address(rebalancer), type(uint256).max);
       }
     }
 
-    // Set trigger value
     trigger = _trigger;
   }
 
-  /**
-   * @dev Calculates the received amount after applying a fee, based on the conversion rate between two tokens.
-   * @param fromToken The address of the token being converted from.
-   * @param amount The amount to be converted after applying a fee.
-   * @return scaledAmount The received amount after applying the conversion rate and fee.
-   */
-  function _convertTokenWithRateScaled(address fromToken, uint256 amount) internal view returns (uint256 scaledAmount) {
-    uint256 rate;
-    address WNATIVE = rebalancer.getWNATIVEAddress();
-    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-    uint8 toDecimal = IERC20Metadata(WNATIVE).decimals();
-
-    try rebalancer.getRateToEth(IERC20(fromToken), false) returns (uint256 _rate) {
-      rate = _rate;
-    } catch {
-      return 0;
-    }
-
-    uint256 factor;
-    uint256 numerator = 10 ** fromDecimal;
-    uint256 demonimator = ONE;
-
-    rate = (rate * numerator) / demonimator;
-
-    if (fromDecimal > toDecimal) {
-      factor = 10 ** (fromDecimal - toDecimal);
-      amount = amount * factor;
-    } else if (fromDecimal < toDecimal) {
-      factor = 10 ** (toDecimal - fromDecimal);
-      amount = amount * factor;
-    } else {
-      if (fromDecimal == 18) {
-        return ((amount) * (rate)) / ONE;
-      } else {
-        factor = 10 ** 18 - fromDecimal;
-        amount = amount * factor;
-      }
-    }
-
-    return ((amount) * (rate)) / ONE;
+  modifier onlyRouter() {
+    require(msg.sender == router, 'Only Factory');
+    _;
   }
 
-  /**
-   * @dev Swaps tokens from one address to another.
-   * @param fromToken The address of the token to swap from.
-   * @param toToken The address of the token to swap to.
-   * @param amount The amount of tokens to swap.
-   * @return The amount of tokens received after the swap.
-   */
+  function rebalanceWeights(address receiver) external {
+    (uint256 totalValuation, uint256[] memory valuations) = _computeValuations();
+
+    uint256[] memory amountsToAdd = _calculateAmountsToAdd(totalValuation, valuations);
+
+    uint256 totalAddedLiquidity = _calculateTotalAddedLiquidity(amountsToAdd);
+
+    _mint(receiver, totalAddedLiquidity);
+    emit WeightsRebalanced(msg.sender, amountsToAdd);
+  }
+
   function swap(address fromToken, address toToken, uint256 amount) external nonReentrant returns (uint256) {
     require(fromToken != toToken, 'Cannot swap the same token');
     require(amount > 0, 'Amount must be greater than zero');
     IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
-
-    // Calculate the fee and adjust the amount after fee
     uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
     uint256 amountAfterFee = amount - fee;
-
-    // Get decimals for fromToken and toToken
-    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-    uint8 toDecimal = IERC20Metadata(toToken).decimals();
-
-    uint256 rate;
-    try rebalancer.getRate(IERC20(fromToken), IERC20(toToken), false) returns (uint256 _rate) {
-      rate = _rate;
-    } catch {
-      return 0;
-    }
-
-    uint256 adjustedAmount;
-    if (fromDecimal > toDecimal) {
-      uint256 factor = 10 ** (fromDecimal - toDecimal);
-      adjustedAmount = amountAfterFee / factor; // Correct division for scaling down
-    } else if (fromDecimal < toDecimal) {
-      uint256 factor = 10 ** (toDecimal - fromDecimal);
-      adjustedAmount = amountAfterFee;
-      rate = rate * factor; // Correct multiplication for scaling up
-    } else {
-      adjustedAmount = amountAfterFee;
-    }
-
-    // Calculate the received amount
-    uint256 receivedAmount = (adjustedAmount * rate) / (10 ** toDecimal);
-
+    uint256 receivedAmount = getAmountOut(fromToken, toToken, amountAfterFee);
     require(IERC20(toToken).balanceOf(address(this)) >= receivedAmount, 'Insufficient Liquidity');
     IERC20(toToken).transfer(msg.sender, receivedAmount);
     emit Swap(msg.sender, fromToken, toToken, amount, receivedAmount);
@@ -183,87 +81,27 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return receivedAmount;
   }
 
-  /**
-   * @dev Calculates the amount of `toToken` that will be received after swapping `fromToken` for `toToken`.
-   * @param fromToken The address of the token being swapped from.
-   * @param toToken The address of the token being swapped to.
-   * @param amount The amount of `fromToken` being swapped.
-   * @return The amount of `toToken` that will be received after the swap.
-   * @notice This function is view-only and does not modify the contract state.
-   * @notice The `fromToken` and `toToken` must be either `asset1` or `asset2`.
-   * @notice The `fromToken` and `toToken` cannot be the same token.
-   * @notice The `amount` must be greater than zero.
-   * @notice The returned amount does not include any swap fees.
-   */
-  function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
-    require(fromToken != toToken, 'Cannot swap the same token');
-    require(amount > 0, 'Amount must be greater than zero');
-
-    // Calculate the fee and adjust the amount after fee
-    uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
-    uint256 amountAfterFee = amount - fee;
-
-    // Get decimals for fromToken and toToken
-    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-    uint8 toDecimal = IERC20Metadata(toToken).decimals();
-
-    uint256 rate;
-    try rebalancer.getRate(IERC20(fromToken), IERC20(toToken), false) returns (uint256 _rate) {
-      rate = _rate;
-    } catch {
-      return 0;
-    }
-
-    uint256 adjustedAmount;
-    if (fromDecimal > toDecimal) {
-      uint256 factor = 10 ** (fromDecimal - toDecimal);
-      adjustedAmount = amountAfterFee / factor; // Correct division for scaling down
-    } else if (fromDecimal < toDecimal) {
-      uint256 factor = 10 ** (toDecimal - fromDecimal);
-      adjustedAmount = amountAfterFee;
-      rate = rate * factor; // Correct multiplication for scaling up
-    } else {
-      adjustedAmount = amountAfterFee;
-    }
-
-    // Calculate the amount out
-    uint256 amountOut = (adjustedAmount * rate) / (10 ** toDecimal);
-
-    return amountOut;
-  }
-
-  /**
-   * @dev Adds liquidity to the pool by transferring specified amounts of assets from the caller's address to the contract.
-   * The function calculates the received amount of each asset and mints new LP tokens proporzionalmente.
-   * @param amounts An array of amounts for each asset to be added as liquidity.
-   * @return The amount of LP tokens minted and transferred to the caller.
-   */
-  function addLiquidity(uint256[] calldata amounts) external nonReentrant returns (uint256) {
-    require(amounts.length == assets.length, 'Amounts length mismatch');
-
+  function mint(address to) external onlyRouter returns (uint256) {
     uint256 totalSupply = totalSupply();
-    uint256 totalValueInUSDC = 0;
-    address USDC = rebalancer.getUSDCAddress();
+    uint256 totalValue = 0;
 
-    uint8 decimals = IERC20Metadata(USDC).decimals();
-    uint256 scalingFactor = 10 ** (18 - decimals);
+    uint256[] memory reserves = getReserves();
 
     for (uint256 i = 0; i < assets.length; i++) {
       address asset = assets[i];
-      uint256 amount = amounts[i];
-      IERC20(asset).transferFrom(msg.sender, address(this), amount);
-      uint256 valuation = _convertTokenWithRateScaled(asset, amount);
-      totalValueInUSDC += valuation;
+      uint256 actualBalance = IERC20(asset).balanceOf(address(this));
+      uint256 amount = actualBalance - reserves[i];
+      uint256 valuation = _convertTokenToNative(asset, amount);
+      totalValue += valuation;
     }
 
     uint256 toMint;
 
     if (totalSupply == 0) {
-      toMint = totalValueInUSDC;
+      toMint = totalValue;
     } else {
       (uint256 totalLiquidity, ) = _computeTotalValuation();
-
-      toMint = ((totalValueInUSDC) * totalSupply) / totalLiquidity;
+      toMint = ((totalValue) * totalSupply) / totalLiquidity;
     }
     require(toMint != 0, 'Mint qty is 0');
     uint256 b4 = balanceOf(msg.sender);
@@ -273,73 +111,81 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     uint256 b = balanceOf(msg.sender) - b4;
     require(b == toMint, 'Mint Failed');
 
-    emit LiquidityAdded(msg.sender, amounts, toMint);
+    emit Mint(to, toMint);
 
     return toMint;
   }
 
-  /**
-   * @dev Allows a user to exit the pool by redeeming their share of assets.
-   * @param share The amount of shares to redeem.
-   * Requirements:
-   * - The caller must have a balance of shares greater than or equal to the specified amount.
-   * - The pool must have sufficient assets to cover the redeemed shares.
-   * Effects:
-   * - Decreases the caller's share balance by the specified amount.
-   * - Transfers the proportional amount of each asset in the pool to the caller.
-   * Emits:
-   * - LiquidityRemoved event with the caller's address and the redeemed share amount.
-   */
-  function exit(uint256 share, address recipient) external nonReentrant {
-    require(balanceOf(msg.sender) >= share, 'Insufficient share');
+  function burn(address to) external {
+    uint256 share = balanceOf(address(this));
+
+    require(share > 0, 'Share must be greater than 0');
     uint256 totalSupply = totalSupply();
+
     require(totalSupply > 0, 'No liquidity');
-
     uint256[] memory amounts = new uint256[](assets.length);
-
-    // Calculate the share of each asset to be transferred
-    for (uint256 i = 0; i < assets.length; i++) {
-      uint256 assetBalance = IERC20(assets[i]).balanceOf(address(this));
-      amounts[i] = (assetBalance * share) / totalSupply;
-    }
 
     uint256 fee = (share * SWAP_FEE_BPS) / 10000;
     uint256 shareAfterFee = share - fee;
 
-    // Burn the shares
-    _burn(msg.sender, share);
-    transfer(rebalancer.getTreasury(), shareAfterFee);
-
-    // Transfer each asset to the user
     for (uint256 i = 0; i < assets.length; i++) {
-      IERC20(assets[i]).transfer(recipient, amounts[i]);
+      uint256 assetBalance = IERC20(assets[i]).balanceOf(address(this));
+      amounts[i] = (assetBalance * shareAfterFee) / totalSupply;
     }
 
-    emit LiquidityRemoved(recipient, amounts, share);
+    _burn(address(this), shareAfterFee);
+
+    bool feeTransferSuccess = transfer(rebalancer.getTreasury(), fee);
+    require(feeTransferSuccess, 'Fee transfer failed');
+
+    for (uint256 i = 0; i < assets.length; i++) {
+      bool assetTransferSuccess = IERC20(assets[i]).transfer(to, amounts[i]);
+      require(assetTransferSuccess, 'Asset transfer failed');
+    }
+
+    emit Burn(to, shareAfterFee);
   }
 
-  /**
-   * @dev Performs a rebalance if needed.
-   *
-   * This internal function checks if a rebalance is needed by calling the `checkRebalance` function of the `rebalancer` contract.
-   * If a rebalance is required, it calls the `rebalance` function of the `rebalancer` contract to perform the rebalance.
-   *
-   * Requirements:
-   * - The `assets` array must contain the addresses of the assets to rebalance.
-   * - The `weights` array must contain the corresponding weights for the assets.
-   * - The `rebalanceStatus` must not be `NoRebalance`.
-   */
+  function getAmountOut(address fromToken, address toToken, uint256 amount) public view returns (uint256) {
+    require(fromToken != toToken, 'Cannot swap the same token');
+    require(amount > 0, 'Amount must be greater than zero');
+
+    uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
+    uint256 amountAfterFee = amount - fee;
+
+    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+    uint8 toDecimal = IERC20Metadata(toToken).decimals();
+
+    uint256 rate;
+
+    try rebalancer.getRate(IERC20(fromToken), IERC20(toToken), false) returns (uint256 _rate) {
+      rate = _rate;
+    } catch {
+      return 0;
+    }
+
+    uint256 adjustedAmount = amountAfterFee;
+    if (fromDecimal != toDecimal) {
+      uint256 factor;
+      if (fromDecimal > toDecimal) {
+        factor = 10 ** (fromDecimal - toDecimal);
+        adjustedAmount /= factor;
+      } else {
+        factor = 10 ** (toDecimal - fromDecimal);
+        adjustedAmount *= factor;
+      }
+    }
+
+    uint256 amountOut = (adjustedAmount * rate) / (10 ** toDecimal);
+    return amountOut;
+  }
+
   function performRebalanceIfNeeded(address _sender) external {
     uint256 requiredBalance = (totalSupply() * 1000) / 10000;
     require(balanceOf(_sender) >= requiredBalance, 'Under 5% LP share');
     _performRebalanceIfNeeded();
   }
 
-  /**
-   * @dev Returns the deviation of the current weights of each asset from the target weights.
-   * @return directions An array of booleans indicating whether each current weight is greater than the target weight.
-   * @return deviations An array of uint256 values representing the deviation of each asset's current weight from the target weight.
-   */
   function getDeviation() external view returns (bool[] memory directions, uint256[] memory deviations) {
     (uint256 totalUsdValuation, uint256[] memory usdValuations) = _computeTotalValuation();
     uint256 numAssets = assets.length;
@@ -363,33 +209,18 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return (directions, deviations);
   }
 
-  /**
-   * @dev Returns the valuation of a specific asset in USD.
-   * @param assetIndex The index of the asset in the assets array.
-   * @return The valuation of the specified asset in USD.
-   */
-  function assetsLiquidityInWNATIVE(uint256 assetIndex) external view returns (uint256) {
+  function assetLiquidity(uint256 assetIndex) external view returns (uint256) {
     (, uint256[] memory usdValuations) = _computeTotalValuation();
     require(assetIndex < usdValuations.length, 'Invalid asset index');
     return usdValuations[assetIndex];
   }
 
-  /**
-   * @dev Returns the total valuation in USD.
-   * @return The total valuation in USD.
-   */
-  function totalLiquidityInWNATIVE() external view returns (uint256) {
+  function liquidity() external view returns (uint256) {
     (uint256 totalVal, ) = _computeTotalValuation();
     return totalVal;
   }
 
-  /**
-   * @dev Returns the unit price of the pool.
-   * The unit price is calculated by dividing the total valuation of the pool by the total supply of tokens.
-   * If the total supply is 0, the unit price is 0.
-   * @return The unit price of the pool in USD.
-   */
-  function getUnitPriceWNATIVE() external view returns (uint256) {
+  function unitPrice() external view returns (uint256) {
     (uint256 totalVal, ) = _computeTotalValuation();
     uint256 totalSupply = totalSupply();
     if (totalSupply == 0) {
@@ -398,53 +229,12 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return (totalVal * ONE) / totalSupply;
   }
 
-  /**
-   * @dev Computes the valuation of the assets in the pool.
-   * @return totalValuation The total valuation of the assets in USD.
-   * @return valuations An array of USD valuations for each asset.
-   */
-  function _computeTotalValuation() internal view returns (uint256 totalValuation, uint256[] memory valuations) {
-    uint256 numAssets = assets.length;
-    valuations = new uint256[](numAssets);
-    for (uint256 i = 0; i < numAssets; i++) {
-      IERC20 asset = IERC20(assets[i]);
-      uint8 decimals = IERC20Metadata(address(asset)).decimals();
-      uint256 valuation = _convertTokenWithRateScaled(address(asset), asset.balanceOf(address(this)));
-      valuations[i] = valuation;
-      totalValuation += valuations[i];
-    }
-    return (totalValuation, valuations);
-  }
-
-  /**
-   * @dev Performs rebalance if needed based on the deviation of asset weights from the target weights.
-   * @notice This function checks if the caller has any shares, calculates the current weights of assets,
-   * and compares them with the target weights. If the deviation exceeds the threshold, a rebalance is performed
-   * by calling the `rebalance` function of the `rebalancer` contract.
-   * @notice The rebalance is performed using the assets and weights specified in the `assets` and `weights` arrays.
-   * @notice Emits a `RebalancePerformed` event if a rebalance is performed.
-   * @notice Reverts with an error message if no rebalance is needed.
-   */
-  function _performRebalanceIfNeeded() internal {
-    rebalancer.rebalance(assets, weights, address(this), address(this), trigger);
-    emit RebalancePerformed(msg.sender, assets);
-  }
-
-  /**
-   * @dev Returns the current reserves of all assets held by the contract.
-   * @return An array containing the balances of all assets respectively.
-   */
-  function getReserves() external view returns (uint256[] memory) {
+  function getReserves() public view returns (uint256[] memory) {
     uint256[] memory reserves = new uint256[](assets.length);
     for (uint256 i = 0; i < assets.length; i++) {
       reserves[i] = IERC20(assets[i]).balanceOf(address(this));
     }
     return reserves;
-  }
-
-  function changeRebalancer(address _newRebalancer) external {
-    require(msg.sender == address(factory), 'Only Factory');
-    rebalancer = IBaluniV1Rebalancer(_newRebalancer);
   }
 
   function getAssets() external view returns (address[] memory) {
@@ -455,13 +245,151 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return weights;
   }
 
-  event Swap(
-    address indexed user,
-    address indexed fromToken,
-    address indexed toToken,
-    uint256 amountIn,
-    uint256 amountOut
-  );
-  event LiquidityAdded(address indexed user, uint256[] amounts, uint256 sharesMinted);
-  event LiquidityRemoved(address indexed user, uint256 asset1Amount, uint256 asset2Amount, uint256 sharesBurned);
+  function changeRebalancer(address _newRebalancer) external onlyRouter {
+    rebalancer = IBaluniV1Rebalancer(_newRebalancer);
+  }
+
+  function changeRouter(address _newRouter) external onlyRouter {
+    router = _newRouter;
+  }
+
+  function _computeTotalValuation() internal view returns (uint256 totalValuation, uint256[] memory valuations) {
+    uint256 numAssets = assets.length;
+    valuations = new uint256[](numAssets);
+    for (uint256 i = 0; i < numAssets; i++) {
+      IERC20 asset = IERC20(assets[i]);
+      uint256 valuation = _convertTokenToNative(address(asset), asset.balanceOf(address(this)));
+      valuations[i] = valuation;
+      totalValuation += valuations[i];
+    }
+    return (totalValuation, valuations);
+  }
+
+  function _performRebalanceIfNeeded() internal {
+    rebalancer.rebalance(assets, weights, address(this), address(this), trigger);
+    emit RebalancePerformed(msg.sender, assets);
+  }
+
+  function _calculateTotalAddedLiquidity(uint256[] memory amountsToAdd) internal returns (uint256 totalAddedLiquidity) {
+    for (uint256 i = 0; i < assets.length; i++) {
+      if (amountsToAdd[i] > 0) {
+        _transferAndCalculateLiquidity(i, amountsToAdd[i]);
+        totalAddedLiquidity += amountsToAdd[i];
+      }
+    }
+    return totalAddedLiquidity;
+  }
+
+  function _computeValuations() internal view returns (uint256 totalValuation, uint256[] memory valuations) {
+    valuations = new uint256[](assets.length);
+    for (uint256 i = 0; i < assets.length; i++) {
+      valuations[i] = _convertTokenToNative(assets[i], IERC20(assets[i]).balanceOf(address(this)));
+      totalValuation += valuations[i];
+    }
+    return (totalValuation, valuations);
+  }
+
+  function _calculateAmountsToAdd(
+    uint256 totalValuation,
+    uint256[] memory valuations
+  ) internal view returns (uint256[] memory amountsToAdd) {
+    amountsToAdd = new uint256[](assets.length);
+    for (uint256 i = 0; i < assets.length; i++) {
+      amountsToAdd[i] = _calculateSingleAmountToAdd(totalValuation, valuations[i], weights[i]);
+    }
+    return amountsToAdd;
+  }
+
+  function _calculateSingleAmountToAdd(
+    uint256 totalValuation,
+    uint256 valuation,
+    uint256 weight
+  ) internal pure returns (uint256 amountToAdd) {
+    uint256 targetValuation = (totalValuation * weight) / 10000;
+    if (valuation < targetValuation) {
+      amountToAdd = targetValuation - valuation;
+    }
+    return amountToAdd;
+  }
+
+  function _transferAndCalculateLiquidity(uint256 index, uint256 amountToAdd) internal {
+    IERC20(assets[index]).transferFrom(msg.sender, address(this), _convertNativeToToken(assets[index], amountToAdd));
+  }
+
+  function _convertNativeToToken(address fromToken, uint256 amount) internal view returns (uint256) {
+    uint256 rate;
+    address WNATIVE = rebalancer.getWNATIVEAddress();
+    uint8 tokenDecimal = IERC20Metadata(fromToken).decimals();
+    uint8 wnativeDecimal = IERC20Metadata(WNATIVE).decimals();
+
+    try rebalancer.getRateToEth(IERC20(fromToken), false) returns (uint256 _rate) {
+      rate = _rate;
+    } catch {
+      return 0;
+    }
+
+    uint256 factor;
+    if (tokenDecimal != wnativeDecimal) {
+      factor = 10 ** uint256(max(tokenDecimal, wnativeDecimal) - min(tokenDecimal, wnativeDecimal));
+      if (tokenDecimal > wnativeDecimal) {
+        amount *= factor;
+      } else {
+        amount /= factor;
+      }
+    }
+
+    uint256 tokenAmount = (amount * ONE) / rate;
+
+    // Adjust the final result to the token's decimals
+    if (tokenDecimal != wnativeDecimal) {
+      if (wnativeDecimal > tokenDecimal) {
+        tokenAmount /= factor;
+      } else {
+        tokenAmount *= factor;
+      }
+    }
+
+    return tokenAmount;
+  }
+
+  function max(uint8 a, uint8 b) private pure returns (uint8) {
+    return a >= b ? a : b;
+  }
+
+  function min(uint8 a, uint8 b) private pure returns (uint8) {
+    return a <= b ? a : b;
+  }
+
+  function _convertTokenToNative(address fromToken, uint256 amount) internal view returns (uint256 scaledAmount) {
+    uint256 rate;
+    address WNATIVE = rebalancer.getWNATIVEAddress();
+    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+    uint8 wnativeDecimal = IERC20Metadata(WNATIVE).decimals();
+
+    try rebalancer.getRateToEth(IERC20(fromToken), false) returns (uint256 _rate) {
+      rate = _rate;
+    } catch {
+      return 0;
+    }
+
+    uint256 factor;
+    uint256 numerator = 10 ** fromDecimal;
+    uint256 denominator = ONE;
+
+    rate = (rate * numerator) / denominator;
+
+    if (fromDecimal != wnativeDecimal) {
+      factor = 10 ** uint256(max(fromDecimal, wnativeDecimal) - min(fromDecimal, wnativeDecimal));
+      if (fromDecimal > wnativeDecimal) {
+        amount *= factor;
+      } else {
+        amount *= factor;
+      }
+    } else if (fromDecimal != 18) {
+      factor = 10 ** (18 - fromDecimal);
+      amount *= factor;
+    }
+
+    return (amount * rate) / ONE;
+  }
 }
