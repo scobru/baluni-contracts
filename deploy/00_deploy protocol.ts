@@ -18,7 +18,7 @@ const _1INCHSPOTAGG = "0x0AdDd25a91563696D8567Df78D5A01C9a991F9B8"; // 1inch Spo
 const uniswapRouter = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
 const uniswapFactory = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
 
-const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // const BaluniV1AgentFactory = await ethers.getContractFactory("BaluniV1AgentFactory");
   // const agentFactory = await upgrades.deployProxy(BaluniV1AgentFactory, {
   //   kind: "uups",
@@ -77,6 +77,6 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // console.log("tournament:", tournament.address);
 };
 
-export default deployYourContract;
+export default deployProtocol;
 
-deployYourContract.tags = ["deploy-protocol"];
+deployProtocol.tags = ["deploy-protocol"];

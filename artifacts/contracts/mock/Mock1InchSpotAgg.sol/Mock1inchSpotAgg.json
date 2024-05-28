@@ -1,0 +1,353 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "Mock1inchSpotAgg",
+  "sourceName": "contracts/mock/Mock1InchSpotAgg.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "usdc",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "usdt",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_wmatic",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "weth",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "wbtc",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "USDC_TO_USDT_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "USDC_TO_WBTC_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "USDC_TO_WETH_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "USDT_TO_USDC_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "USDT_TO_WBTC_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "USDT_TO_WETH_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "WBTC_TO_USDC_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "WBTC_TO_USDT_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "WBTC_TO_WMATIC_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "WETH_TO_WMATIC_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "WMATIC_TO_USDC_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "WMATIC_TO_USDT_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "fromToken",
+          "type": "address"
+        },
+        {
+          "internalType": "contract IERC20",
+          "name": "toToken",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "name": "getRate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "fromToken",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "name": "getRateToEth",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getTreasury",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "rate",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "rateToEth",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "rates",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_treasury",
+          "type": "address"
+        }
+      ],
+      "name": "setTreasury",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "treasury",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "wmatic",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x6080346101f757601f61097838819003918201601f191683019291906001600160401b038411838510176101fb578160a092849260409687528339810103126101f75761004b8161020f565b90602061005981830161020f565b61006485840161020f565b9361007d60806100766060870161020f565b950161020f565b60018060a01b03809216805f5282600494858752818a5f20991698895f5287526c115f72984194ede525fc7f85738a5f20551690815f52848652885f20885f5286526c115ba2d92365f43696f87411ea895f2055848652885f20815f528652620b68f7895f2055875f52848652885f20825f528652620b653e895f2055805f52848652885f20825f528652670de435a2a433cf48895f2055848652885f20815f528652670ddc25ba9553c8e4895f205584865283895f20931692835f528652660538103f0e3988895f2055848652885f20905f5285526824efc5d2223b2ab2b29081895f2055805f52848652885f20835f528652660535f1297e23ca895f2055848652885f20905f528552875f2055805f52828452865f20865f5284526d2de0969d801e9db2d1af098d155b875f2055828452865f20905f52835269011ee2f003db8771171d9384875f2055165f528152835f2090835f5252825f205560018060a01b031960025416176002555161075490816102248239f35b5f80fd5b634e487b7160e01b5f52604160045260245ffd5b51906001600160a01b03821682036101f75756fe60806040908082526004361015610014575f80fd5b5f3560e01c908163020987191461065a575080630e0917621461061f5780632c4e722e146105e45780633b19e84a14610511578063443dc7891461059f578063522b65a21461056357806353ff493e1461025b57806361d027b3146105115780637b0cf44d1461049c5780637de4fd1014610421578063802431fb146103a05780638e5139ed1461035a57806397db8e021461031b578063a58a7f8a146102db578063b537d24b1461029b578063c018498314610260578063d135e3be1461025b578063e2338e7214610216578063e30f6892146101d4578063f0f442601461015a5763fb41be1614610105575f80fd5b34610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209073ffffffffffffffffffffffffffffffffffffffff600254169051908152f35b5f80fd5b346101565760207ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565773ffffffffffffffffffffffffffffffffffffffff6101a66106d8565b167fffffffffffffffffffffffff000000000000000000000000000000000000000060035416176003555f80f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576020905169011ee2f003db8771171d8152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc36011261015657602090516c115f72984194ede525fc7f85738152f35b610697565b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209051620b653e8152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209051670de435a2a433cf488152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209051670ddc25ba9553c8e48152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209051660535f1297e23ca8152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc36011261015657602090516d2de0969d801e9db2d1af098d155b8152f35b50346101565760607ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576103d86106d8565b906103e16106fb565b604435801515036101565760209273ffffffffffffffffffffffffffffffffffffffff8091165f5260048452825f2091165f528252805f20549051908152f35b503461015657807ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576104586106d8565b90602435801515036101565760209173ffffffffffffffffffffffffffffffffffffffff8091165f5260048352815f2090600254165f528252805f20549051908152f35b503461015657807ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576020906104d66106d8565b6104de6106fb565b9073ffffffffffffffffffffffffffffffffffffffff8091165f5260048452825f2091165f528252805f20549051908152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209073ffffffffffffffffffffffffffffffffffffffff600354169051908152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576020906001549051908152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc36011261015657602090516c115ba2d92365f43696f87411ea8152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576020905f549051908152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209051620b68f78152f35b34610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565780660538103f0e398860209252f35b34610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760206040516824efc5d2223b2ab2b28152f35b6004359073ffffffffffffffffffffffffffffffffffffffff8216820361015657565b6024359073ffffffffffffffffffffffffffffffffffffffff821682036101565756fea2646970667358221220b8371f9f175e9bb6974f2b611dfcee6b9181316fd3176ad2dd7e1554cfaa678164736f6c63430008190033",
+  "deployedBytecode": "0x60806040908082526004361015610014575f80fd5b5f3560e01c908163020987191461065a575080630e0917621461061f5780632c4e722e146105e45780633b19e84a14610511578063443dc7891461059f578063522b65a21461056357806353ff493e1461025b57806361d027b3146105115780637b0cf44d1461049c5780637de4fd1014610421578063802431fb146103a05780638e5139ed1461035a57806397db8e021461031b578063a58a7f8a146102db578063b537d24b1461029b578063c018498314610260578063d135e3be1461025b578063e2338e7214610216578063e30f6892146101d4578063f0f442601461015a5763fb41be1614610105575f80fd5b34610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209073ffffffffffffffffffffffffffffffffffffffff600254169051908152f35b5f80fd5b346101565760207ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565773ffffffffffffffffffffffffffffffffffffffff6101a66106d8565b167fffffffffffffffffffffffff000000000000000000000000000000000000000060035416176003555f80f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576020905169011ee2f003db8771171d8152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc36011261015657602090516c115f72984194ede525fc7f85738152f35b610697565b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209051620b653e8152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209051670de435a2a433cf488152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209051670ddc25ba9553c8e48152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209051660535f1297e23ca8152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc36011261015657602090516d2de0969d801e9db2d1af098d155b8152f35b50346101565760607ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576103d86106d8565b906103e16106fb565b604435801515036101565760209273ffffffffffffffffffffffffffffffffffffffff8091165f5260048452825f2091165f528252805f20549051908152f35b503461015657807ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576104586106d8565b90602435801515036101565760209173ffffffffffffffffffffffffffffffffffffffff8091165f5260048352815f2090600254165f528252805f20549051908152f35b503461015657807ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576020906104d66106d8565b6104de6106fb565b9073ffffffffffffffffffffffffffffffffffffffff8091165f5260048452825f2091165f528252805f20549051908152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209073ffffffffffffffffffffffffffffffffffffffff600354169051908152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576020906001549051908152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc36011261015657602090516c115ba2d92365f43696f87411ea8152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc360112610156576020905f549051908152f35b5034610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760209051620b68f78152f35b34610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565780660538103f0e398860209252f35b34610156575f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3601126101565760206040516824efc5d2223b2ab2b28152f35b6004359073ffffffffffffffffffffffffffffffffffffffff8216820361015657565b6024359073ffffffffffffffffffffffffffffffffffffffff821682036101565756fea2646970667358221220b8371f9f175e9bb6974f2b611dfcee6b9181316fd3176ad2dd7e1554cfaa678164736f6c63430008190033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
