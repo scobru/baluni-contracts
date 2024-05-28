@@ -71,7 +71,7 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
    * @return The address of the newly created pool.
    */
   function createPool(address[] memory assets, uint256[] memory weights, uint256 trigger) external returns (address) {
-    require(periphery != address(0), 'Router not set');
+    require(periphery != address(0), 'Periphery not set');
     require(assets.length > 1, 'At least two assets are required');
     require(assets.length == weights.length, 'Assets and weights length mismatch');
 
