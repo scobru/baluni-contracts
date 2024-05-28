@@ -23,7 +23,7 @@ const _1INCHSPOTAGG = "0x0AdDd25a91563696D8567Df78D5A01C9a991F9B8"; // 1inch Spo
 const uniswapRouter = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
 const uniswapFactory = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
 
-const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   /// Deployment ---------------------------------------------------------------------
   ///---------------------------------------------------------------------------------
   const { deployer } = await hre.getNamedAccounts();
@@ -52,37 +52,37 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   // const instanceRouter = await router?.waitForDeployment();
   // console.log("BaluniV1Router upgraded to:", instanceRouter.target);
 
-  // const BaluniV1Rebalancer = await ethers.getContractFactory("BaluniV1Rebalancer");
-  // await upgrades.forceImport("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", BaluniV1Rebalancer);
-  // const rebalancer = await upgrades.upgradeProxy("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", BaluniV1Rebalancer, {
-  //   kind: "uups",
-  //   call: {
-  //     fn: "reinitialize",
-  //     args: [
-  //       "0x8DD108DDC24A6b07Bc9191DE5f0337f240c4e0c0",
-  //       USDC,
-  //       WNATIVE,
-  //       uniswapRouter,
-  //       uniswapFactory,
-  //       _1INCHSPOTAGG,
-  //       46,
-  //     ],
-  //   },
-  // });
-  // const instanceRebalancer = await rebalancer?.waitForDeployment();
-  // console.log("BaluniV1Rebalancer upgraded to:", instanceRebalancer.target);
-
-  const BaluniV1PoolPeriphery = await ethers.getContractFactory("BaluniV1PoolPeriphery");
-  await upgrades.prepareUpgrade(periperhyAddress, BaluniV1PoolPeriphery);
-  const baluniPeriphery = await upgrades.upgradeProxy(periperhyAddress, BaluniV1PoolPeriphery, {
+  const BaluniV1Rebalancer = await ethers.getContractFactory("BaluniV1Rebalancer");
+  await upgrades.prepareUpgrade("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", BaluniV1Rebalancer);
+  const rebalancer = await upgrades.upgradeProxy("0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac", BaluniV1Rebalancer, {
     kind: "uups",
     call: {
       fn: "reinitialize",
-      args: [factoryAddress, 2],
+      args: [
+        "0x8DD108DDC24A6b07Bc9191DE5f0337f240c4e0c0",
+        USDC,
+        WNATIVE,
+        uniswapRouter,
+        uniswapFactory,
+        _1INCHSPOTAGG,
+        48,
+      ],
     },
   });
-  const instancePeriphery = await baluniPeriphery?.waitForDeployment();
-  console.log("BaluniV1Periphery upgraded to:", instancePeriphery.target);
+  const instanceRebalancer = await rebalancer?.waitForDeployment();
+  console.log("BaluniV1Rebalancer upgraded to:", instanceRebalancer.target);
+
+  // const BaluniV1PoolPeriphery = await ethers.getContractFactory("BaluniV1PoolPeriphery");
+  // await upgrades.prepareUpgrade(periperhyAddress, BaluniV1PoolPeriphery);
+  // const baluniPeriphery = await upgrades.upgradeProxy(periperhyAddress, BaluniV1PoolPeriphery, {
+  //   kind: "uups",
+  //   call: {
+  //     fn: "reinitialize",
+  //     args: [factoryAddress, 2],
+  //   },
+  // });
+  // const instancePeriphery = await baluniPeriphery?.waitForDeployment();
+  // console.log("BaluniV1Periphery upgraded to:", instancePeriphery.target);
 
   // const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
   // await upgrades.prepareUpgrade(factoryAddress, BaluniV1PoolFactory);
@@ -152,8 +152,8 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   //   console.log("BaluniV1Pool upgraded to:", intancePool.target);
 };
 
-export default deployYourContract;
+export default upgradeProtocol;
 
 // Tags are useful if you have multiple deploy files and only want to run one of them.
 // e.g. yarn deploy --tags YourContract
-deployYourContract.tags = ["upgrade"];
+upgradeProtocol.tags = ["upgrade"];

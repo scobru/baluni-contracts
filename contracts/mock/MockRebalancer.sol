@@ -105,4 +105,33 @@ contract MockRebalancer {
   function getUSDCAddress() external view returns (address) {
     return address(0);
   }
+
+  function convert(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
+    uint256 rate;
+
+    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+    uint8 toDecimal = IERC20Metadata(toToken).decimals();
+
+    uint256 numerator = 10 ** fromDecimal;
+    uint256 denominator = 10 ** toDecimal;
+
+    rate = rates[address(fromToken)][address(toToken)];
+    rate = (rate * numerator) / denominator;
+
+    uint256 tokenAmount = ((amount * rate) / 10 ** 18);
+
+    if (fromDecimal == toDecimal) {
+      return tokenAmount;
+    }
+
+    uint256 factor = 10 ** (fromDecimal > toDecimal ? fromDecimal - toDecimal : toDecimal - fromDecimal);
+
+    if (fromDecimal > toDecimal) {
+      tokenAmount /= factor;
+    } else {
+      tokenAmount *= factor;
+    }
+
+    return tokenAmount;
+  }
 }

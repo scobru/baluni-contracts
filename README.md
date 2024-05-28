@@ -34,4 +34,4 @@ yarn test
 - **BaluniV1Rebalance**: 0x1CC8A760bb5d714E3290a30044c6f4f4cEc01dac
 - **BaluniV1MarketOracle**: 0x3D22f6bdE20E8647B96d0BAbc21b9BB610FB53A5
 - **BaluniV1PoolFactory**: 0x532D40e35C19912d5C94d6a426Bb58EC9f7D60E2
-- **BaluniV1PoolPeriphery**: 0x31413CE6C213f01f6ffa8c2176feCcB2868B30b3
+- **BaluniV1PoolPeriphery**: 0x3d4b6b4268794cb1CE4feDE1F0f7Da36A3EB5503

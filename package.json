@@ -1,6 +1,6 @@
 {
   "name": "baluni-contracts",
-  "version": "2.5.1",
+  "version": "2.5.2",
   "description": "Smart Contracts for Baluni",
   "types": "typechain-types/index.ts",
   "scripts": {

@@ -301,51 +301,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @return The amount of `toToken` that will be received.
    */
   function getAmountOut(address fromToken, address toToken, uint256 amount) public view returns (uint256) {
-    require(fromToken != toToken, 'Cannot swap the same token');
-    require(amount > 0, 'Amount must be greater than zero');
-
-    uint256 fee = (amount * SWAP_FEE_BPS) / 10000;
-    uint256 amountAfterFee = amount - fee;
-
-    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-    uint8 toDecimal = IERC20Metadata(toToken).decimals();
-
-    uint256 rate;
-
-    try rebalancer.getRate(IERC20(fromToken), IERC20(toToken), false) returns (uint256 _rate) {
-      rate = _rate;
-    } catch {
-      return 0;
-    }
-
-    uint256 factor;
-    uint256 adjustedAmount = amountAfterFee;
-    uint256 amountOut;
-    uint256 numerator = 10 ** fromDecimal;
-    uint256 denominator = 1e18;
-
-    if (fromDecimal != toDecimal) {
-      rate = (rate * numerator) / denominator;
-
-      if (fromDecimal > toDecimal) {
-        factor = 10 ** (fromDecimal - toDecimal);
-        adjustedAmount /= factor;
-        amountOut = (adjustedAmount * rate) / denominator;
-        amountOut *= factor;
-      } else {
-        factor = 10 ** (toDecimal - fromDecimal);
-        adjustedAmount *= factor;
-        amountOut = (adjustedAmount * rate) / denominator;
-        amountOut /= factor;
-      }
-    } else {
-      factor = 10 ** (18 - toDecimal);
-      adjustedAmount *= factor;
-      amountOut = (adjustedAmount * rate) / denominator;
-      amountOut /= factor;
-    }
-
-    return amountOut;
+    return rebalancer.convert(fromToken, toToken, amount);
   }
 
   /**
@@ -530,31 +486,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
   }
 
   /**
-   * @dev Calculates the amounts to add to each asset based on the total valuation and individual valuations.
-   * @param totalValuation The total valuation of the assets.
-   * @param valuations An array of individual valuations for each asset.
-   * @return amountsToAdd An array of amounts to add to each asset.
-   */
-  // function _calculateAmountsToAdd(
-  //   uint256 totalValuation,
-  //   uint256[] memory valuations
-  // ) internal view returns (uint256[] memory amountsToAdd) {
-  //   amountsToAdd = new uint256[](assetInfos.length);
-
-  //   // getdeviations
-  //   (, uint256[] memory deviations) = getDeviation();
-  //   for (uint256 i = 0; i < assetInfos.length; i++) {
-  //     uint256 targetValuation = (totalValuation * assetInfos[i].weight) / 10000;
-  //     if (valuations[i] < targetValuation) {
-  //       amountsToAdd[i] = (totalValuation * deviations[i]) / 10000;
-  //     } else {
-  //       amountsToAdd[i] = 0;
-  //     }
-  //   }
-  //   return (amountsToAdd);
-  // }
-
-  /**
    * @dev Internal function to transfer tokens from the caller to the contract and calculate the liquidity.
    * @param index The index of the asset in the assetInfos array.
    * @param amountToAdd The amount of native tokens to add as liquidity.
@@ -573,17 +504,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @return The corresponding token amount.
    */
   function _convertNativeToToken(address fromToken, uint256 amount) internal view returns (uint256) {
-    uint256 rate;
-
     address WNATIVE = rebalancer.getWNATIVEAddress();
-
-    try rebalancer.getRate(IERC20(WNATIVE), IERC20(fromToken), false) returns (uint256 _rate) {
-      rate = _rate;
-    } catch {
-      return 0;
-    }
-    uint256 tokenAmount = ((amount * rate) / ONE);
-
+    uint256 tokenAmount = rebalancer.convert(WNATIVE, fromToken, amount);
     return tokenAmount;
   }
 
@@ -607,37 +529,16 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return a <= b ? a : b;
   }
 
+  /**
+   * @dev Converts the specified token to the native token using the rebalancer contract.
+   * @param fromToken The address of the token to convert from.
+   * @param amount The amount of tokens to convert.
+   * @return scaledAmount The converted amount of tokens.
+   */
   function _convertTokenToNative(address fromToken, uint256 amount) internal view returns (uint256 scaledAmount) {
-    uint256 rate;
     address WNATIVE = rebalancer.getWNATIVEAddress();
-    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-    uint8 wnativeDecimal = IERC20Metadata(WNATIVE).decimals();
-
-    try rebalancer.getRateToEth(IERC20(fromToken), false) returns (uint256 _rate) {
-      rate = _rate;
-    } catch {
-      return 0;
-    }
-
-    uint256 factor;
-    uint256 numerator = 10 ** fromDecimal;
-    uint256 denominator = ONE;
-
-    rate = (rate * numerator) / denominator;
-
-    if (fromDecimal != wnativeDecimal) {
-      factor = 10 ** uint256(max(fromDecimal, wnativeDecimal) - min(fromDecimal, wnativeDecimal));
-      if (fromDecimal > wnativeDecimal) {
-        amount /= factor;
-      } else {
-        amount *= factor;
-      }
-    } else if (fromDecimal != 18) {
-      factor = 10 ** (18 - fromDecimal);
-      amount *= factor;
-    }
-
-    return (amount * rate) / ONE;
+    uint256 tokenAmount = rebalancer.convert(fromToken, WNATIVE, amount);
+    return tokenAmount;
   }
 
   /**

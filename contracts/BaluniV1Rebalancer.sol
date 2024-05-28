@@ -518,7 +518,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
    * @param useWrappers Boolean indicating whether to use wrappers.
    * @return weightedRate The weighted rate between the source and destination tokens.
    */
-  function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate) {
+  function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) public view returns (uint256 weightedRate) {
     uint256 rate;
     try _1InchSpotAgg.getRate(IERC20(srcToken), IERC20(dstToken), useWrappers) returns (uint256 _rate) {
       rate = _rate;
@@ -568,5 +568,42 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     }
 
     return rate;
+  }
+
+  /**
+   * @dev Converts an amount of tokens from one token to another based on the current exchange rate.
+   * @param fromToken The address of the token to convert from.
+   * @param toToken The address of the token to convert to.
+   * @param amount The amount of tokens to convert.
+   * @return The converted amount of tokens.
+   */
+  function convert(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
+    uint256 rate;
+
+    uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+    uint8 toDecimal = IERC20Metadata(toToken).decimals();
+
+    uint256 numerator = 10 ** fromDecimal;
+    uint256 denominator = 10 ** toDecimal;
+
+    rate = getRate(IERC20(fromToken), IERC20(toToken), false);
+    rate = (rate * numerator) / denominator;
+
+    uint256 tokenAmount = ((amount * rate) / 10 ** 18);
+
+    if (fromDecimal == toDecimal) {
+      tokenAmount = ((amount * rate) / 10 ** 18);
+      return tokenAmount;
+    }
+
+    uint256 factor = 10 ** (fromDecimal > toDecimal ? fromDecimal - toDecimal : toDecimal - fromDecimal);
+
+    if (fromDecimal > toDecimal) {
+      tokenAmount /= factor;
+    } else {
+      tokenAmount *= factor;
+    }
+
+    return tokenAmount;
   }
 }

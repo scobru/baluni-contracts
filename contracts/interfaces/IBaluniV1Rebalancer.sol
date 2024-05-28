@@ -51,4 +51,6 @@ interface IBaluniV1Rebalancer {
   function getWNATIVEAddress() external view returns (address);
 
   function getRateToEth(IERC20 srcToken, bool useWrappers) external view returns (uint256 weightedRate);
+
+  function convert(address fromToken, address toToken, uint256 amount) external view returns (uint256);
 }
