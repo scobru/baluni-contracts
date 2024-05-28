@@ -93,8 +93,47 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
     IERC20(fromToken).approve(poolAddress, amount);
 
-    uint256 amountOut = pool.swap(fromToken, toToken, amount, receiver);A
+    uint256 amountOut = pool.swap(fromToken, toToken, amount, receiver);
+
     return amountOut;
+  }
+
+  /**
+   * @dev Performs batch swaps between multiple token pairs.
+   * @param fromTokens An array of addresses representing the tokens to swap from.
+   * @param toTokens An array of addresses representing the tokens to swap to.
+   * @param amounts An array of amounts representing the amounts to swap.
+   * @param receivers An array of addresses representing the receivers of the swapped tokens.
+   * @return An array of amounts representing the amounts of tokens received after the swaps.
+   */
+  function batchSwap(
+    address[] calldata fromTokens,
+    address[] calldata toTokens,
+    uint256[] calldata amounts,
+    address[] calldata receivers
+  ) external returns (uint256[] memory) {
+    require(
+      fromTokens.length == toTokens.length && toTokens.length == amounts.length && amounts.length == receivers.length,
+      'Input arrays length mismatch'
+    );
+
+    uint256[] memory amountsOut = new uint256[](fromTokens.length);
+
+    for (uint256 i = 0; i < fromTokens.length; i++) {
+      require(amounts[i] > 0, 'Amount must be greater than zero');
+
+      // Get the pool address for the given tokens
+      address poolAddress = poolFactory.getPoolByAssets(fromTokens[i], toTokens[i]);
+      IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+
+      IERC20(fromTokens[i]).transferFrom(msg.sender, address(this), amounts[i]);
+      IERC20(fromTokens[i]).approve(poolAddress, amounts[i]);
+
+      uint256 amountOut = pool.swap(fromTokens[i], toTokens[i], amounts[i], receivers[i]);
+      amountsOut[i] = amountOut;
+    }
+
+    return amountsOut;
   }
 
   /**
@@ -112,6 +151,22 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     }
 
     pool.mint(receiver);
+  }
+
+  function addLiquidityOneSide(uint256 amount, address token, address poolAddress, address receiver) external {
+    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+    address[] memory assets = pool.getAssets(); // Get the assets in the pool
+
+    uint256 index = 0;
+    for (uint256 i = 0; i < assets.length; i++) {
+      if (assets[i] == token) {
+        index = i;
+        break;
+      }
+    }
+
+    IERC20(token).transferFrom(msg.sender, poolAddress, amount);
+    pool.mintOneSide(index, amount, receiver);
   }
 
   /**

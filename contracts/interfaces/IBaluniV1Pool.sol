@@ -43,11 +43,22 @@ interface IBaluniV1Pool {
 
   function mint(address to) external returns (uint256);
 
+  function mintOneSide(uint256 assetIndex, uint256 amount, address receiver) external returns (uint256);
+
   function burn(address to) external;
 
   function changeRebalancer(address _newRebalancer) external;
 
   function changeRouter(address _newRouter) external;
+
+  function computeTotalValuation() external view returns (uint256 totalVal, uint256[] memory valuations);
+
+  struct AssetInfo {
+    address asset;
+    uint256 weight;
+  }
+
+  function assetInfos(uint _index) external view returns (AssetInfo memory);
 
   // Events
   event RebalancePerformed(address indexed by, address[] assets);

@@ -172,13 +172,11 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       let reservesAfter = await pool.getReserves();
       console.log("Reserves After: ", formatUnits(reservesAfter[0], 6), formatUnits(reservesAfter[1], 6));
 
-      deviation = await pool.getDeviation();
-      console.log("Deviation: ", deviation.toString());
+      let realBalances = await pool.getRealBalances();
+      console.log("Real Balances: ", formatUnits(realBalances[0], 6), formatUnits(realBalances[1], 6));
 
-      await pool.rebalanceWeights(await owner.getAddress());
-
-      reservesAfter = await pool.getReserves();
-      console.log("Reserves After: ", formatUnits(reservesAfter[0], 6), formatUnits(reservesAfter[1], 6));
+      let exededAmount = await pool.getExcessAmounts();
+      console.log("Exceeded Amount: ", formatUnits(exededAmount[0], 6), formatUnits(exededAmount[1], 6));
 
       deviation = await pool.getDeviation();
       console.log("Deviation: ", deviation.toString());
@@ -187,6 +185,26 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
 
       reservesAfter = await pool.getReserves();
       console.log("Reserves After: ", formatUnits(reservesAfter[0], 6), formatUnits(reservesAfter[1], 6));
+
+      realBalances = await pool.getRealBalances();
+      console.log("Real Balances: ", formatUnits(realBalances[0], 6), formatUnits(realBalances[1], 6));
+
+      exededAmount = await pool.getExcessAmounts();
+      console.log("Exceeded Amount: ", formatUnits(exededAmount[0], 6), formatUnits(exededAmount[1], 6));
+
+      deviation = await pool.getDeviation();
+      console.log("Deviation: ", deviation.toString());
+
+      await pool.rebalanceWeights(await owner.getAddress());
+
+      reservesAfter = await pool.getReserves();
+      console.log("Reserves After: ", formatUnits(reservesAfter[0], 6), formatUnits(reservesAfter[1], 6));
+
+      realBalances = await pool.getRealBalances();
+      console.log("Real Balances: ", formatUnits(realBalances[0], 6), formatUnits(realBalances[1], 6));
+
+      exededAmount = await pool.getExcessAmounts();
+      console.log("Exceeded Amount: ", formatUnits(exededAmount[0], 6), formatUnits(exededAmount[1], 6));
 
       deviation = await pool.getDeviation();
       console.log("Deviation: ", deviation.toString());
