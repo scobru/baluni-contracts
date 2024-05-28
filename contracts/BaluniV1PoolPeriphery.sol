@@ -195,22 +195,6 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     pool.mint(receiver);
   }
 
-  function addLiquidityOneSide(uint256 amount, address token, address poolAddress, address receiver) external {
-    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
-    address[] memory assets = pool.getAssets(); // Get the assets in the pool
-
-    uint256 index = 0;
-    for (uint256 i = 0; i < assets.length; i++) {
-      if (assets[i] == token) {
-        index = i;
-        break;
-      }
-    }
-
-    IERC20(token).transferFrom(msg.sender, poolAddress, amount);
-    pool.mintOneSide(index, amount, receiver);
-  }
-
   /**
    * @dev Removes liquidity from a BaluniV1Pool.
    * @param share The amount of liquidity tokens to remove.
