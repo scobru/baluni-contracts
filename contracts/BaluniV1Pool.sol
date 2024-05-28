@@ -15,7 +15,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
   uint256 public constant SWAP_FEE_BPS = 30;
 
   mapping(address => uint256) public reserves;
-  mapping(address => uint256) public excessAmounts;
 
   struct AssetInfo {
     address asset;
@@ -84,6 +83,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @param receiver The address to receive the minted liquidity tokens.
    */
   function rebalanceWeights(address receiver) external {
+    _updateReserves();
+
     (uint256 totalValuation, uint256[] memory valuations) = _computeTotalValuation();
 
     uint256[] memory amountsToAdd = _calculateAmountsToAdd(totalValuation, valuations);
@@ -150,84 +151,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     _updateReserves();
 
     return receivedAmount;
-  }
-
-  function _rebalanceIfNeeded() internal {
-    (bool[] memory directions, uint256[] memory deviations) = getDeviation();
-    (uint256 totalValue, uint256[] memory valuations) = _computeTotalValuation();
-
-    for (uint256 i = 0; i < assetInfos.length; i++) {
-      address asset = assetInfos[i].asset;
-      uint256 targetAmountInNative = (totalValue * assetInfos[i].weight) / 10000;
-      uint256 currentAmountInNative = valuations[i];
-
-      if (deviations[i] > 0) {
-        if (directions[i] && currentAmountInNative > targetAmountInNative) {
-          // Asset is overweight, adjust using excess amount
-          uint256 excessAmountInNative = currentAmountInNative - targetAmountInNative;
-          uint256 excessAmountInToken = _convertNativeToToken(asset, excessAmountInNative);
-          if (excessAmounts[asset] > 0) {
-            uint256 adjustAmount = excessAmounts[asset] > excessAmountInToken
-              ? excessAmountInToken
-              : excessAmounts[asset];
-            reserves[asset] -= adjustAmount;
-            excessAmounts[asset] -= adjustAmount;
-          }
-        } else if (!directions[i] && currentAmountInNative < targetAmountInNative) {
-          // Asset is underweight, adjust using excess amount if available
-          uint256 deficitAmountInNative = targetAmountInNative - currentAmountInNative;
-          uint256 deficitAmountInToken = _convertNativeToToken(asset, deficitAmountInNative);
-          if (excessAmounts[asset] > 0) {
-            uint256 adjustAmount = excessAmounts[asset] > deficitAmountInToken
-              ? deficitAmountInToken
-              : excessAmounts[asset];
-            reserves[asset] += adjustAmount;
-            excessAmounts[asset] -= adjustAmount;
-          }
-        }
-      }
-    }
-  }
-
-  function mintOneSide(uint256 assetIndex, uint256 amount, address receiver) external onlyPeriphery returns (uint256) {
-    require(assetIndex < assetInfos.length, 'Invalid asset index');
-
-    // 1. Transfer asset from user to pool
-    address asset = assetInfos[assetIndex].asset;
-    IERC20(asset).transferFrom(msg.sender, address(this), amount);
-
-    // 2. Update reserves
-    reserves[asset] += amount;
-
-    // 3. Calculate the pool's total value in native token (e.g., WMATIC) BEFORE the deposit
-    (uint256 totalValueBefore /* uint256[] memory valuations */, ) = _computeTotalValuation(); // Calculate in native token
-
-    // 4. Calculate the target amount of the added asset based on its weight
-    uint256 targetAmountInNative = (totalValueBefore * assetInfos[assetIndex].weight) / 10000;
-    uint256 currentAmountInNative = _convertTokenToNative(asset, reserves[asset]);
-
-    // 5. Determine the excess amount (if any)
-    uint256 excessAmount = 0;
-    if (currentAmountInNative > targetAmountInNative) {
-      excessAmount = currentAmountInNative - targetAmountInNative;
-      // Adjust the reserve to reflect the target amount without reducing the actual balance
-      reserves[asset] = _convertNativeToToken(asset, targetAmountInNative);
-    }
-
-    // 6. Store excess amount in the mapping
-    excessAmounts[asset] += _convertNativeToToken(asset, excessAmount);
-
-    // 7. Calculate LP tokens to mint (using the adjusted reserves and native token valuation)
-    uint256 totalSupply = totalSupply();
-    uint256 amountInNative = _convertTokenToNative(asset, amount);
-    uint256 share = totalSupply == 0 ? 1e18 : (amountInNative * 1e18) / totalValueBefore;
-    uint256 toMint = (totalSupply * share) / 1e18;
-
-    _mint(receiver, toMint);
-    _updateReserves(); // Update reserves after adjusting for excess
-
-    emit Mint(receiver, toMint);
-    return toMint;
   }
 
   /**
@@ -474,30 +397,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
   }
 
   /**
-   * @dev Returns an array of excess amounts for each asset in the pool.
-   * @return An array of uint256 values representing the excess amounts.
-   */
-  function getExcessAmounts() external view returns (uint256[] memory) {
-    uint256[] memory _excessAmounts = new uint256[](assetInfos.length);
-    for (uint256 i = 0; i < assetInfos.length; i++) {
-      _excessAmounts[i] = excessAmounts[assetInfos[i].asset];
-    }
-    return _excessAmounts;
-  }
-
-  /**
-   * @dev Returns an array of real balances for each asset in the pool.
-   * @return An array of uint256 values representing the real balances.
-   */
-  function getRealBalances() external view returns (uint256[] memory) {
-    uint256[] memory _realBalances = new uint256[](assetInfos.length);
-    for (uint256 i = 0; i < assetInfos.length; i++) {
-      _realBalances[i] = IERC20(assetInfos[i].asset).balanceOf(address(this));
-    }
-    return _realBalances;
-  }
-
-  /**
    * @dev Retrieves the list of assets in the pool.
    * @return An array of addresses representing the assets.
    */
@@ -595,15 +494,18 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     uint256[] memory valuations
   ) internal view returns (uint256[] memory amountsToAdd) {
     amountsToAdd = new uint256[](assetInfos.length);
+
+    // getdeviations
+    (, uint256[] memory deviations) = getDeviation();
     for (uint256 i = 0; i < assetInfos.length; i++) {
       uint256 targetValuation = (totalValuation * assetInfos[i].weight) / 10000;
       if (valuations[i] < targetValuation) {
-        amountsToAdd[i] = targetValuation - valuations[i];
+        amountsToAdd[i] = (totalValuation * deviations[i]) / 10000;
       } else {
         amountsToAdd[i] = 0;
       }
     }
-    return amountsToAdd;
+    return (amountsToAdd);
   }
 
   /**
@@ -696,11 +598,9 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @dev Updates the reserves of all assets in the pool.
    */
   function _updateReserves() internal {
-    if (totalSupply() != 0) _rebalanceIfNeeded();
-
     for (uint256 i = 0; i < assetInfos.length; i++) {
       address asset = assetInfos[i].asset;
-      uint256 newReserve = IERC20(asset).balanceOf(address(this)) - excessAmounts[asset];
+      uint256 newReserve = IERC20(asset).balanceOf(address(this));
       reserves[asset] = newReserve;
     }
   }

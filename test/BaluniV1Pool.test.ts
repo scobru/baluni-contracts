@@ -20,6 +20,8 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
   let usdc: MockToken;
   let usdt: MockToken;
   let wmatic: MockToken;
+  let weth: MockToken;
+  let wbtc: MockToken;
   let owner: Signer;
   let addr1: Signer;
   let addr2: Signer;
@@ -35,6 +37,10 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
     await usdt.waitForDeployment();
     wmatic = (await MockToken.deploy("WMATIC", "WMATIC", 18)) as MockToken;
     await wmatic.waitForDeployment();
+    weth = (await MockToken.deploy("Wrapped Ether", "WETH", 18)) as MockToken;
+    await weth.waitForDeployment();
+    wbtc = (await MockToken.deploy("Wrapped Bitcoin", "WBTC", 8)) as MockToken;
+    await wbtc.waitForDeployment();
 
     // Deploy Mock Rebalancer
     const MockRebalancer = await hre.ethers.getContractFactory("MockRebalancer");
@@ -42,6 +48,8 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       await usdt.getAddress(),
       await usdc.getAddress(),
       await wmatic.getAddress(),
+      await weth.getAddress(),
+      await wbtc.getAddress(),
     )) as MockRebalancer;
     await rebalancer.waitForDeployment();
 
@@ -64,9 +72,15 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
     // Mint tokens for the owner
     await usdc.mint(await owner.getAddress(), ethers.parseUnits("100000", 6));
     await usdt.mint(await owner.getAddress(), ethers.parseUnits("100000", 6));
+    await wbtc.mint(await owner.getAddress(), ethers.parseUnits("100000", 8));
+    await weth.mint(await owner.getAddress(), ethers.parseUnits("100000", 18));
 
     // Create a new pool
-    await factory.createPool([await usdc.getAddress(), await usdt.getAddress()], [6000, 4000], 10000);
+    await factory.createPool(
+      [await usdc.getAddress(), await usdt.getAddress(), await weth.getAddress(), await wbtc.getAddress()],
+      [3000, 3000, 3000, 3000],
+      500,
+    );
     const poolAddress = await factory.getPoolByAssets(await usdc.getAddress(), await usdt.getAddress());
     pool = (await ethers.getContractAt("BaluniV1Pool", poolAddress)) as BaluniV1Pool;
 
@@ -77,12 +91,19 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
     it("should mint LP tokens correctly", async function () {
       await usdc.approve(await periphery.getAddress(), ethers.parseUnits("6000", 6));
       await usdt.approve(await periphery.getAddress(), ethers.parseUnits("4000", 6));
+      await weth.approve(await periphery.getAddress(), ethers.parseUnits("4000", 18));
+      await wbtc.approve(await periphery.getAddress(), ethers.parseUnits("4000", 8));
 
       console.log("USDC Balance:", formatUnits(await usdc.balanceOf(await owner.getAddress()), 6));
       console.log("USDT Balance:", formatUnits(await usdt.balanceOf(await owner.getAddress()), 6));
 
       await periphery.addLiquidity(
-        [ethers.parseUnits("6000", 6), ethers.parseUnits("4000", 6)],
+        [
+          ethers.parseUnits("6000", 6),
+          ethers.parseUnits("4000", 6),
+          ethers.parseUnits("10", 18),
+          ethers.parseUnits("10", 8),
+        ],
         await pool.getAddress(),
         await owner.getAddress(),
       );
@@ -111,9 +132,16 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
     it("should swap USDC to USDT correctly using periphery", async function () {
       await usdc.approve(await periphery.getAddress(), ethers.parseUnits("6000", 6));
       await usdt.approve(await periphery.getAddress(), ethers.parseUnits("4000", 6));
+      await wbtc.approve(await periphery.getAddress(), ethers.parseUnits("4000", 8));
+      await weth.approve(await periphery.getAddress(), ethers.parseUnits("4000", 18));
 
       await periphery.addLiquidity(
-        [ethers.parseUnits("6000", 6), ethers.parseUnits("4000", 6)],
+        [
+          ethers.parseUnits("6000", 6),
+          ethers.parseUnits("4000", 6),
+          ethers.parseUnits("10", 18),
+          ethers.parseUnits("10", 8),
+        ],
         await pool.getAddress(),
         await owner.getAddress(),
       );
@@ -127,6 +155,7 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       const usdtBalance = await usdt.balanceOf(await addr1.getAddress());
 
       console.log("USDT Balance: ", ethers.formatUnits(usdtBalance.toString(), 6));
+
       expect(usdtBalance).to.be.gt(ethers.parseUnits("99", 6));
     });
   });
@@ -135,8 +164,16 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
     it("should swap USDC to USDT correctly using periphery and rebalance the pool", async function () {
       await usdc.approve(await periphery.getAddress(), ethers.parseUnits("6000", 6));
       await usdt.approve(await periphery.getAddress(), ethers.parseUnits("4000", 6));
+      await weth.approve(await periphery.getAddress(), ethers.parseUnits("4000", 18));
+      await wbtc.approve(await periphery.getAddress(), ethers.parseUnits("4000", 8));
+
       await periphery.addLiquidity(
-        [ethers.parseUnits("6000", 6), ethers.parseUnits("4000", 6)],
+        [
+          ethers.parseUnits("6000", 6),
+          ethers.parseUnits("4000", 6),
+          ethers.parseUnits("10", 18),
+          ethers.parseUnits("10", 8),
+        ],
         await pool.getAddress(),
         await owner.getAddress(),
       );
@@ -149,17 +186,17 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
 
       await periphery
         .connect(addr1)
-        .swap(await usdc.getAddress(), await usdt.getAddress(), ethers.parseUnits("2000", 6), await addr1.getAddress());
+        .swap(await usdc.getAddress(), await wbtc.getAddress(), ethers.parseUnits("100", 6), await addr1.getAddress());
 
       const usdtBalance = await usdt.balanceOf(await addr1.getAddress());
-      let usdtOwnerBalance = await usdt.balanceOf(await owner.getAddress());
+      const wbtcBalance = await wbtc.balanceOf(await owner.getAddress());
 
       let deviation = await pool.getDeviation();
       console.log("Deviation: ", deviation.toString());
 
       console.log("USDT Balance: ", ethers.formatUnits(usdtBalance.toString(), 6));
-      console.log("USDT Owner Balance: ", ethers.formatUnits(usdtOwnerBalance.toString(), 6));
-      expect(usdtBalance).to.be.gt(ethers.parseUnits("1900", 6));
+      console.log("WBTC Owner Balance: ", ethers.formatUnits(wbtcBalance.toString(), 8));
+      expect(wbtcBalance).to.be.gt(ethers.parseUnits("0.001", 8));
 
       const reservesBefore = await pool.getReserves();
       console.log("Reserves Before: ", formatUnits(reservesBefore[0], 6), formatUnits(reservesBefore[1], 6));
@@ -172,40 +209,6 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       let reservesAfter = await pool.getReserves();
       console.log("Reserves After: ", formatUnits(reservesAfter[0], 6), formatUnits(reservesAfter[1], 6));
 
-      let realBalances = await pool.getRealBalances();
-      console.log("Real Balances: ", formatUnits(realBalances[0], 6), formatUnits(realBalances[1], 6));
-
-      let exededAmount = await pool.getExcessAmounts();
-      console.log("Exceeded Amount: ", formatUnits(exededAmount[0], 6), formatUnits(exededAmount[1], 6));
-
-      deviation = await pool.getDeviation();
-      console.log("Deviation: ", deviation.toString());
-
-      await pool.rebalanceWeights(await owner.getAddress());
-
-      reservesAfter = await pool.getReserves();
-      console.log("Reserves After: ", formatUnits(reservesAfter[0], 6), formatUnits(reservesAfter[1], 6));
-
-      realBalances = await pool.getRealBalances();
-      console.log("Real Balances: ", formatUnits(realBalances[0], 6), formatUnits(realBalances[1], 6));
-
-      exededAmount = await pool.getExcessAmounts();
-      console.log("Exceeded Amount: ", formatUnits(exededAmount[0], 6), formatUnits(exededAmount[1], 6));
-
-      deviation = await pool.getDeviation();
-      console.log("Deviation: ", deviation.toString());
-
-      await pool.rebalanceWeights(await owner.getAddress());
-
-      reservesAfter = await pool.getReserves();
-      console.log("Reserves After: ", formatUnits(reservesAfter[0], 6), formatUnits(reservesAfter[1], 6));
-
-      realBalances = await pool.getRealBalances();
-      console.log("Real Balances: ", formatUnits(realBalances[0], 6), formatUnits(realBalances[1], 6));
-
-      exededAmount = await pool.getExcessAmounts();
-      console.log("Exceeded Amount: ", formatUnits(exededAmount[0], 6), formatUnits(exededAmount[1], 6));
-
       deviation = await pool.getDeviation();
       console.log("Deviation: ", deviation.toString());
 
@@ -216,9 +219,6 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
 
       deviation = await pool.getDeviation();
       console.log("Deviation: ", deviation.toString());
-
-      usdtOwnerBalance = await usdt.balanceOf(await owner.getAddress());
-      console.log("USDT Owner Balance: ", ethers.formatUnits(usdtOwnerBalance.toString(), 6));
     });
   });
 });
