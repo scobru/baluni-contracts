@@ -48,6 +48,13 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     _updateReserves();
 
     trigger = _trigger;
+
+    // ensure the sum o weight equal 10000
+    uint256 totalWeight = 0;
+    for (uint256 i = 0; i < _weights.length; i++) {
+      totalWeight += _weights[i];
+    }
+    require(totalWeight == 10000, 'Invalid weights');
   }
 
   modifier onlyPeriphery() {
@@ -83,8 +90,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @param receiver The address to receive the minted liquidity tokens.
    */
   function rebalanceWeights(address receiver) external {
-    _updateReserves();
-
     (uint256 totalValuation, uint256[] memory valuations) = _computeTotalValuation();
 
     uint256[] memory amountsToAdd = _calculateAmountsToAdd(totalValuation, valuations);
@@ -278,26 +283,30 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     }
 
     uint256 factor;
-    uint256 numerator = 10 ** fromDecimal;
-    uint256 denominator = 10 ** toDecimal;
-
-    rate = (rate * numerator) / denominator;
-
     uint256 adjustedAmount = amountAfterFee;
     uint256 amountOut;
+    uint256 numerator = 10 ** fromDecimal;
+    uint256 denominator = 1e18;
 
     if (fromDecimal != toDecimal) {
+      rate = (rate * numerator) / denominator;
+
       if (fromDecimal > toDecimal) {
         factor = 10 ** (fromDecimal - toDecimal);
         adjustedAmount /= factor;
-        amountOut = (adjustedAmount * rate) / 10 ** toDecimal;
+        amountOut = (adjustedAmount * rate) / denominator;
+        amountOut *= factor;
       } else {
         factor = 10 ** (toDecimal - fromDecimal);
         adjustedAmount *= factor;
-        amountOut = (adjustedAmount * rate) / (10 ** toDecimal);
+        amountOut = (adjustedAmount * rate) / denominator;
+        amountOut /= factor;
       }
     } else {
-      amountOut = (adjustedAmount * rate) / 1e18;
+      factor = 10 ** (18 - toDecimal);
+      adjustedAmount *= factor;
+      amountOut = (adjustedAmount * rate) / denominator;
+      amountOut /= factor;
     }
 
     return amountOut;
@@ -319,14 +328,14 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @return directions An array of boolean values indicating whether the current weight is higher (true) or lower (false) than the target weight.
    */
   function getDeviation() public view returns (bool[] memory directions, uint256[] memory deviations) {
-    (uint256 totalUsdValuation, uint256[] memory usdValuations) = _computeTotalValuation();
+    (uint256 totVal, uint256[] memory valuations) = _computeTotalValuation();
     uint256 numAssets = assetInfos.length;
 
     directions = new bool[](numAssets);
     deviations = new uint256[](numAssets);
 
     for (uint256 i = 0; i < numAssets; i++) {
-      uint256 currentWeight = (usdValuations[i] * 10000) / totalUsdValuation;
+      uint256 currentWeight = (valuations[i] * 10000) / totVal;
       uint256 targetWeight = assetInfos[i].weight;
 
       if (currentWeight > targetWeight) {
@@ -430,7 +439,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     valuations = new uint256[](numAssets);
     for (uint256 i = 0; i < numAssets; i++) {
       IERC20 asset = IERC20(assetInfos[i].asset);
-      uint256 valuation = _convertTokenToNative(address(asset), reserves[assetInfos[i].asset]);
+      uint256 valuation = _convertTokenToNative(address(asset), reserves[address(asset)]);
       valuations[i] = valuation;
       totalValuation += valuations[i];
     }
@@ -469,19 +478,20 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     return totalAddedLiquidity;
   }
 
-  // function _calculateAmountsToAdd(
-  //   uint256 totalValuation,
-  //   uint256[] memory valuations
-  // ) internal view returns (uint256[] memory amountsToAdd) {
-  //   amountsToAdd = new uint256[](assetInfos.length);
-  //   for (uint256 i = 0; i < assetInfos.length; i++) {
-  //     uint256 targetValuation = (totalValuation * assetInfos[i].weight) / 10000;
-  //     if (valuations[i] < targetValuation) {
-  //       amountsToAdd[i] = targetValuation - valuations[i];
-  //     }
-  //   }
-  //   return amountsToAdd;
-  // }
+  function _calculateAmountsToAdd(
+    uint256 totalValuation,
+    uint256[] memory valuations
+  ) internal view returns (uint256[] memory amountsToAdd) {
+    // get deviation
+    amountsToAdd = new uint256[](assetInfos.length);
+    for (uint256 i = 0; i < assetInfos.length; i++) {
+      uint256 targetValuation = (totalValuation * assetInfos[i].weight) / 10000;
+      if (valuations[i] < targetValuation) {
+        amountsToAdd[i] = targetValuation - valuations[i];
+      }
+    }
+    return amountsToAdd;
+  }
 
   /**
    * @dev Calculates the amounts to add to each asset based on the total valuation and individual valuations.
@@ -489,24 +499,24 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
    * @param valuations An array of individual valuations for each asset.
    * @return amountsToAdd An array of amounts to add to each asset.
    */
-  function _calculateAmountsToAdd(
-    uint256 totalValuation,
-    uint256[] memory valuations
-  ) internal view returns (uint256[] memory amountsToAdd) {
-    amountsToAdd = new uint256[](assetInfos.length);
+  // function _calculateAmountsToAdd(
+  //   uint256 totalValuation,
+  //   uint256[] memory valuations
+  // ) internal view returns (uint256[] memory amountsToAdd) {
+  //   amountsToAdd = new uint256[](assetInfos.length);
 
-    // getdeviations
-    (, uint256[] memory deviations) = getDeviation();
-    for (uint256 i = 0; i < assetInfos.length; i++) {
-      uint256 targetValuation = (totalValuation * assetInfos[i].weight) / 10000;
-      if (valuations[i] < targetValuation) {
-        amountsToAdd[i] = (totalValuation * deviations[i]) / 10000;
-      } else {
-        amountsToAdd[i] = 0;
-      }
-    }
-    return (amountsToAdd);
-  }
+  //   // getdeviations
+  //   (, uint256[] memory deviations) = getDeviation();
+  //   for (uint256 i = 0; i < assetInfos.length; i++) {
+  //     uint256 targetValuation = (totalValuation * assetInfos[i].weight) / 10000;
+  //     if (valuations[i] < targetValuation) {
+  //       amountsToAdd[i] = (totalValuation * deviations[i]) / 10000;
+  //     } else {
+  //       amountsToAdd[i] = 0;
+  //     }
+  //   }
+  //   return (amountsToAdd);
+  // }
 
   /**
    * @dev Internal function to transfer tokens from the caller to the contract and calculate the liquidity.

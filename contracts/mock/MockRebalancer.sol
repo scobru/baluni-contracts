@@ -7,37 +7,55 @@ contract MockRebalancer {
   mapping(address => mapping(address => uint256)) public rates;
 
   // Hardcoded rates
-  uint256 public constant USDC_TO_WETH_RATE = 1376418375228432834760617723251;
-  uint256 public constant USDT_TO_WETH_RATE = 1375238770025523092477539783146;
+  uint256 public constant USDC_TO_WETH_RATE = 256897185735855109411507118;
   uint256 public constant USDC_TO_USDT_RATE = 1000983989838925640;
-  uint256 public constant USDT_TO_USDC_RATE = 998714700668848356;
+  uint256 public constant USDC_TO_WBTC_RATE = 1463657468947761;
+  uint256 public constant USDC_TO_WMATIC_RATE = 1351148249095651365340914098616;
+
   uint256 public constant WMATIC_TO_USDT_RATE = 747767;
-  uint256 public constant WMATIC_TO_USDC_RATE = 746814;
-  uint256 public constant WETH_TO_WMATIC_RATE = 5292121379569319089949;
-  uint256 public constant WBTC_TO_WMATIC_RATE = 930502153725374937460554691581275;
+  uint256 public constant WMATIC_TO_USDC_RATE = 739533;
+  uint256 public constant WMATIC_TO_WBTC_RATE = 1080;
+  uint256 public constant WMATIC_TO_WETH_RATE = 189625582664100;
+
+  uint256 public constant WBTC_TO_WMATIC_RATE = 924778033538811846038762973579739;
   uint256 public constant WBTC_TO_USDT_RATE = 681360233243484009138;
-  uint256 public constant USDT_TO_WBTC_RATE = 1466684783076298;
+  uint256 public constant WBTC_TO_WETH_RATE = 175476470939493533556108593598;
   uint256 public constant WBTC_TO_USDC_RATE = 681360233243484009138;
-  uint256 public constant USDC_TO_WBTC_RATE = 1469017312082312;
+
+  uint256 public constant USDT_TO_WBTC_RATE = 1457844841452943;
+  uint256 public constant USDT_TO_USDC_RATE = 998714700668848356;
+  uint256 public constant USDT_TO_WETH_RATE = 256884484348670192973112135;
+  uint256 public constant USDT_TO_WMATIC_RATE = 1351542478738482785523886658083;
+
+  uint256 public constant WETH_TO_WMATIC_RATE = 5273576410685072782753;
+
   address public wmatic;
   address public treasury;
 
   constructor(address usdc, address usdt, address _wmatic, address weth, address wbtc) {
-    rates[usdc][_wmatic] = USDC_TO_WETH_RATE;
-    rates[usdt][_wmatic] = USDT_TO_WETH_RATE;
-    rates[_wmatic][usdc] = WMATIC_TO_USDT_RATE;
-    rates[_wmatic][usdt] = WMATIC_TO_USDC_RATE;
-    rates[usdc][usdt] = USDC_TO_USDT_RATE;
-    rates[usdt][usdc] = USDT_TO_USDC_RATE;
-    rates[usdc][wbtc] = USDC_TO_WBTC_RATE;
-    rates[wbtc][usdc] = WBTC_TO_USDC_RATE;
-    rates[usdt][wbtc] = USDT_TO_WBTC_RATE;
-    rates[wbtc][usdt] = WBTC_TO_USDT_RATE;
-    rates[wbtc][_wmatic] = WBTC_TO_WMATIC_RATE;
-    rates[_wmatic][wbtc] = WETH_TO_WMATIC_RATE;
-    rates[weth][_wmatic] = WETH_TO_WMATIC_RATE;
-
     wmatic = _wmatic;
+
+    rates[usdt][usdc] = USDT_TO_USDC_RATE;
+    rates[usdt][wbtc] = USDT_TO_WBTC_RATE;
+    rates[usdt][weth] = USDT_TO_WETH_RATE;
+    rates[usdt][wmatic] = USDT_TO_WMATIC_RATE;
+
+    rates[wbtc][usdt] = WBTC_TO_USDT_RATE;
+    rates[wbtc][wmatic] = WBTC_TO_WMATIC_RATE;
+    rates[wbtc][usdc] = WBTC_TO_USDC_RATE;
+    rates[wbtc][weth] = WBTC_TO_WETH_RATE;
+
+    rates[usdc][usdt] = USDC_TO_USDT_RATE;
+    rates[usdc][wbtc] = USDC_TO_WBTC_RATE;
+    rates[usdc][wmatic] = USDC_TO_WMATIC_RATE;
+    rates[usdc][weth] = USDC_TO_WETH_RATE;
+
+    rates[wmatic][wbtc] = WMATIC_TO_WBTC_RATE;
+    rates[wmatic][weth] = WMATIC_TO_WETH_RATE;
+    rates[wmatic][usdc] = WMATIC_TO_USDC_RATE;
+    rates[wmatic][usdt] = WMATIC_TO_USDT_RATE;
+
+    rates[weth][wmatic] = WETH_TO_WMATIC_RATE;
   }
 
   function setRate(address fromToken, address toToken, uint256 rate) external {

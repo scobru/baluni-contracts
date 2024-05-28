@@ -122,18 +122,60 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     for (uint256 i = 0; i < fromTokens.length; i++) {
       require(amounts[i] > 0, 'Amount must be greater than zero');
 
+      // Transfer fromToken from sender to this contract
+      IERC20(fromTokens[i]).transferFrom(msg.sender, address(this), amounts[i]);
+
       // Get the pool address for the given tokens
       address poolAddress = poolFactory.getPoolByAssets(fromTokens[i], toTokens[i]);
       IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
 
-      IERC20(fromTokens[i]).transferFrom(msg.sender, address(this), amounts[i]);
+      // Approve the pool to spend fromToken
       IERC20(fromTokens[i]).approve(poolAddress, amounts[i]);
 
+      // Perform the swap
       uint256 amountOut = pool.swap(fromTokens[i], toTokens[i], amounts[i], receivers[i]);
       amountsOut[i] = amountOut;
     }
 
     return amountsOut;
+  }
+
+  function smartSwap(address fromToken, address toToken, uint256 amount, address receiver) external returns (uint256) {
+    require(amount > 0, 'Amount must be greater than zero');
+
+    // Get all pools that contain fromToken
+    address[] memory fromPools = poolFactory.getPoolsByAsset(fromToken);
+    uint256 bestAmountOut = 0;
+    address bestPoolAddress;
+    uint256 bestTokenLiquidity = 0;
+
+    // Iterate over all pools to find the best pool based on token-specific liquidity and asset deviation
+    for (uint256 i = 0; i < fromPools.length; i++) {
+      IBaluniV1Pool pool = IBaluniV1Pool(fromPools[i]);
+      (bool[] memory directions, uint256[] memory deviations) = pool.getDeviation();
+      (uint256 totalValuation, uint256[] memory valuations) = pool.computeTotalValuation();
+
+      // Check if fromToken is overweight and get the liquidity of the specific token
+      for (uint256 j = 0; j < directions.length; j++) {
+        if (pool.assetInfos(j).asset == fromToken) {
+          uint256 tokenLiquidity = valuations[j];
+          if (directions[j] && tokenLiquidity > bestTokenLiquidity) {
+            bestTokenLiquidity = tokenLiquidity;
+            bestPoolAddress = fromPools[i];
+          }
+        }
+      }
+    }
+
+    require(bestPoolAddress != address(0), 'No suitable pool found');
+
+    // Perform the swap in the best pool
+    IBaluniV1Pool bestPool = IBaluniV1Pool(bestPoolAddress);
+    IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
+    IERC20(fromToken).approve(bestPoolAddress, amount);
+    uint256 amountReceived = bestPool.swap(fromToken, toToken, amount, receiver);
+
+    return amountReceived;
   }
 
   /**
