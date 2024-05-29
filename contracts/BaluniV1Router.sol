@@ -52,12 +52,20 @@ import './interfaces/IBaluniV1MarketOracle.sol';
 import './interfaces/IBaluniV1Rebalancer.sol';
 import './libs/EnumerableSetUpgradeable.sol';
 import './BaluniToken.sol';
+import './BaluniV1Uniswapper.sol';
 
 interface I1inchSpotAgg {
   function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate);
 }
 
-contract BaluniV1Router is Initializable, BaluniToken, OwnableUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable {
+contract BaluniV1Router is
+  Initializable,
+  BaluniToken,
+  OwnableUpgradeable,
+  ReentrancyGuardUpgradeable,
+  UUPSUpgradeable,
+  BaluniV1Uniswapper
+{
   struct Call {
     address to;
     uint256 value;
@@ -191,7 +199,7 @@ contract BaluniV1Router is Initializable, BaluniToken, OwnableUpgradeable, Reent
    * @dev Returns the unit price of the token in USDC.
    * @return The unit price of the token in USDC.
    */
-  function getUnitPrice() public view returns (uint256) {
+  function unitPrice() public view returns (uint256) {
     return _calculateBaluniToUSDC(1e18);
   }
 
@@ -618,60 +626,6 @@ contract BaluniV1Router is Initializable, BaluniToken, OwnableUpgradeable, Reent
   }
 
   /**
-   * @dev Executes a single swap on Uniswap.
-   * @param token0 The address of the input token.
-   * @param token1 The address of the output token.
-   * @param tokenBalance The amount of input token to be swapped.
-   * @param receiver The address that will receive the swapped tokens.
-   * @return amountOut The amount of output tokens received.
-   */
-  function _singleSwap(
-    address token0,
-    address token1,
-    uint256 tokenBalance,
-    address receiver
-  ) private returns (uint256 amountOut) {
-    ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-      tokenIn: token0,
-      tokenOut: token1,
-      fee: 3000,
-      recipient: address(receiver),
-      deadline: block.timestamp,
-      amountIn: tokenBalance,
-      amountOutMinimum: 0,
-      sqrtPriceLimitX96: 0
-    });
-
-    return uniswapRouter.exactInputSingle(params);
-  }
-
-  /**
-   * @dev Executes a multi-hop swap using the Uniswap router.
-   * @param token0 The address of the first token in the swap path.
-   * @param token1 The address of the second token in the swap path.
-   * @param token2 The address of the third token in the swap path.
-   * @param tokenBalance The amount of tokens to be swapped.
-   * @param receiver The address that will receive the swapped tokens.
-   * @return amountOut The amount of tokens received after the swap.
-   */
-  function _multiHopSwap(
-    address token0,
-    address token1,
-    address token2,
-    uint256 tokenBalance,
-    address receiver
-  ) private returns (uint256 amountOut) {
-    ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
-      path: abi.encodePacked(token0, uint24(3000), token1, uint24(3000), token2),
-      recipient: address(receiver),
-      deadline: block.timestamp,
-      amountIn: tokenBalance,
-      amountOutMinimum: 0
-    });
-    return uniswapRouter.exactInput(params);
-  }
-
-  /**
    * @dev Calculates the total valuation of the contract by summing up the valuation of each token held.
    * @return The total valuation of the contract.
    */
@@ -729,5 +683,9 @@ contract BaluniV1Router is Initializable, BaluniToken, OwnableUpgradeable, Reent
    */
   function getVersion() external view returns (uint64) {
     return _getInitializedVersion();
+  }
+
+  function getTokens() external view returns (address[] memory) {
+    return tokens.values();
   }
 }

@@ -130,22 +130,17 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
 
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-  /**
-   * @dev Rebalances the assets in the contract based on the specified weights.
-   * @param assets An array of asset addresses.
-   * @param weights An array of weights corresponding to the assets.
-   * @param receiver The address that will receive the rebalanced assets.
-   * @param limit The maximum percentage difference allowed between the current weight and target weight.
-   */
+
   function rebalance(
+    uint256[] memory balances,
     address[] calldata assets,
     uint256[] calldata weights,
+    uint256 limit,
     address sender,
     address receiver,
-    uint256 limit,
     address baseAsset
   ) external override {
-    RebalanceVars memory vars = _checkRebalance(assets, weights, limit, sender, baseAsset);
+    RebalanceVars memory vars = _checkRebalance(balances, assets, weights, limit, sender, baseAsset);
 
     for (uint256 i = 0; i < vars.overweightVaults.length; i++) {
       if (vars.overweightAmounts[i] > 0) {
@@ -219,39 +214,31 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     }
   }
 
-  /**
-   * @dev Checks if a rebalance is needed based on the given assets, weights, limit, and sender.
-   * @param assets The array of addresses representing the assets to be rebalanced.
-   * @param weights The array of weights corresponding to the assets.
-   * @param limit The maximum limit for the rebalance.
-   * @param sender The address of the sender.
-   * @return A struct containing the rebalance variables.
-   */
   function checkRebalance(
+    uint256[] memory balances,
     address[] calldata assets,
     uint256[] calldata weights,
     uint256 limit,
     address sender,
     address baseAsset
   ) public view override returns (RebalanceVars memory) {
-    return _checkRebalance(assets, weights, limit, sender, baseAsset);
+    return _checkRebalance(balances, assets, weights, limit, sender, baseAsset);
   }
 
-  /**
-   * @dev Internal function to check if rebalancing is required for a given set of assets and weights.
-   * @param assets The array of asset addresses.
-   * @param weights The array of target weights for each asset.
-   * @param limit The maximum percentage difference allowed between the current weight and target weight.
-   * @param sender The address of the sender.
-   * @return A `RebalanceVars` struct containing the rebalance information.
-   */
   function _checkRebalance(
+    uint256[] memory balances,
     address[] calldata assets,
     uint256[] calldata weights,
     uint256 limit,
     address sender,
     address baseAsset
   ) internal view returns (RebalanceVars memory) {
+    if (balances.length == 0) {
+      for (uint256 i = 0; i < assets.length; i++) {
+        balances[i] = IERC20(assets[i]).balanceOf(sender);
+      }
+    }
+
     uint256 totalValue = calculateTotalValue(assets, sender);
     RebalanceVars memory vars = RebalanceVars(
       assets.length,
@@ -268,8 +255,10 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
       new uint256[](assets.length)
     );
 
+    vars.balances = balances;
+
     for (uint256 i = 0; i < assets.length; i++) {
-      vars.balances[i] = IERC20(assets[i]).balanceOf(sender);
+      //vars.balances[i] = balances[i];
       uint256 decimals = IERC20Metadata(assets[i]).decimals();
       uint256 tokensTotalValue;
 
@@ -517,24 +506,6 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
   }
 
   /**
-   * @dev Returns the weighted rate between two tokens.
-   * @param srcToken The source token.
-   * @param dstToken The destination token.
-   * @param useWrappers Boolean indicating whether to use wrappers.
-   * @return weightedRate The weighted rate between the source and destination tokens.
-   */
-  function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) public view returns (uint256 weightedRate) {
-    uint256 rate;
-    try _1InchSpotAgg.getRate(IERC20(srcToken), IERC20(dstToken), useWrappers) returns (uint256 _rate) {
-      rate = _rate;
-    } catch {
-      return 0;
-    }
-
-    return rate;
-  }
-
-  /**
    * @dev Returns the address of the treasury.
    * @return The address of the treasury.
    */
@@ -591,7 +562,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     uint256 numerator = 10 ** fromDecimal;
     uint256 denominator = 10 ** toDecimal;
 
-    rate = getRate(IERC20(fromToken), IERC20(toToken), false);
+    rate = _1InchSpotAgg.getRate(IERC20(fromToken), IERC20(toToken), false);
     rate = (rate * numerator) / denominator;
 
     uint256 tokenAmount = ((amount * rate) / 10 ** 18);
