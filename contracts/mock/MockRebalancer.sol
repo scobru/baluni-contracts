@@ -13,27 +13,30 @@ contract MockRebalancer {
   uint256 public constant USDC_TO_WMATIC_RATE = 1351148249095651365340914098616;
 
   uint256 public constant WMATIC_TO_USDT_RATE = 747767;
-  uint256 public constant WMATIC_TO_USDC_RATE = 739533;
+  uint256 public constant WMATIC_TO_USDC_RATE = 733905;
   uint256 public constant WMATIC_TO_WBTC_RATE = 1080;
   uint256 public constant WMATIC_TO_WETH_RATE = 189625582664100;
 
   uint256 public constant WBTC_TO_WMATIC_RATE = 924778033538811846038762973579739;
   uint256 public constant WBTC_TO_USDT_RATE = 681360233243484009138;
   uint256 public constant WBTC_TO_WETH_RATE = 175476470939493533556108593598;
-  uint256 public constant WBTC_TO_USDC_RATE = 681360233243484009138;
+  uint256 public constant WBTC_TO_USDC_RATE = 683003374554512029990;
 
   uint256 public constant USDT_TO_WBTC_RATE = 1457844841452943;
-  uint256 public constant USDT_TO_USDC_RATE = 998714700668848356;
+  uint256 public constant USDT_TO_USDC_RATE = 998588636583774074;
   uint256 public constant USDT_TO_WETH_RATE = 256884484348670192973112135;
   uint256 public constant USDT_TO_WMATIC_RATE = 1351542478738482785523886658083;
 
   uint256 public constant WETH_TO_WMATIC_RATE = 5273576410685072782753;
+  uint256 public constant WETH_TO_USDC_RATE = 3836478742;
 
   address public wmatic;
+  address public usdc;
   address public treasury;
 
-  constructor(address usdc, address usdt, address _wmatic, address weth, address wbtc) {
+  constructor(address usdt, address _usdc, address _wmatic, address weth, address wbtc) {
     wmatic = _wmatic;
+    usdc = _usdc;
 
     rates[usdt][usdc] = USDT_TO_USDC_RATE;
     rates[usdt][wbtc] = USDT_TO_WBTC_RATE;
@@ -56,6 +59,7 @@ contract MockRebalancer {
     rates[wmatic][usdt] = WMATIC_TO_USDT_RATE;
 
     rates[weth][wmatic] = WETH_TO_WMATIC_RATE;
+    rates[weth][usdc] = WETH_TO_USDC_RATE;
   }
 
   function setRate(address fromToken, address toToken, uint256 rate) external {
@@ -103,7 +107,7 @@ contract MockRebalancer {
   }
 
   function getUSDCAddress() external view returns (address) {
-    return address(0);
+    return usdc;
   }
 
   function convert(address fromToken, address toToken, uint256 amount) external view returns (uint256) {

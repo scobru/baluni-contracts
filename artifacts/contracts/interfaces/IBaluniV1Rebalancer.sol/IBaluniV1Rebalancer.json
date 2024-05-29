@@ -24,6 +24,11 @@
           "internalType": "address",
           "name": "sender",
           "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "baseAsset",
+          "type": "address"
         }
       ],
       "name": "checkRebalance",
@@ -259,6 +264,11 @@
           "internalType": "uint256",
           "name": "limit",
           "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "baseAsset",
+          "type": "address"
         }
       ],
       "name": "rebalance",

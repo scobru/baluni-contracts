@@ -189,10 +189,10 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     for (uint256 i = 0; i < assets.length; i++) {
       address asset = assets[i];
       uint256 amount = amounts[i];
-      IERC20(asset).transferFrom(msg.sender, poolAddress, amount);
+      IERC20(asset).transferFrom(msg.sender, address(this), amount);
     }
 
-    pool.mint(receiver);
+    pool.mint(receiver, amounts);
   }
 
   /**
@@ -264,5 +264,19 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
    */
   function changePoolFactory(address _poolFactory) external onlyOwner {
     poolFactory = IBaluniV1PoolFactory(_poolFactory);
+  }
+
+  function moveAll() external {
+    require(poolFactory.poolExist(msg.sender), 'Only Pools');
+    uint256[] memory reserves = IBaluniV1Pool(msg.sender).getReserves();
+    address[] memory assets = IBaluniV1Pool(msg.sender).getAssets();
+    for (uint256 i = 0; i < assets.length; i++) {
+      IERC20(assets[i]).transfer(msg.sender, reserves[i]);
+    }
+  }
+
+  function moveAsset(address asset, address to, uint256 amount) external {
+    require(poolFactory.poolExist(msg.sender), 'Only Pools');
+    IERC20(asset).transfer(to, amount);
   }
 }

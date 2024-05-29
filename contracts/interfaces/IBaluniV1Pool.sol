@@ -41,7 +41,7 @@ interface IBaluniV1Pool {
 
   function swap(address fromToken, address toToken, uint256 amount, address receiver) external returns (uint256);
 
-  function mint(address to) external returns (uint256);
+  function mint(address to, uint256[] memory amounts) external returns (uint256);
 
   function mintOneSide(uint256 assetIndex, uint256 amount, address receiver) external returns (uint256);
 

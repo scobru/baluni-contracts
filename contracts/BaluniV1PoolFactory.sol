@@ -175,4 +175,13 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
   function changePeriphery(address _newPeriphery) external onlyOwner {
     periphery = _newPeriphery;
   }
+
+  function poolExist(address _pool) external returns (bool) {
+    for (uint256 i = 0; i < allPools.length; i++) {
+      if (allPools[i] == _pool) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

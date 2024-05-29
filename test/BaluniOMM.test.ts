@@ -27,6 +27,7 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
   let owner: Signer;
   let addr1: Signer;
   let addr2: Signer;
+  let baseAddress: string;
 
   beforeEach(async function () {
     [owner, addr1, addr2] = await ethers.getSigners();
@@ -81,12 +82,14 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
     await factory.createPool(
       [await usdc.getAddress(), await usdt.getAddress(), await weth.getAddress(), await wbtc.getAddress()],
       [2500, 2500, 2500, 2500],
-      500,
+      50,
     );
     const poolAddress = await factory.getPoolByAssets(await usdc.getAddress(), await usdt.getAddress());
     pool = (await ethers.getContractAt("BaluniV1Pool", poolAddress)) as BaluniV1Pool;
 
     await rebalancer.setTreasury(await owner.getAddress());
+
+    baseAddress = await pool.baseAsset();
   });
 
   describe("Minting and Burn", function () {
@@ -158,7 +161,7 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       const usdtBalance = await usdt.balanceOf(await addr1.getAddress());
 
       console.log("USDT Balance after swap: ", formatUnits(usdtBalance.toString(), 6));
-      expect(usdtBalance).to.be.gt(ethers.parseUnits("99", 6));
+      expect(usdtBalance).to.be.gt(ethers.parseUnits("97", 6));
       console.log("✅ Swap Completed Successfully ✅");
     });
   });
@@ -182,11 +185,20 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       );
 
       let totvals = await pool.computeTotalValuation();
-      console.log("Total Valuation: ", formatUnits(totvals[0], 18));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], 18));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], 18));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], 18));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], 18));
+
+      let baseDecimals;
+
+      if (baseAddress == (await usdc.getAddress())) {
+        baseDecimals = await usdc.decimals();
+      } else if (baseAddress == (await wmatic.getAddress())) {
+        baseDecimals = await wmatic.decimals();
+      }
+
+      console.log("Total Valuation: ", formatUnits(totvals[0], baseDecimals));
+      console.log("Valuation USDC: ", formatUnits(totvals[1][0], baseDecimals));
+      console.log("Valuation USDT: ", formatUnits(totvals[1][1], baseDecimals));
+      console.log("Valuation WETH: ", formatUnits(totvals[1][2], baseDecimals));
+      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], baseDecimals));
 
       const reservesB4Swap = await pool.getReserves();
       console.log(
@@ -213,7 +225,7 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       console.log("🔄 Performing Swap: USDC to WETH 🔄");
       await periphery
         .connect(addr1)
-        .swap(await usdc.getAddress(), await weth.getAddress(), ethers.parseUnits("100", 6), await addr1.getAddress());
+        .swap(await usdc.getAddress(), await weth.getAddress(), ethers.parseUnits("200", 6), await addr1.getAddress());
 
       console.log("🔄 Performing Swap: WBTC to WETH 🔄");
       await periphery
@@ -235,11 +247,11 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       console.log("📉 Deviation after swap: ", deviation.toString());
 
       totvals = await pool.computeTotalValuation();
-      console.log("Total Valuation: ", formatUnits(totvals[0], 18));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], 18));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], 18));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], 18));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], 18));
+      console.log("Total Valuation: ", formatUnits(totvals[0], baseDecimals));
+      console.log("Valuation USDC: ", formatUnits(totvals[1][0], baseDecimals));
+      console.log("Valuation USDT: ", formatUnits(totvals[1][1], baseDecimals));
+      console.log("Valuation WETH: ", formatUnits(totvals[1][2], baseDecimals));
+      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], baseDecimals));
 
       const reservesBefore = await pool.getReserves();
 
@@ -261,11 +273,11 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       await pool.rebalanceWeights(await owner.getAddress());
 
       totvals = await pool.computeTotalValuation();
-      console.log("Total Valuation: ", formatUnits(totvals[0], 18));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], 18));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], 18));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], 18));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], 18));
+      console.log("Total Valuation: ", formatUnits(totvals[0], baseDecimals));
+      console.log("Valuation USDC: ", formatUnits(totvals[1][0], baseDecimals));
+      console.log("Valuation USDT: ", formatUnits(totvals[1][1], baseDecimals));
+      console.log("Valuation WETH: ", formatUnits(totvals[1][2], baseDecimals));
+      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], baseDecimals));
 
       let reservesAfter = await pool.getReserves();
 
@@ -285,11 +297,11 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       await pool.rebalanceWeights(await owner.getAddress());
 
       totvals = await pool.computeTotalValuation();
-      console.log("Total Valuation: ", formatUnits(totvals[0], 18));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], 18));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], 18));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], 18));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], 18));
+      console.log("Total Valuation: ", formatUnits(totvals[0], baseDecimals));
+      console.log("Valuation USDC: ", formatUnits(totvals[1][0], baseDecimals));
+      console.log("Valuation USDT: ", formatUnits(totvals[1][1], baseDecimals));
+      console.log("Valuation WETH: ", formatUnits(totvals[1][2], baseDecimals));
+      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], baseDecimals));
 
       reservesAfter = await pool.getReserves();
 
@@ -321,11 +333,11 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
       reservesAfter = await pool.getReserves();
 
       totvals = await pool.computeTotalValuation();
-      console.log("Total Valuation: ", formatUnits(totvals[0], 18));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], 18));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], 18));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], 18));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], 18));
+      console.log("Total Valuation: ", formatUnits(totvals[0], baseDecimals));
+      console.log("Valuation USDC: ", formatUnits(totvals[1][0], baseDecimals));
+      console.log("Valuation USDT: ", formatUnits(totvals[1][1], baseDecimals));
+      console.log("Valuation WETH: ", formatUnits(totvals[1][2], baseDecimals));
+      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], baseDecimals));
 
       console.log(
         "📊 Reserves After Batch Swap: ",
@@ -334,47 +346,6 @@ describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function
         formatUnits(reservesAfter[2], 18),
         formatUnits(reservesAfter[3], 8),
       );
-
-      console.log("⚖️ Performing Rebalance 3 ⚖️");
-
-      await pool.rebalanceWeights(await owner.getAddress());
-
-      totvals = await pool.computeTotalValuation();
-      console.log("Total Valuation: ", formatUnits(totvals[0], 18));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], 18));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], 18));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], 18));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], 18));
-
-      reservesAfter = await pool.getReserves();
-
-      console.log(
-        "📊 Reserves After Rebalance 3: ",
-        formatUnits(reservesAfter[0], 6),
-        formatUnits(reservesAfter[1], 6),
-        formatUnits(reservesAfter[2], 18),
-        formatUnits(reservesAfter[3], 8),
-      );
-
-      deviation = await pool.getDeviation();
-      console.log("📉 Deviation after Rebalance 3: ", deviation.toString());
-
-      console.log("⚖️ Performing Rebalance 4 ⚖️");
-
-      await pool.rebalanceWeights(await owner.getAddress());
-
-      reservesAfter = await pool.getReserves();
-
-      console.log(
-        "📊 Reserves After Rebalance 4: ",
-        formatUnits(reservesAfter[0], 6),
-        formatUnits(reservesAfter[1], 6),
-        formatUnits(reservesAfter[2], 18),
-        formatUnits(reservesAfter[3], 8),
-      );
-
-      deviation = await pool.getDeviation();
-      console.log("📉 Deviation after Rebalance 4: ", deviation.toString());
     });
   });
 });

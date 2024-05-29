@@ -452,9 +452,10 @@ contract BaluniV1Router is Initializable, BaluniToken, OwnableUpgradeable, Reent
     uint256[] calldata weights,
     address sender,
     address receiver,
-    uint256 limit
+    uint256 limit,
+    address baseAsset
   ) external {
-    rebalancer.rebalance(assets, weights, sender, receiver, limit);
+    rebalancer.rebalance(assets, weights, sender, receiver, limit, baseAsset);
   }
 
   /**

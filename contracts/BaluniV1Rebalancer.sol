@@ -142,9 +142,10 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     uint256[] calldata weights,
     address sender,
     address receiver,
-    uint256 limit
+    uint256 limit,
+    address baseAsset
   ) external override {
-    RebalanceVars memory vars = _checkRebalance(assets, weights, limit, sender);
+    RebalanceVars memory vars = _checkRebalance(assets, weights, limit, sender, baseAsset);
 
     for (uint256 i = 0; i < vars.overweightVaults.length; i++) {
       if (vars.overweightAmounts[i] > 0) {
@@ -230,9 +231,10 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     address[] calldata assets,
     uint256[] calldata weights,
     uint256 limit,
-    address sender
+    address sender,
+    address baseAsset
   ) public view override returns (RebalanceVars memory) {
-    return _checkRebalance(assets, weights, limit, sender);
+    return _checkRebalance(assets, weights, limit, sender, baseAsset);
   }
 
   /**
@@ -247,7 +249,8 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     address[] calldata assets,
     uint256[] calldata weights,
     uint256 limit,
-    address sender
+    address sender,
+    address baseAsset
   ) internal view returns (RebalanceVars memory) {
     uint256 totalValue = calculateTotalValue(assets, sender);
     RebalanceVars memory vars = RebalanceVars(
@@ -272,10 +275,12 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
 
       uint256 price = baluniRouter.tokenValuation(1 * 10 ** decimals, assets[i]);
 
-      if (assets[i] == address(USDC)) {
-        tokensTotalValue = vars.balances[i] * 1e12; // Adjust for USDC decimals (assumed to be 6)
+      if (assets[i] == address(baseAsset)) {
+        uint256 baseAssetDecimals = IERC20Metadata(baseAsset).decimals();
+        uint256 factor = 10 ** (18 - baseAssetDecimals);
+        tokensTotalValue = vars.balances[i] * factor;
       } else {
-        tokensTotalValue = (price * vars.balances[i] * (10 ** (18 - decimals))) / 1e18; // Correctly adjust for token decimals
+        tokensTotalValue = convert(assets[i], baseAsset, vars.balances[i]);
       }
 
       uint256 targetWeight = weights[i];
@@ -577,7 +582,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
    * @param amount The amount of tokens to convert.
    * @return The converted amount of tokens.
    */
-  function convert(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
+  function convert(address fromToken, address toToken, uint256 amount) public view returns (uint256) {
     uint256 rate;
 
     uint8 fromDecimal = IERC20Metadata(fromToken).decimals();

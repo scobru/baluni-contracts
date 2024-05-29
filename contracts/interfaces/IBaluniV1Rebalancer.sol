@@ -29,7 +29,8 @@ interface IBaluniV1Rebalancer {
     address[] calldata assets,
     uint256[] calldata weights,
     uint256 limit,
-    address sender
+    address sender,
+    address baseAsset
   ) external view returns (RebalanceVars memory);
 
   function rebalance(
@@ -37,7 +38,8 @@ interface IBaluniV1Rebalancer {
     uint256[] calldata weights,
     address sender,
     address receiver,
-    uint256 limit
+    uint256 limit,
+    address baseAsset
   ) external;
 
   function getBaluniRouter() external view returns (address);
