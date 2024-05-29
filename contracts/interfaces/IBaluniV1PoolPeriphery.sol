@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 interface IBaluniV1PoolPeriphery {
-  function moveAll() external;
+    function getReserves(address pool) external view returns (uint256[] memory);
 
-  function moveAsset(address asset, address to, uint256 amount) external;
+    function getAssetReserve(address pool, address asset) external view returns (uint256);
 }

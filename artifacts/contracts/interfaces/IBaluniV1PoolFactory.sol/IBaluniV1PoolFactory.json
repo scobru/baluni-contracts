@@ -4,6 +4,19 @@
   "sourceName": "contracts/interfaces/IBaluniV1PoolFactory.sol",
   "abi": [
     {
+      "inputs": [],
+      "name": "getAllPools",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",

@@ -176,7 +176,7 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
     periphery = _newPeriphery;
   }
 
-  function poolExist(address _pool) external returns (bool) {
+  function poolExist(address _pool) external view returns (bool) {
     for (uint256 i = 0; i < allPools.length; i++) {
       if (allPools[i] == _pool) {
         return true;

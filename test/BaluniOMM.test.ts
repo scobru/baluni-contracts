@@ -1,351 +1,360 @@
 /* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
-import { formatEther, formatUnits, Signer } from "ethers";
-import {
-  BaluniV1Pool,
-  BaluniV1PoolPeriphery,
-  MockRebalancer,
-  MockToken,
-  BaluniV1PoolFactory,
-} from "../typechain-types";
+import { expect } from 'chai'
+import { ethers, upgrades } from 'hardhat'
+import { formatEther, formatUnits, Signer } from 'ethers'
+import { BaluniV1Pool, BaluniV1PoolPeriphery, MockRebalancer, MockToken, BaluniV1PoolFactory } from '../typechain-types'
 
-import hre from "hardhat";
+import hre from 'hardhat'
 
-describe("BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery", function () {
-  let pool: BaluniV1Pool;
-  let periphery: BaluniV1PoolPeriphery;
-  let factory: BaluniV1PoolFactory;
-  let rebalancer: MockRebalancer;
-  let usdc: MockToken;
-  let usdt: MockToken;
-  let wmatic: MockToken;
-  let weth: MockToken;
-  let wbtc: MockToken;
-  let owner: Signer;
-  let addr1: Signer;
-  let addr2: Signer;
-  let baseAddress: string;
+describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function () {
+  let pool: BaluniV1Pool
+  let periphery: BaluniV1PoolPeriphery
+  let factory: BaluniV1PoolFactory
+  let rebalancer: MockRebalancer
+  let usdc: MockToken
+  let usdt: MockToken
+  let wmatic: MockToken
+  let weth: MockToken
+  let wbtc: MockToken
+  let owner: Signer
+  let addr1: Signer
+  let addr2: Signer
+  let baseAddress: string
 
   beforeEach(async function () {
-    [owner, addr1, addr2] = await ethers.getSigners();
+    ;[owner, addr1, addr2] = await ethers.getSigners()
 
     // Deploy Mock Tokens
-    const MockToken = await hre.ethers.getContractFactory("MockToken");
-    usdc = (await MockToken.deploy("USD Coin", "USDC", 6)) as MockToken;
-    await usdc.waitForDeployment();
-    usdt = (await MockToken.deploy("Tether USD", "USDT", 6)) as MockToken;
-    await usdt.waitForDeployment();
-    wmatic = (await MockToken.deploy("WMATIC", "WMATIC", 18)) as MockToken;
-    await wmatic.waitForDeployment();
-    weth = (await MockToken.deploy("Wrapped Ether", "WETH", 18)) as MockToken;
-    await weth.waitForDeployment();
-    wbtc = (await MockToken.deploy("Wrapped Bitcoin", "WBTC", 8)) as MockToken;
-    await wbtc.waitForDeployment();
+    const MockToken = await hre.ethers.getContractFactory('MockToken')
+    usdc = (await MockToken.deploy('USD Coin', 'USDC', 6)) as MockToken
+    await usdc.waitForDeployment()
+    usdt = (await MockToken.deploy('Tether USD', 'USDT', 6)) as MockToken
+    await usdt.waitForDeployment()
+    wmatic = (await MockToken.deploy('WMATIC', 'WMATIC', 18)) as MockToken
+    await wmatic.waitForDeployment()
+    weth = (await MockToken.deploy('Wrapped Ether', 'WETH', 18)) as MockToken
+    await weth.waitForDeployment()
+    wbtc = (await MockToken.deploy('Wrapped Bitcoin', 'WBTC', 8)) as MockToken
+    await wbtc.waitForDeployment()
 
     // Deploy Mock Rebalancer
-    const MockRebalancer = await hre.ethers.getContractFactory("MockRebalancer");
+    const MockRebalancer = await hre.ethers.getContractFactory('MockRebalancer')
     rebalancer = (await MockRebalancer.deploy(
       await usdt.getAddress(),
       await usdc.getAddress(),
       await wmatic.getAddress(),
       await weth.getAddress(),
-      await wbtc.getAddress(),
-    )) as MockRebalancer;
-    await rebalancer.waitForDeployment();
+      await wbtc.getAddress()
+    )) as MockRebalancer
+    await rebalancer.waitForDeployment()
 
     // Deploy BaluniV1PoolFactory
-    const BaluniV1PoolFactory = await hre.ethers.getContractFactory("BaluniV1PoolFactory");
+    const BaluniV1PoolFactory = await hre.ethers.getContractFactory('BaluniV1PoolFactory')
     factory = (await upgrades.deployProxy(BaluniV1PoolFactory, [
       await rebalancer.getAddress(),
-    ])) as unknown as BaluniV1PoolFactory;
-    await factory.waitForDeployment();
+    ])) as unknown as BaluniV1PoolFactory
+    await factory.waitForDeployment()
 
     // Deploy BaluniV1PoolPeriphery
-    const BaluniV1PoolPeriphery = await hre.ethers.getContractFactory("BaluniV1PoolPeriphery");
+    const BaluniV1PoolPeriphery = await hre.ethers.getContractFactory('BaluniV1PoolPeriphery')
     periphery = (await upgrades.deployProxy(BaluniV1PoolPeriphery, [
       await factory.getAddress(),
-    ])) as unknown as BaluniV1PoolPeriphery;
-    await periphery.waitForDeployment();
+    ])) as unknown as BaluniV1PoolPeriphery
+    await periphery.waitForDeployment()
 
-    await factory.changePeriphery(await periphery.getAddress());
+    await factory.changePeriphery(await periphery.getAddress())
 
     // Mint tokens for the owner
-    await usdc.mint(await owner.getAddress(), ethers.parseUnits("100000", 6));
-    await usdt.mint(await owner.getAddress(), ethers.parseUnits("100000", 6));
-    await wbtc.mint(await owner.getAddress(), ethers.parseUnits("100000", 8));
-    await weth.mint(await owner.getAddress(), ethers.parseUnits("100000", 18));
+    await usdc.mint(await owner.getAddress(), ethers.parseUnits('100000', 6))
+    await usdt.mint(await owner.getAddress(), ethers.parseUnits('100000', 6))
+    await wbtc.mint(await owner.getAddress(), ethers.parseUnits('100000', 8))
+    await weth.mint(await owner.getAddress(), ethers.parseUnits('100000', 18))
 
     // Create a new pool
     await factory.createPool(
       [await usdc.getAddress(), await usdt.getAddress(), await weth.getAddress(), await wbtc.getAddress()],
       [2500, 2500, 2500, 2500],
-      50,
-    );
-    const poolAddress = await factory.getPoolByAssets(await usdc.getAddress(), await usdt.getAddress());
-    pool = (await ethers.getContractAt("BaluniV1Pool", poolAddress)) as BaluniV1Pool;
+      50
+    )
+    const poolAddress = await factory.getPoolByAssets(await usdc.getAddress(), await usdt.getAddress())
+    pool = (await ethers.getContractAt('BaluniV1Pool', poolAddress)) as BaluniV1Pool
 
-    await rebalancer.setTreasury(await owner.getAddress());
+    await rebalancer.setTreasury(await owner.getAddress())
 
-    baseAddress = await pool.baseAsset();
-  });
+    baseAddress = await pool.baseAsset()
+  })
 
-  describe("Minting and Burn", function () {
-    it("should mint LP tokens correctly 🪙", async function () {
-      await usdc.approve(await periphery.getAddress(), ethers.parseUnits("6000", 6));
-      await usdt.approve(await periphery.getAddress(), ethers.parseUnits("4000", 6));
-      await weth.approve(await periphery.getAddress(), ethers.parseUnits("4000", 18));
-      await wbtc.approve(await periphery.getAddress(), ethers.parseUnits("4000", 8));
+  describe('Minting and Burn', function () {
+    it('should mint LP tokens correctly 🪙', async function () {
+      await usdc.approve(await periphery.getAddress(), ethers.parseUnits('6000', 6))
+      await usdt.approve(await periphery.getAddress(), ethers.parseUnits('4000', 6))
+      await weth.approve(await periphery.getAddress(), ethers.parseUnits('4000', 18))
+      await wbtc.approve(await periphery.getAddress(), ethers.parseUnits('4000', 8))
 
-      console.log("🪙 Minting LP Tokens 🪙");
-      console.log("USDC Balance:", formatUnits(await usdc.balanceOf(await owner.getAddress()), 6));
-      console.log("USDT Balance:", formatUnits(await usdt.balanceOf(await owner.getAddress()), 6));
-
-      await periphery.addLiquidity(
-        [
-          ethers.parseUnits("6000", 6),
-          ethers.parseUnits("4000", 6),
-          ethers.parseUnits("10", 18),
-          ethers.parseUnits("10", 8),
-        ],
-        await pool.getAddress(),
-        await owner.getAddress(),
-      );
-      const balance = await pool.balanceOf(await owner.getAddress());
-
-      expect(balance).to.be.gt(0);
-      expect(await pool.totalSupply()).to.equal(balance);
-
-      const lpBalance = await pool.balanceOf(await owner.getAddress());
-      console.log("LP Balance: ", ethers.formatEther(lpBalance.toString()));
-
-      await pool.approve(await periphery.getAddress(), lpBalance);
-      await periphery.connect(owner).removeLiquidity(lpBalance, await pool.getAddress(), await owner.getAddress());
-
-      const pooFee = await pool.SWAP_FEE_BPS();
-      const fee = (lpBalance * BigInt(pooFee) * 1n) / 10000n;
-
-      expect(await pool.totalSupply()).to.equal(BigInt(fee));
-      console.log("✅ LP Tokens Minted Successfully ✅");
-    });
-  });
-
-  describe("Swapping", function () {
-    it("should swap USDC to USDT correctly using periphery 🔄", async function () {
-      await usdc.approve(await periphery.getAddress(), ethers.parseUnits("6000", 6));
-      await usdt.approve(await periphery.getAddress(), ethers.parseUnits("4000", 6));
-      await wbtc.approve(await periphery.getAddress(), ethers.parseUnits("4000", 8));
-      await weth.approve(await periphery.getAddress(), ethers.parseUnits("4000", 18));
-
-      console.log("🔄 Swapping USDC to USDT 🔄");
+      console.log('🪙 Minting LP Tokens 🪙')
+      console.log('USDC Balance:', formatUnits(await usdc.balanceOf(await owner.getAddress()), 6))
+      console.log('USDT Balance:', formatUnits(await usdt.balanceOf(await owner.getAddress()), 6))
 
       await periphery.addLiquidity(
         [
-          ethers.parseUnits("6000", 6),
-          ethers.parseUnits("4000", 6),
-          ethers.parseUnits("1", 18),
-          ethers.parseUnits("1", 8),
+          ethers.parseUnits('1000', 6),
+          ethers.parseUnits('1000', 6),
+          ethers.parseUnits('0.24631000000000003', 18),
+          ethers.parseUnits('0.01405', 8),
         ],
         await pool.getAddress(),
-        await owner.getAddress(),
-      );
+        await owner.getAddress()
+      )
+      const balance = await pool.balanceOf(await owner.getAddress())
 
-      await usdc.transfer(await addr1.getAddress(), ethers.parseUnits("100", 6));
-      usdc.connect(addr1).approve(await periphery.getAddress(), ethers.parseUnits("100", 6));
+      expect(balance).to.be.gt(0)
+      expect(await pool.totalSupply()).to.equal(balance)
+
+      let baseDecimals
+
+      if (baseAddress == (await usdc.getAddress())) {
+        baseDecimals = await usdc.decimals()
+      } else if (baseAddress == (await wmatic.getAddress())) {
+        baseDecimals = await wmatic.decimals()
+      }
+
+      const lpBalance = await pool.balanceOf(await owner.getAddress())
+
+      console.log('LP Balance: ', ethers.formatUnits(lpBalance.toString(), 18))
+      console.log('USDC Balance:', formatUnits(await usdc.balanceOf(await owner.getAddress()), 6))
+      console.log('USDT Balance:', formatUnits(await usdt.balanceOf(await owner.getAddress()), 6))
+
+      const totvals = await pool.computeTotalValuation()
+      console.log('Total Valuation: ', formatUnits(totvals[0], baseDecimals))
+      console.log('Valuation USDC: ', formatUnits(totvals[1][0], baseDecimals))
+      console.log('Valuation USDT: ', formatUnits(totvals[1][1], baseDecimals))
+      console.log('Valuation WETH: ', formatUnits(totvals[1][2], baseDecimals))
+      console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
+
+      console.log('🪙 Burnning LP Tokens 🪙')
+
+      await pool.approve(await periphery.getAddress(), lpBalance)
+      await periphery.connect(owner).removeLiquidity(lpBalance, await pool.getAddress(), await owner.getAddress())
+
+      const pooFee = await pool.SWAP_FEE_BPS()
+      const fee = (lpBalance * BigInt(pooFee) * 1n) / 10000n
+
+      expect(await pool.totalSupply()).to.equal(BigInt(fee))
+      console.log('✅ LP Tokens Minted Successfully ✅')
+    })
+  })
+
+  describe('Swapping', function () {
+    it('should swap USDC to USDT correctly using periphery 🔄', async function () {
+      await usdc.approve(await periphery.getAddress(), ethers.parseUnits('6000', 6))
+      await usdt.approve(await periphery.getAddress(), ethers.parseUnits('4000', 6))
+      await wbtc.approve(await periphery.getAddress(), ethers.parseUnits('4000', 8))
+      await weth.approve(await periphery.getAddress(), ethers.parseUnits('4000', 18))
+
+      console.log('🔄 Swapping USDC to USDT 🔄')
+
+      await periphery.addLiquidity(
+        [
+          ethers.parseUnits('1000', 6),
+          ethers.parseUnits('1000', 6),
+          ethers.parseUnits('0.24631000000000003', 18),
+          ethers.parseUnits('0.01405', 8),
+        ],
+        await pool.getAddress(),
+        await owner.getAddress()
+      )
+
+      await usdc.transfer(await addr1.getAddress(), ethers.parseUnits('100', 6))
+      usdc.connect(addr1).approve(await periphery.getAddress(), ethers.parseUnits('100', 6))
 
       await periphery
         .connect(addr1)
-        .swap(await usdc.getAddress(), await usdt.getAddress(), ethers.parseUnits("100", 6), await addr1.getAddress());
-      const usdtBalance = await usdt.balanceOf(await addr1.getAddress());
+        .swap(await usdc.getAddress(), await usdt.getAddress(), ethers.parseUnits('100', 6), await addr1.getAddress())
+      const usdtBalance = await usdt.balanceOf(await addr1.getAddress())
 
-      console.log("USDT Balance after swap: ", formatUnits(usdtBalance.toString(), 6));
-      expect(usdtBalance).to.be.gt(ethers.parseUnits("97", 6));
-      console.log("✅ Swap Completed Successfully ✅");
-    });
-  });
+      console.log('USDT Balance after swap: ', formatUnits(usdtBalance.toString(), 6))
+      expect(usdtBalance).to.be.gt(ethers.parseUnits('97', 6))
+      console.log('✅ Swap Completed Successfully ✅')
+    })
+  })
 
-  describe("Swapping and Rebalance", function () {
-    it("should swap USDC to USDT correctly using periphery and rebalance the pool 🔄⚖️", async function () {
-      await usdc.approve(await periphery.getAddress(), ethers.MaxUint256);
-      await usdt.approve(await periphery.getAddress(), ethers.MaxUint256);
-      await weth.approve(await periphery.getAddress(), ethers.MaxUint256);
-      await wbtc.approve(await periphery.getAddress(), ethers.MaxUint256);
+  describe('Swapping and Rebalance', function () {
+    it('should swap USDC to USDT correctly using periphery and rebalance the pool 🔄⚖️', async function () {
+      await usdc.approve(await periphery.getAddress(), ethers.MaxUint256)
+      await usdt.approve(await periphery.getAddress(), ethers.MaxUint256)
+      await weth.approve(await periphery.getAddress(), ethers.MaxUint256)
+      await wbtc.approve(await periphery.getAddress(), ethers.MaxUint256)
 
       await periphery.addLiquidity(
         [
-          ethers.parseUnits("1000", 6),
-          ethers.parseUnits("1000", 6),
-          ethers.parseUnits("0.24631000000000003", 18),
-          ethers.parseUnits("0.01405", 8),
+          ethers.parseUnits('1000', 6),
+          ethers.parseUnits('1000', 6),
+          ethers.parseUnits('0.24631000000000003', 18),
+          ethers.parseUnits('0.01405', 8),
         ],
         await pool.getAddress(),
-        await owner.getAddress(),
-      );
+        await owner.getAddress()
+      )
 
-      let totvals = await pool.computeTotalValuation();
+      let totvals = await pool.computeTotalValuation()
 
-      let baseDecimals;
+      let baseDecimals
 
       if (baseAddress == (await usdc.getAddress())) {
-        baseDecimals = await usdc.decimals();
+        baseDecimals = await usdc.decimals()
       } else if (baseAddress == (await wmatic.getAddress())) {
-        baseDecimals = await wmatic.decimals();
+        baseDecimals = await wmatic.decimals()
       }
 
-      console.log("Total Valuation: ", formatUnits(totvals[0], baseDecimals));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], baseDecimals));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], baseDecimals));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], baseDecimals));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], baseDecimals));
+      console.log('Total Valuation: ', formatUnits(totvals[0], baseDecimals))
+      console.log('Valuation USDC: ', formatUnits(totvals[1][0], baseDecimals))
+      console.log('Valuation USDT: ', formatUnits(totvals[1][1], baseDecimals))
+      console.log('Valuation WETH: ', formatUnits(totvals[1][2], baseDecimals))
+      console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
 
-      const reservesB4Swap = await pool.getReserves();
+      const reservesB4Swap = await pool.getReserves()
       console.log(
-        "📊 Reserves Before Swap: ",
+        '📊 Reserves Before Swap: ',
         formatUnits(reservesB4Swap[0], 6),
         formatUnits(reservesB4Swap[1], 6),
         formatUnits(reservesB4Swap[2], 18),
-        formatUnits(reservesB4Swap[3], 8),
-      );
+        formatUnits(reservesB4Swap[3], 8)
+      )
 
-      await usdt.transfer(await addr1.getAddress(), ethers.parseUnits("10000", 6));
-      usdt.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256);
+      await usdt.transfer(await addr1.getAddress(), ethers.parseUnits('10000', 6))
+      usdt.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
 
-      await usdc.transfer(await addr1.getAddress(), ethers.parseUnits("10000", 6));
-      usdc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256);
+      await usdc.transfer(await addr1.getAddress(), ethers.parseUnits('10000', 6))
+      usdc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
 
-      await weth.transfer(await addr1.getAddress(), ethers.parseUnits("10", 18));
-      weth.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256);
+      await weth.transfer(await addr1.getAddress(), ethers.parseUnits('10', 18))
+      weth.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
 
-      await wbtc.transfer(await addr1.getAddress(), ethers.parseUnits("10", 8));
-      wbtc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256);
+      await wbtc.transfer(await addr1.getAddress(), ethers.parseUnits('10', 8))
+      wbtc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
 
       // SWAP
-      console.log("🔄 Performing Swap: USDC to WETH 🔄");
+      console.log('🔄 Performing Swap: USDC to WETH 🔄')
       await periphery
         .connect(addr1)
-        .swap(await usdc.getAddress(), await weth.getAddress(), ethers.parseUnits("200", 6), await addr1.getAddress());
+        .swap(await usdc.getAddress(), await weth.getAddress(), ethers.parseUnits('200', 6), await addr1.getAddress())
 
-      console.log("🔄 Performing Swap: WBTC to WETH 🔄");
+      console.log('🔄 Performing Swap: WBTC to WETH 🔄')
       await periphery
         .connect(addr1)
-        .swap(
-          await wbtc.getAddress(),
-          await weth.getAddress(),
-          ethers.parseUnits("0.005", 8),
-          await addr1.getAddress(),
-        );
+        .swap(await wbtc.getAddress(), await weth.getAddress(), ethers.parseUnits('0.005', 8), await addr1.getAddress())
 
-      console.log("🔄 Performing Swap: USDC to WBTC 🔄");
+      console.log('🔄 Performing Swap: USDC to WBTC 🔄')
       await periphery
         .connect(addr1)
-        .swap(await usdt.getAddress(), await wbtc.getAddress(), ethers.parseUnits("100", 6), await addr1.getAddress());
+        .swap(await usdt.getAddress(), await wbtc.getAddress(), ethers.parseUnits('100', 6), await addr1.getAddress())
 
-      let deviation = await pool.getDeviation();
+      let deviation = await pool.getDeviation()
 
-      console.log("📉 Deviation after swap: ", deviation.toString());
+      console.log('📉 Deviation after swap: ', deviation.toString())
 
-      totvals = await pool.computeTotalValuation();
-      console.log("Total Valuation: ", formatUnits(totvals[0], baseDecimals));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], baseDecimals));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], baseDecimals));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], baseDecimals));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], baseDecimals));
+      totvals = await pool.computeTotalValuation()
+      console.log('Total Valuation: ', formatUnits(totvals[0], baseDecimals))
+      console.log('Valuation USDC: ', formatUnits(totvals[1][0], baseDecimals))
+      console.log('Valuation USDT: ', formatUnits(totvals[1][1], baseDecimals))
+      console.log('Valuation WETH: ', formatUnits(totvals[1][2], baseDecimals))
+      console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
 
-      const reservesBefore = await pool.getReserves();
+      const reservesBefore = await pool.getReserves()
 
       console.log(
-        "📊 Reserves Before Rebalance: ",
+        '📊 Reserves Before Rebalance: ',
         formatUnits(reservesBefore[0], 6),
         formatUnits(reservesBefore[1], 6),
         formatUnits(reservesBefore[2], 18),
-        formatUnits(reservesBefore[3], 8),
-      );
+        formatUnits(reservesBefore[3], 8)
+      )
 
-      await usdc.approve(await pool.getAddress(), ethers.MaxUint256);
-      await usdt.approve(await pool.getAddress(), ethers.MaxUint256);
-      await wbtc.approve(await pool.getAddress(), ethers.MaxUint256);
-      await weth.approve(await pool.getAddress(), ethers.MaxUint256);
+      await usdc.approve(await periphery.getAddress(), ethers.MaxUint256)
+      await usdt.approve(await periphery.getAddress(), ethers.MaxUint256)
+      await wbtc.approve(await periphery.getAddress(), ethers.MaxUint256)
+      await weth.approve(await periphery.getAddress(), ethers.MaxUint256)
 
-      console.log("⚖️ Performing Rebalance 1 ⚖️");
+      console.log('⚖️ Performing Rebalance 1 ⚖️')
 
-      await pool.rebalanceWeights(await owner.getAddress());
+      await periphery.rebalanceWeights(await pool.getAddress(), await owner.getAddress())
 
-      totvals = await pool.computeTotalValuation();
-      console.log("Total Valuation: ", formatUnits(totvals[0], baseDecimals));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], baseDecimals));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], baseDecimals));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], baseDecimals));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], baseDecimals));
+      totvals = await pool.computeTotalValuation()
+      console.log('Total Valuation: ', formatUnits(totvals[0], baseDecimals))
+      console.log('Valuation USDC: ', formatUnits(totvals[1][0], baseDecimals))
+      console.log('Valuation USDT: ', formatUnits(totvals[1][1], baseDecimals))
+      console.log('Valuation WETH: ', formatUnits(totvals[1][2], baseDecimals))
+      console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
 
-      let reservesAfter = await pool.getReserves();
+      let reservesAfter = await pool.getReserves()
 
       console.log(
-        "📊 Reserves After Rebalance 1: ",
+        '📊 Reserves After Rebalance 1: ',
         formatUnits(reservesAfter[0], 6),
         formatUnits(reservesAfter[1], 6),
         formatUnits(reservesAfter[2], 18),
-        formatUnits(reservesAfter[3], 8),
-      );
+        formatUnits(reservesAfter[3], 8)
+      )
 
-      deviation = await pool.getDeviation();
-      console.log("📉 Deviation after Rebalance 1: ", deviation.toString());
+      deviation = await pool.getDeviation()
+      console.log('📉 Deviation after Rebalance 1: ', deviation.toString())
 
-      console.log("⚖️ Performing Rebalance 2 ⚖️");
+      console.log('⚖️ Performing Rebalance 2 ⚖️')
 
-      await pool.rebalanceWeights(await owner.getAddress());
+      await periphery.rebalanceWeights(await pool.getAddress(), await owner.getAddress())
 
-      totvals = await pool.computeTotalValuation();
-      console.log("Total Valuation: ", formatUnits(totvals[0], baseDecimals));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], baseDecimals));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], baseDecimals));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], baseDecimals));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], baseDecimals));
+      totvals = await pool.computeTotalValuation()
+      console.log('Total Valuation: ', formatUnits(totvals[0], baseDecimals))
+      console.log('Valuation USDC: ', formatUnits(totvals[1][0], baseDecimals))
+      console.log('Valuation USDT: ', formatUnits(totvals[1][1], baseDecimals))
+      console.log('Valuation WETH: ', formatUnits(totvals[1][2], baseDecimals))
+      console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
 
-      reservesAfter = await pool.getReserves();
+      reservesAfter = await pool.getReserves()
 
       console.log(
-        "📊 Reserves After Rebalance 2: ",
+        '📊 Reserves After Rebalance 2: ',
         formatUnits(reservesAfter[0], 6),
         formatUnits(reservesAfter[1], 6),
         formatUnits(reservesAfter[2], 18),
-        formatUnits(reservesAfter[3], 8),
-      );
+        formatUnits(reservesAfter[3], 8)
+      )
 
-      deviation = await pool.getDeviation();
-      console.log("📉 Deviation after Rebalance 2: ", deviation.toString());
+      deviation = await pool.getDeviation()
+      console.log('📉 Deviation after Rebalance 2: ', deviation.toString())
 
-      const toTokens = [await wbtc.getAddress(), await usdc.getAddress()];
-      const fromTokens = [await weth.getAddress(), await weth.getAddress()];
-      const amounts = [ethers.parseUnits("0.01", 8), ethers.parseUnits("100", 6)];
-      const receivers = [await addr1.getAddress(), await addr1.getAddress()];
+      const toTokens = [await wbtc.getAddress(), await usdc.getAddress()]
+      const fromTokens = [await weth.getAddress(), await weth.getAddress()]
+      const amounts = [ethers.parseUnits('0.01', 8), ethers.parseUnits('100', 6)]
+      const receivers = [await addr1.getAddress(), await addr1.getAddress()]
 
-      usdt.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256);
-      usdc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256);
-      weth.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256);
-      wbtc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256);
+      usdt.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+      usdc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+      weth.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+      wbtc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
 
       // BATCH SWAP
-      console.log("🔄 Performing Batch Swap 🔄");
-      await periphery.connect(addr1).batchSwap(fromTokens, toTokens, amounts, receivers);
+      console.log('🔄 Performing Batch Swap 🔄')
+      await periphery.connect(addr1).batchSwap(fromTokens, toTokens, amounts, receivers)
 
-      reservesAfter = await pool.getReserves();
+      reservesAfter = await pool.getReserves()
 
-      totvals = await pool.computeTotalValuation();
-      console.log("Total Valuation: ", formatUnits(totvals[0], baseDecimals));
-      console.log("Valuation USDC: ", formatUnits(totvals[1][0], baseDecimals));
-      console.log("Valuation USDT: ", formatUnits(totvals[1][1], baseDecimals));
-      console.log("Valuation WETH: ", formatUnits(totvals[1][2], baseDecimals));
-      console.log("Valuation WBTC: ", formatUnits(totvals[1][3], baseDecimals));
+      totvals = await pool.computeTotalValuation()
+      console.log('Total Valuation: ', formatUnits(totvals[0], baseDecimals))
+      console.log('Valuation USDC: ', formatUnits(totvals[1][0], baseDecimals))
+      console.log('Valuation USDT: ', formatUnits(totvals[1][1], baseDecimals))
+      console.log('Valuation WETH: ', formatUnits(totvals[1][2], baseDecimals))
+      console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
 
       console.log(
-        "📊 Reserves After Batch Swap: ",
+        '📊 Reserves After Batch Swap: ',
         formatUnits(reservesAfter[0], 6),
         formatUnits(reservesAfter[1], 6),
         formatUnits(reservesAfter[2], 18),
-        formatUnits(reservesAfter[3], 8),
-      );
-    });
-  });
-});
+        formatUnits(reservesAfter[3], 8)
+      )
+    })
+  })
+})

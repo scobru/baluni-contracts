@@ -20,23 +20,19 @@ interface IBaluniV1Rebalancer {
   }
 
   // Variables
-  function baluniRouter() external view returns (IBaluniV1Router);
+  function baluniRouter() external view returns (address);
 
-  function USDC() external view returns (IERC20);
+  function USDC() external view returns (address);
 
-  function WNATIVE() external view returns (IERC20Metadata);
+  function WNATIVE() external view returns (address);
 
-  function uniswapRouter() external view returns (ISwapRouter);
+  function uniswapRouter() external view returns (address);
 
-  function uniswapFactory() external view returns (IUniswapV3Factory);
+  function uniswapFactory() external view returns (address);
 
-  function _1InchSpotAgg() external view returns (I1inchSpotAgg);
+  function _1InchSpotAgg() external view returns (address);
 
   function treasury() external view returns (address);
-
-  function usdc() external view returns (address);
-
-  function wnative() external view returns (address);
 
   // Functions
   function rebalance(
@@ -57,21 +53,6 @@ interface IBaluniV1Rebalancer {
     address sender,
     address baseAsset
   ) external view returns (RebalanceVars memory);
-
-  function singleSwap(
-    address token0,
-    address token1,
-    uint256 amount,
-    address receiver
-  ) external returns (uint256 amountOut);
-
-  function multiHopSwap(
-    address token0,
-    address token1,
-    address token2,
-    uint256 amount,
-    address receiver
-  ) external returns (uint256 amountOut);
 
   function convert(address fromToken, address toToken, uint256 amount) external view returns (uint256);
 }

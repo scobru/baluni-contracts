@@ -47,60 +47,135 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
 abstract contract BaluniV1Uniswapper {
-  ISwapRouter public uniswapRouter;
-  IUniswapV3Factory public uniswapFactory;
+    address private uniswapRouter;
+    address private uniswapFactory;
 
-  /**
-   * @dev Executes a single swap on Uniswap.
-   * @param token0 The address of the input token.
-   * @param token1 The address of the output token.
-   * @param tokenBalance The amount of input token to be swapped.
-   * @param receiver The address that will receive the swapped tokens.
-   * @return amountOut The amount of output tokens received.
-   */
-  function _singleSwap(
-    address token0,
-    address token1,
-    uint256 tokenBalance,
-    address receiver
-  ) private returns (uint256 amountOut) {
-    ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-      tokenIn: token0,
-      tokenOut: token1,
-      fee: 3000,
-      recipient: address(receiver),
-      deadline: block.timestamp,
-      amountIn: tokenBalance,
-      amountOutMinimum: 0,
-      sqrtPriceLimitX96: 0
-    });
+    /**
+     * @dev Executes a single swap between two tokens using Uniswap.
+     * @param token0 The address of the token to be swapped.
+     * @param token1 The address of the token to be received.
+     * @param amount The amount of token0 to be swapped.
+     * @param receiver The address that will receive the swapped tokens.
+     * @return amountOut The amount of token1 received from the swap.
+     *
+     * The function requires that the caller has a sufficient balance of token0 and that the amount to be swapped is greater than 0.
+     * Also, the caller must have approved this contract to spend the amount of token0.
+     * The function transfers the amount of token0 to be swapped from the caller to this contract, then performs the swap using Uniswap.
+     * The swapped tokens are sent to the receiver's address.
+     * The function returns the amount of token1 received from the swap.
+     */
+    function singleSwap(
+        address token0,
+        address token1,
+        uint256 amount,
+        address receiver
+    ) external returns (uint256 amountOut) {
+        require(msg.sender != address(this), 'Wrong sender');
+        require(amount > 0, 'Amount is 0');
+        require(IERC20(token0).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
+        IERC20(token0).transferFrom(msg.sender, address(this), amount);
+        secureApproval(token0, address(uniswapRouter), amount);
+        return _singleSwap(token0, token1, amount, receiver);
+    }
 
-    return uniswapRouter.exactInputSingle(params);
-  }
+    /**
+     * @dev Executes a multi-hop swap between three tokens using Uniswap.
+     * @param token0 The address of the token to be swapped.
+     * @param token1 The address of the intermediate token to be used for the swap.
+     * @param token2 The address of the final token to be received.
+     * @param amount The amount of token0 to be swapped.
+     * @param receiver The address that will receive the swapped tokens.
+     * @return amountOut The amount of token2 received from the swap.
+     *
+     * The function requires that the caller has a sufficient balance of token0 and that the amount to be swapped is greater than 0.
+     * Also, the caller must have approved this contract to spend the amount of token0.
+     * The function transfers the amount of token0 to be swapped from the caller to this contract, then performs the swap using Uniswap.
+     * The swapped tokens are sent to the receiver's address.
+     * The function returns the amount of token2 received from the swap.
+     */
+    function multiHopSwap(
+        address token0,
+        address token1,
+        address token2,
+        uint256 amount,
+        address receiver
+    ) external returns (uint256 amountOut) {
+        require(msg.sender != address(this), 'Wrong sender');
+        require(amount > 0, 'Amount is 0');
+        require(IERC20(token0).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
+        IERC20(token0).transferFrom(msg.sender, address(this), amount);
+        secureApproval(token0, address(uniswapRouter), amount);
+        return _multiHopSwap(token0, token1, token2, amount, receiver);
+    }
 
-  /**
-   * @dev Executes a multi-hop swap using the Uniswap router.
-   * @param token0 The address of the first token in the swap path.
-   * @param token1 The address of the second token in the swap path.
-   * @param token2 The address of the third token in the swap path.
-   * @param tokenBalance The amount of tokens to be swapped.
-   * @param receiver The address that will receive the swapped tokens.
-   * @return amountOut The amount of tokens received after the swap.
-   */
-  function _multiHopSwap(
-    address token0,
-    address token1,
-    address token2,
-    uint256 tokenBalance,
-    address receiver
-  ) private returns (uint256 amountOut) {
-    ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
-      path: abi.encodePacked(token0, uint24(3000), token1, uint24(3000), token2),
-      recipient: address(receiver),
-      deadline: block.timestamp,
-      amountIn: tokenBalance,
-      amountOutMinimum: 0
-    });
-    return uniswapRouter.exactInput(params);
-  }
+    /**
+     * @dev Executes a single swap on Uniswap.
+     * @param token0 The address of the input token.
+     * @param token1 The address of the output token.
+     * @param tokenBalance The amount of input token to be swapped.
+     * @param receiver The address that will receive the swapped tokens.
+     * @return amountOut The amount of output tokens received.
+     */
+    function _singleSwap(
+        address token0,
+        address token1,
+        uint256 tokenBalance,
+        address receiver
+    ) internal returns (uint256 amountOut) {
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+            tokenIn: token0,
+            tokenOut: token1,
+            fee: 3000,
+            recipient: address(receiver),
+            deadline: block.timestamp,
+            amountIn: tokenBalance,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        });
+
+        return ISwapRouter(uniswapRouter).exactInputSingle(params);
+    }
+
+    /**
+     * @dev Executes a multi-hop swap using the Uniswap router.
+     * @param token0 The address of the first token in the swap path.
+     * @param token1 The address of the second token in the swap path.
+     * @param token2 The address of the third token in the swap path.
+     * @param tokenBalance The amount of tokens to be swapped.
+     * @param receiver The address that will receive the swapped tokens.
+     * @return amountOut The amount of tokens received after the swap.
+     */
+    function _multiHopSwap(
+        address token0,
+        address token1,
+        address token2,
+        uint256 tokenBalance,
+        address receiver
+    ) internal returns (uint256 amountOut) {
+        ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
+            path: abi.encodePacked(token0, uint24(3000), token1, uint24(3000), token2),
+            recipient: address(receiver),
+            deadline: block.timestamp,
+            amountIn: tokenBalance,
+            amountOutMinimum: 0
+        });
+        return ISwapRouter(uniswapRouter).exactInput(params);
+    }
+
+    /**
+     * @dev Ensures that the contract has the necessary approval for a token to be spent by a spender.
+     * If the current allowance is not equal to the desired amount, it updates the allowance accordingly.
+     * @param token The address of the token to be approved.
+     * @param spender The address of the spender.
+     * @param amount The desired allowance amount.
+     * @notice This function is internal and should not be called directly.
+     */
+    function secureApproval(address token, address spender, uint256 amount) internal {
+        IERC20 _token = IERC20(token);
+        // check allowance thena pprove
+        if (_token.allowance(address(this), spender) < amount) {
+            _token.approve(spender, 0);
+            _token.approve(spender, amount);
+        }
+    }
 }

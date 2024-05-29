@@ -47,16 +47,10 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
 import './interfaces/IBaluniV1AgentFactory.sol';
-import './interfaces/IBaluniV1Agent.sol';
-import './interfaces/IBaluniV1MarketOracle.sol';
 import './interfaces/IBaluniV1Rebalancer.sol';
 import './libs/EnumerableSetUpgradeable.sol';
 import './BaluniToken.sol';
 import './BaluniV1Uniswapper.sol';
-
-interface I1inchSpotAgg {
-  function getRate(IERC20 srcToken, IERC20 dstToken, bool useWrappers) external view returns (uint256 weightedRate);
-}
 
 contract BaluniV1Router is
   Initializable,
@@ -77,16 +71,14 @@ contract BaluniV1Router is
   uint256 public _BPS_BASE;
 
   EnumerableSetUpgradeable.AddressSet private tokens;
-  IERC20 private USDC;
-  IERC20Metadata private WNATIVE;
-  I1inchSpotAgg private oracle;
-  ISwapRouter private uniswapRouter;
-  IUniswapV3Factory private uniswapFactory;
-  IBaluniV1AgentFactory public agentFactory;
-  IBaluniV1MarketOracle public marketOracle;
-  IBaluniV1Rebalancer public rebalancer;
-
+  address public USDC;
+  address public WNATIVE;
+  address public oracle;
+  address public agentFactory;
+  address public rebalancer;
   address public treasury;
+  address private uniswapRouter;
+  address private uniswapFactory;
 
   using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
@@ -120,13 +112,13 @@ contract BaluniV1Router is
     _MAX_BPS_FEE = 500;
     _BPS_FEE = 30; // 0.3%.
     _BPS_BASE = 10000;
-    USDC = IERC20(_usdc);
-    WNATIVE = IERC20Metadata(_wnative);
-    oracle = I1inchSpotAgg(_1inchSpotAgg); // 1inch Spot Aggregator
-    uniswapRouter = ISwapRouter(_uniRouter);
-    uniswapFactory = IUniswapV3Factory(_uniFactory);
+    USDC = _usdc;
+    WNATIVE = _wnative;
+    oracle = _1inchSpotAgg; // 1inch Spot Aggregator
+    uniswapRouter = _uniRouter;
+    uniswapFactory = _uniFactory;
     EnumerableSetUpgradeable.add(tokens, address(USDC));
-    rebalancer = IBaluniV1Rebalancer(_rebalancer);
+    rebalancer = _rebalancer;
     treasury = msg.sender;
   }
 
@@ -153,31 +145,14 @@ contract BaluniV1Router is
     _MAX_BPS_FEE = 500;
     _BPS_FEE = 30; // 0.3%.
     _BPS_BASE = 10000;
-    USDC = IERC20(_usdc);
-    WNATIVE = IERC20Metadata(_wnative);
-    oracle = I1inchSpotAgg(_1inchSpotAgg); // 1inch Spot Aggregator
-    uniswapRouter = ISwapRouter(_uniRouter);
-    uniswapFactory = IUniswapV3Factory(_uniFactory);
+    USDC = _usdc;
+    WNATIVE = _wnative;
+    oracle = _1inchSpotAgg; // 1inch Spot Aggregator
+    uniswapRouter = _uniRouter;
+    uniswapFactory = _uniFactory;
     EnumerableSetUpgradeable.add(tokens, address(USDC));
-    rebalancer = IBaluniV1Rebalancer(_rebalancer);
+    rebalancer = _rebalancer;
     treasury = msg.sender;
-  }
-
-  /**
-   * @dev Initializes the market oracle contract.
-   * @param _marketOracle The address of the market oracle contract.
-   */
-  function initializeMarketOracle(address _marketOracle) public initializer {
-    require(address(marketOracle) == address(0), 'Market Oracle Already Initialized');
-    marketOracle = IBaluniV1MarketOracle(_marketOracle);
-  }
-
-  /**
-   * @dev Returns the address of the contract owner (treasury).
-   * @return The address of the contract owner.
-   */
-  function getTreasury() public view returns (address) {
-    return treasury;
   }
 
   /**
@@ -188,31 +163,11 @@ contract BaluniV1Router is
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
   /**
-   * @dev Returns the basis points fee.
-   * @return The basis points fee as a uint256 value.
-   */
-  function getBpsFee() external view returns (uint256) {
-    return _BPS_FEE;
-  }
-
-  /**
    * @dev Returns the unit price of the token in USDC.
    * @return The unit price of the token in USDC.
    */
   function unitPrice() public view returns (uint256) {
     return _calculateBaluniToUSDC(1e18);
-  }
-
-  /**
-   * @dev Returns an array of all listed tokens.
-   * @return An array of all listed tokens.
-   */
-  function listAllTokens() external view returns (address[] memory) {
-    return tokens.values();
-  }
-
-  function changeMarketOracle(address _marketOracle) external onlyOwner {
-    marketOracle = IBaluniV1MarketOracle(_marketOracle);
   }
 
   /**
@@ -240,7 +195,7 @@ contract BaluniV1Router is
    * @param _newRebalancer The new address of the rebalancer contract.
    */
   function changeRebalancer(address _newRebalancer) external onlyOwner {
-    rebalancer = IBaluniV1Rebalancer(_newRebalancer);
+    rebalancer = _newRebalancer;
   }
 
   /**
@@ -249,7 +204,7 @@ contract BaluniV1Router is
    * @param _agentFactory The new address of the agent factory contract.
    */
   function changeAgentFactory(address _agentFactory) external onlyOwner {
-    agentFactory = IBaluniV1AgentFactory(_agentFactory);
+    agentFactory = _agentFactory;
   }
 
   /**
@@ -262,7 +217,7 @@ contract BaluniV1Router is
    */
   function execute(IBaluniV1Agent.Call[] memory calls, address[] memory tokensReturn) external nonReentrant {
     require(address(agentFactory) != address(0), 'Agent factory not set');
-    address agent = agentFactory.getOrCreateAgent(msg.sender);
+    address agent = IBaluniV1AgentFactory(agentFactory).getOrCreateAgent(msg.sender);
     bool[] memory isTokenNew = new bool[](tokensReturn.length);
     uint256[] memory tokenBalances = new uint256[](tokensReturn.length);
 
@@ -276,12 +231,10 @@ contract BaluniV1Router is
     for (uint256 i = 0; i < tokensReturn.length; i++) {
       address token = tokensReturn[i];
       uint256 balance = IERC20(token).balanceOf(address(this));
-
-      address poolNative3000 = uniswapFactory.getPool(token, address(WNATIVE), 3000);
-      address poolNative500 = uniswapFactory.getPool(token, address(WNATIVE), 500);
-      address poolUSDC500 = uniswapFactory.getPool(token, address(USDC), 500);
-      address poolUSDC3000 = uniswapFactory.getPool(token, address(USDC), 3000);
-
+      address poolNative3000 = IUniswapV3Factory(uniswapFactory).getPool(token, address(WNATIVE), 3000);
+      address poolNative500 = IUniswapV3Factory(uniswapFactory).getPool(token, address(WNATIVE), 500);
+      address poolUSDC500 = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 500);
+      address poolUSDC3000 = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 3000);
       bool poolExist = poolNative3000 != address(0) ||
         poolNative500 != address(0) ||
         poolUSDC3000 != address(0) ||
@@ -300,7 +253,7 @@ contract BaluniV1Router is
 
       if (balance > tokenBalances[i]) {
         uint256 fee = (amountReceived * _BPS_FEE) / _BPS_BASE;
-        IERC20(tokensReturn[i]).transfer(getTreasury(), fee);
+        IERC20(tokensReturn[i]).transfer(treasury, fee);
       }
     }
   }
@@ -315,7 +268,7 @@ contract BaluniV1Router is
    */
   function liquidate(address token) public {
     uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
-    address pool = uniswapFactory.getPool(token, address(USDC), 3000);
+    address pool = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 3000);
     secureApproval(token, address(uniswapRouter), totalERC20Balance);
     bool haveBalance = totalERC20Balance > 0;
     if (pool != address(0) && haveBalance) {
@@ -341,8 +294,8 @@ contract BaluniV1Router is
   }
 
   /**
-   * @dev Burns a specified amount of BAL tokens from the caller's balance.
-   * @param burnAmount The amount of BAL tokens to burn.
+   * @dev Burns a specified amount of BALUNI tokens from the caller's balance.
+   * @param burnAmount The amount of BALUNI tokens to burn.
    * @notice This function requires the caller to have a balance of at least `burnAmount` BAL tokens.
    * @notice The function also checks the USDC balance before burning the tokens.
    * @notice After burning the tokens, the function transfers a proportional share of each ERC20 token held by the contract to the caller.
@@ -351,7 +304,6 @@ contract BaluniV1Router is
    */
   function burnERC20(uint256 burnAmount) external nonReentrant {
     require(balanceOf(msg.sender) >= burnAmount, 'Insufficient BAL');
-    _checkUSDC(burnAmount);
 
     for (uint256 i; i < tokens.length(); i++) {
       address token = tokens.at(i);
@@ -364,7 +316,7 @@ contract BaluniV1Router is
       uint256 share = _calculateERC20Share(totalBaluni, totalERC20Balance, burnAmount, decimals);
       uint256 amountAfterFee = _calculateNetAmountAfterFee(share);
       IERC20(token).transfer(msg.sender, amountAfterFee);
-      IERC20(token).transfer(getTreasury(), share - amountAfterFee);
+      IERC20(token).transfer(treasury, share - amountAfterFee);
     }
     _burn(msg.sender, burnAmount);
     emit Burn(msg.sender, burnAmount);
@@ -376,7 +328,6 @@ contract BaluniV1Router is
    */
   function burnUSDC(uint256 burnAmount) public nonReentrant {
     require(burnAmount > 0, 'Insufficient BAL');
-    _checkUSDC(burnAmount);
 
     for (uint256 i; i < tokens.length(); i++) {
       address token = tokens.at(i);
@@ -395,20 +346,20 @@ contract BaluniV1Router is
         continue;
       }
 
-      address pool = uniswapFactory.getPool(token, address(USDC), 3000);
+      address pool = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 3000);
       secureApproval(token, address(uniswapRouter), burnAmountToken);
 
       if (pool != address(0)) {
         uint256 amountOut = _singleSwap(token, address(USDC), burnAmountToken, address(this));
         uint256 amountAfterFee = _calculateNetAmountAfterFee(amountOut);
         IERC20(address(USDC)).transfer(msg.sender, amountAfterFee);
-        IERC20(address(USDC)).transfer(getTreasury(), amountOut - amountAfterFee);
+        IERC20(address(USDC)).transfer(treasury, amountOut - amountAfterFee);
         require(amountOut > 0, 'Swap Failed, Try Burn()');
       } else {
         uint256 amountOutHop = _multiHopSwap(token, address(WNATIVE), address(USDC), burnAmountToken, msg.sender);
         uint256 amountAfterFee = _calculateNetAmountAfterFee(amountOutHop);
         IERC20(address(USDC)).transfer(msg.sender, amountAfterFee);
-        IERC20(address(USDC)).transfer(getTreasury(), amountOutHop - amountAfterFee);
+        IERC20(address(USDC)).transfer(treasury, amountOutHop - amountAfterFee);
         require(amountOutHop > 0, 'Swap Failed, Try Burn()');
       }
     }
@@ -422,7 +373,7 @@ contract BaluniV1Router is
    * @return The agent address.
    */
   function getAgentAddress(address _user) external view returns (address) {
-    return agentFactory.getAgentAddress(_user);
+    return IBaluniV1AgentFactory(agentFactory).getAgentAddress(_user);
   }
 
   /**
@@ -433,9 +384,9 @@ contract BaluniV1Router is
     uint256 totalUSDValuation = _totalValuation();
     uint256 totalBalSupply = totalSupply();
     uint256 usdcRequired = (balAmountToMint * totalUSDValuation) / totalBalSupply;
-    USDC.transferFrom(msg.sender, address(this), usdcRequired / 1e12);
+    IERC20(USDC).transferFrom(msg.sender, address(this), usdcRequired / 1e12);
     uint256 balance = IERC20(USDC).balanceOf(msg.sender);
-    uint256 allowed = USDC.allowance(msg.sender, address(this));
+    uint256 allowed = IERC20(USDC).allowance(msg.sender, address(this));
     require(totalBalSupply > 0, 'Total BALUNI supply cannot be zero');
     require(balance >= usdcRequired / 1e12, 'USDC balance is insufficient');
     require(allowed >= usdcRequired / 1e12, 'Check the token allowance');
@@ -444,7 +395,7 @@ contract BaluniV1Router is
     emit Mint(msg.sender, balAmountToMint);
 
     uint256 fee = ((usdcRequired / 1e12) * _BPS_FEE) / _BPS_BASE;
-    IERC20(address(USDC)).transfer(getTreasury(), fee);
+    IERC20(address(USDC)).transfer(treasury, fee);
   }
 
   /**
@@ -461,9 +412,10 @@ contract BaluniV1Router is
     address sender,
     address receiver,
     uint256 limit,
-    address baseAsset
+    address /* baseAsset */
   ) external {
-    rebalancer.rebalance(assets, weights, sender, receiver, limit, baseAsset);
+    uint256[] memory balances = new uint256[](0);
+    IBaluniV1Rebalancer(rebalancer).rebalance(balances, assets, weights, limit, sender, receiver, USDC);
   }
 
   /**
@@ -520,34 +472,6 @@ contract BaluniV1Router is
    */
   function getUSDCShareValue(uint256 amount) external view returns (uint256) {
     return _calculateBaluniToUSDC(amount);
-  }
-
-  /**
-   * @dev Fetches the market prices of BALUNI tokens.
-   * @return The unit price and market price of BALUNI tokens.
-   */
-  function fetchMarketPrices() external view returns (uint256, uint256) {
-    uint256 unitPrice = marketOracle._unitPriceBALUNI();
-    uint256 marketPrice = marketOracle._priceBALUNI() * 1e12;
-    return (unitPrice, marketPrice);
-  }
-
-  /**
-   * @dev Ensures that the contract has the necessary approval for a token to be spent by a spender.
-   * If the current allowance is not equal to the desired amount, it updates the allowance accordingly.
-   * @param token The address of the token to be approved.
-   * @param spender The address of the spender.
-   * @param amount The desired allowance amount.
-   * @notice This function is internal and should not be called directly.
-   */
-  function secureApproval(address token, address spender, uint256 amount) internal {
-    IERC20 _token = IERC20(token);
-    uint256 currentAllowance = _token.allowance(address(this), spender);
-
-    if (currentAllowance < amount) {
-      _token.approve(spender, 0);
-      _token.approve(spender, amount);
-    }
   }
 
   /**
@@ -622,6 +546,7 @@ contract BaluniV1Router is
     }
 
     uint256 result = (amountAdjusted * totalERC20Balance) / baluniAdjusted;
+
     return result;
   }
 
@@ -653,17 +578,6 @@ contract BaluniV1Router is
   }
 
   /**
-   * @dev Internal function to check the USDC balance and total supply before burning tokens.
-   * @param amountToBurn The amount of tokens to be burned.
-   */
-  function _checkUSDC(uint256 amountToBurn) internal view {
-    uint256 balance = IERC20(USDC).balanceOf(address(this));
-    if (balance >= 0.001 * 1e6 && totalSupply() >= 1) {
-      require(amountToBurn >= 0.01 ether, 'Minimum burn amount is 0.01 BALUNI');
-    }
-  }
-
-  /**
    * @dev Resizes an array to the specified size.
    * @param arr The array to be resized.
    * @param size The new size of the array.
@@ -685,6 +599,10 @@ contract BaluniV1Router is
     return _getInitializedVersion();
   }
 
+  /**
+   * @dev Returns an array of addresses representing the tokens.
+   * @return An array of addresses representing the tokens.
+   */
   function getTokens() external view returns (address[] memory) {
     return tokens.values();
   }

@@ -3,8 +3,8 @@ pragma solidity 0.8.25;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
-
 import './I1inchSpotAgg.sol';
+import './IBaluniV1Agent.sol';
 
 interface IBaluniV1Router {
   struct Call {
@@ -24,19 +24,19 @@ interface IBaluniV1Router {
 
   function USDC() external view returns (IERC20);
 
-  function WNATIVE() external view returns (IERC20Metadata);
+  function WNATIVE() external view returns (address);
 
-  function oracle() external view returns (I1inchSpotAgg);
+  function oracle() external view returns (address);
 
-  function uniswapRouter() external view returns (ISwapRouter);
+  function uniswapRouter() external view returns (address);
 
-  function uniswapFactory() external view returns (IUniswapV3Factory);
+  function uniswapFactory() external view returns (address);
 
-  function agentFactory() external view returns (IBaluniV1AgentFactory);
+  function agentFactory() external view returns (address);
 
-  function marketOracle() external view returns (IBaluniV1MarketOracle);
+  function marketOracle() external view returns (address);
 
-  function rebalancer() external view returns (IBaluniV1Rebalancer);
+  function rebalancer() external view returns (address);
 
   function treasury() external view returns (address);
 
@@ -114,5 +114,6 @@ interface IBaluniV1Router {
 
   function getVersion() external view returns (uint64);
 
-  function unitPrice() public view returns (uint256);
+  function unitPrice() external view returns (uint256);
+  
 }

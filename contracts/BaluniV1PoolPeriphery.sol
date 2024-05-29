@@ -49,234 +49,354 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
  * It provides functions for swapping tokens, adding liquidity, removing liquidity, and getting the amount out for a given swap.
  */
 contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
-  IBaluniV1PoolFactory public poolFactory;
+    IBaluniV1PoolFactory public poolFactory;
 
-  /**
-   * @dev Initializes the contract by setting the pool factory address.
-   * @param _poolFactory The address of the BaluniV1PoolFactory contract.
-   */
-  function initialize(address _poolFactory) public initializer {
-    __UUPSUpgradeable_init();
-    __Ownable_init(msg.sender);
-    poolFactory = IBaluniV1PoolFactory(_poolFactory);
-  }
+    mapping(address => mapping(address => uint256)) public poolsReserves; // Mapping of token address to pool addresses (for quick lookup
 
-  /**
-   * @dev Initializes the contract by setting the pool factory address.
-   * @param _poolFactory The address of the BaluniV1PoolFactory contract.
-   */
-  function reinitialize(address _poolFactory, uint64 version) public reinitializer(version) {
-    poolFactory = IBaluniV1PoolFactory(_poolFactory);
-  }
-
-  /**
-   * @dev Internal function to authorize an upgrade to a new implementation contract.
-   * @param newImplementation The address of the new implementation contract.
-   * @notice This function can only be called by the contract owner.
-   */
-  function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
-
-  /**
-   * @dev Swaps tokens in a BaluniV1Pool.
-   * @param fromToken The address of the token to swap from.
-   * @param toToken The address of the token to swap to.
-   * @param amount The amount of tokens to swap.
-   * @return The amount of tokens received after the swap.
-   */
-  function swap(address fromToken, address toToken, uint256 amount, address receiver) external returns (uint256) {
-    require(amount > 0, 'Amount must be greater than zero');
-
-    // Get the pool address for the given tokens
-    address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
-    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
-
-    IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
-    IERC20(fromToken).approve(poolAddress, amount);
-
-    uint256 amountOut = pool.swap(fromToken, toToken, amount, receiver);
-
-    return amountOut;
-  }
-
-  /**
-   * @dev Performs batch swaps between multiple token pairs.
-   * @param fromTokens An array of addresses representing the tokens to swap from.
-   * @param toTokens An array of addresses representing the tokens to swap to.
-   * @param amounts An array of amounts representing the amounts to swap.
-   * @param receivers An array of addresses representing the receivers of the swapped tokens.
-   * @return An array of amounts representing the amounts of tokens received after the swaps.
-   */
-  function batchSwap(
-    address[] calldata fromTokens,
-    address[] calldata toTokens,
-    uint256[] calldata amounts,
-    address[] calldata receivers
-  ) external returns (uint256[] memory) {
-    require(
-      fromTokens.length == toTokens.length && toTokens.length == amounts.length && amounts.length == receivers.length,
-      'Input arrays length mismatch'
-    );
-
-    uint256[] memory amountsOut = new uint256[](fromTokens.length);
-
-    for (uint256 i = 0; i < fromTokens.length; i++) {
-      require(amounts[i] > 0, 'Amount must be greater than zero');
-
-      // Transfer fromToken from sender to this contract
-      IERC20(fromTokens[i]).transferFrom(msg.sender, address(this), amounts[i]);
-
-      // Get the pool address for the given tokens
-      address poolAddress = poolFactory.getPoolByAssets(fromTokens[i], toTokens[i]);
-      IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
-
-      // Approve the pool to spend fromToken
-      IERC20(fromTokens[i]).approve(poolAddress, amounts[i]);
-
-      // Perform the swap
-      uint256 amountOut = pool.swap(fromTokens[i], toTokens[i], amounts[i], receivers[i]);
-      amountsOut[i] = amountOut;
+    /**
+     * @dev Initializes the contract by setting the pool factory address.
+     * @param _poolFactory The address of the BaluniV1PoolFactory contract.
+     */
+    function initialize(address _poolFactory) public initializer {
+        __UUPSUpgradeable_init();
+        __Ownable_init(msg.sender);
+        poolFactory = IBaluniV1PoolFactory(_poolFactory);
     }
 
-    return amountsOut;
-  }
+    /**
+     * @dev Initializes the contract by setting the pool factory address.
+     * @param _poolFactory The address of the BaluniV1PoolFactory contract.
+     */
+    function reinitialize(address _poolFactory, uint64 version) public reinitializer(version) {
+        poolFactory = IBaluniV1PoolFactory(_poolFactory);
+    }
 
-  function smartSwap(address fromToken, address toToken, uint256 amount, address receiver) external returns (uint256) {
-    require(amount > 0, 'Amount must be greater than zero');
+    /**
+     * @dev Internal function to authorize an upgrade to a new implementation contract.
+     * @param newImplementation The address of the new implementation contract.
+     * @notice This function can only be called by the contract owner.
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    // Get all pools that contain fromToken
-    address[] memory fromPools = poolFactory.getPoolsByAsset(fromToken);
-    uint256 bestAmountOut = 0;
-    address bestPoolAddress;
-    uint256 bestTokenLiquidity = 0;
+    /**
+     * @dev Swaps tokens in a BaluniV1Pool.
+     * @param fromToken The address of the token to swap from.
+     * @param toToken The address of the token to swap to.
+     * @param amount The amount of tokens to swap.
+     * @return The amount of tokens received after the swap.
+     */
+    function swap(address fromToken, address toToken, uint256 amount, address receiver) external returns (uint256) {
+        require(amount > 0, 'Amount must be greater than zero');
 
-    // Iterate over all pools to find the best pool based on token-specific liquidity and asset deviation
-    for (uint256 i = 0; i < fromPools.length; i++) {
-      IBaluniV1Pool pool = IBaluniV1Pool(fromPools[i]);
-      (bool[] memory directions, uint256[] memory deviations) = pool.getDeviation();
-      (uint256 totalValuation, uint256[] memory valuations) = pool.computeTotalValuation();
+        address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
+        IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
 
-      // Check if fromToken is overweight and get the liquidity of the specific token
-      for (uint256 j = 0; j < directions.length; j++) {
-        if (pool.assetInfos(j).asset == fromToken) {
-          uint256 tokenLiquidity = valuations[j];
-          if (directions[j] && tokenLiquidity > bestTokenLiquidity) {
-            bestTokenLiquidity = tokenLiquidity;
-            bestPoolAddress = fromPools[i];
-          }
+        IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
+
+        uint256 toSend = pool.swap(fromToken, toToken, amount, receiver);
+
+        poolsReserves[poolAddress][fromToken] += amount;
+        poolsReserves[poolAddress][toToken] -= toSend;
+
+        IERC20(toToken).transfer(receiver, toSend);
+
+        return toSend;
+    }
+
+    /**
+     * @dev Performs batch swaps between multiple token pairs.
+     * @param fromTokens An array of addresses representing the tokens to swap from.
+     * @param toTokens An array of addresses representing the tokens to swap to.
+     * @param amounts An array of amounts representing the amounts to swap.
+     * @param receivers An array of addresses representing the receivers of the swapped tokens.
+     * @return An array of amounts representing the amounts of tokens received after the swaps.
+     */
+    function batchSwap(
+        address[] calldata fromTokens,
+        address[] calldata toTokens,
+        uint256[] calldata amounts,
+        address[] calldata receivers
+    ) external returns (uint256[] memory) {
+        require(
+            fromTokens.length == toTokens.length &&
+                toTokens.length == amounts.length &&
+                amounts.length == receivers.length,
+            'Input arrays length mismatch'
+        );
+
+        uint256[] memory amountsOut = new uint256[](fromTokens.length);
+
+        for (uint256 i = 0; i < fromTokens.length; i++) {
+            require(amounts[i] > 0, 'Amount must be greater than zero');
+            address poolAddress = poolFactory.getPoolByAssets(fromTokens[i], toTokens[i]);
+            IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+            IERC20(fromTokens[i]).transferFrom(msg.sender, address(this), amounts[i]);
+            uint256 amountOut = pool.swap(fromTokens[i], toTokens[i], amounts[i], receivers[i]);
+            poolsReserves[poolAddress][fromTokens[i]] += amounts[i];
+            poolsReserves[poolAddress][toTokens[i]] -= amountOut;
+            IERC20(toTokens[i]).transfer(receivers[i], amountOut);
         }
-      }
+
+        return amountsOut;
     }
 
-    require(bestPoolAddress != address(0), 'No suitable pool found');
-
-    // Perform the swap in the best pool
-    IBaluniV1Pool bestPool = IBaluniV1Pool(bestPoolAddress);
-    IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
-    IERC20(fromToken).approve(bestPoolAddress, amount);
-    uint256 amountReceived = bestPool.swap(fromToken, toToken, amount, receiver);
-
-    return amountReceived;
-  }
-
-  /**
-   * @dev Adds liquidity to a BaluniV1Pool.
-   * @param amounts An array of amounts for each asset to add as liquidity.
-   */
-  function addLiquidity(uint256[] calldata amounts, address poolAddress, address receiver) external {
-    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
-    address[] memory assets = pool.getAssets(); // Get the assets in the pool
-
-    for (uint256 i = 0; i < assets.length; i++) {
-      address asset = assets[i];
-      uint256 amount = amounts[i];
-      IERC20(asset).transferFrom(msg.sender, address(this), amount);
+    function rebalanceWeights(address poolAddress, address receiver) external {
+        IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+        uint256[] memory amounts = pool.rebalanceWeights(receiver);
+        address[] memory assets = pool.getAssets();
+        for (uint256 i = 0; i < assets.length; i++) {
+            poolsReserves[poolAddress][assets[i]] += amounts[i];
+            IERC20(assets[i]).transferFrom(receiver, address(this), amounts[i]);
+        }
     }
 
-    pool.mint(receiver, amounts);
-  }
+    function smartSwap(
+        address fromToken,
+        address toToken,
+        uint256 amount,
+        address receiver
+    ) external returns (uint256) {
+        require(amount > 0, 'Amount must be greater than zero');
 
-  /**
-   * @dev Removes liquidity from a BaluniV1Pool.
-   * @param share The amount of liquidity tokens to remove.
-   * @param poolAddress The address of the BaluniV1Pool.
-   */
-  function removeLiquidity(uint256 share, address poolAddress, address receiver) external {
-    require(share > 0, 'Share must be greater than zero');
-    IERC20 poolToken = IERC20(poolAddress);
+        address[] memory pools = _findOptimalRoute(fromToken, toToken, amount);
+        require(pools.length > 0, 'No route found');
 
-    // Check allowance
-    uint256 allowance = poolToken.allowance(msg.sender, address(this));
-    require(allowance >= share, 'Insufficient allowance');
+        IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
 
-    // Check balance
-    uint256 balance = poolToken.balanceOf(msg.sender);
-    require(balance >= share, 'Insufficient balance');
+        uint256 amountRemaining = amount;
+        address currentToken = fromToken;
+        for (uint256 i = 0; i < pools.length; i++) {
+            IBaluniV1Pool pool = IBaluniV1Pool(pools[i]);
+            address[] memory poolTokens = pool.getAssets();
+            uint256[] memory reserves = getReserves(pools[i]);
 
-    bool success = poolToken.transferFrom(msg.sender, poolAddress, share);
-    require(success, 'Transfer failed');
+            address nextToken;
+            for (uint256 j = 0; j < poolTokens.length; j++) {
+                if (poolTokens[j] != currentToken && reserves[j] > 0) {
+                    nextToken = poolTokens[j];
+                    break;
+                }
+            }
 
-    IBaluniV1Pool(poolAddress).burn(receiver);
-  }
+            require(nextToken != address(0), 'No valid next token found');
+            require(pool.getAssetReserve(nextToken) >= amountRemaining, 'Insufficient liquidity in pool for swap');
 
-  /**
-   * @dev Gets the amount of tokens received after a swap in a BaluniV1Pool.
-   * @param fromToken The address of the token to swap from.
-   * @param toToken The address of the token to swap to.
-   * @param amount The amount of tokens to swap.
-   * @return The amount of tokens received after the swap.
-   */
-  function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
-    address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
-    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
-    return pool.getAmountOut(fromToken, toToken, amount);
-  }
+            uint256 amountOut = pool.swap(
+                currentToken,
+                nextToken,
+                amountRemaining,
+                i == pools.length - 1 ? receiver : address(this)
+            );
 
-  /**
-   * @dev Performs rebalance if needed for the given tokens.
-   * @param poolAddress The address of the token pool to rebalance.
-   */
-  function performRebalanceIfNeeded(address poolAddress) external {
-    IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
-    pool.performRebalanceIfNeeded(msg.sender);
-  }
+            poolsReserves[pools[i]][currentToken] += amountRemaining;
+            poolsReserves[pools[i]][nextToken] -= amountOut;
 
-  /**
-   * @dev Returns an array of pool addresses that contain the given token.
-   * @param token The address of the token to search for.
-   * @return An array of pool addresses.
-   */
-  function getPoolsContainingToken(address token) external view returns (address[] memory) {
-    return poolFactory.getPoolsByAsset(token);
-  }
+            currentToken = nextToken;
+            amountRemaining = amountOut;
+        }
 
-  /**
-   * @dev Returns the version of the contract.
-   * @return The version string.
-   */
-  function getVersion() external view returns (uint64) {
-    return _getInitializedVersion();
-  }
-
-  /**
-   * @dev Changes the address of the pool factory contract.
-   * Can only be called by the contract owner.
-   * @param _poolFactory The new address of the pool factory contract.
-   */
-  function changePoolFactory(address _poolFactory) external onlyOwner {
-    poolFactory = IBaluniV1PoolFactory(_poolFactory);
-  }
-
-  function moveAll() external {
-    require(poolFactory.poolExist(msg.sender), 'Only Pools');
-    uint256[] memory reserves = IBaluniV1Pool(msg.sender).getReserves();
-    address[] memory assets = IBaluniV1Pool(msg.sender).getAssets();
-    for (uint256 i = 0; i < assets.length; i++) {
-      IERC20(assets[i]).transfer(msg.sender, reserves[i]);
+        return amountRemaining;
     }
-  }
 
-  function moveAsset(address asset, address to, uint256 amount) external {
-    require(poolFactory.poolExist(msg.sender), 'Only Pools');
-    IERC20(asset).transfer(to, amount);
-  }
+    function _findOptimalRoute(
+        address fromToken,
+        address toToken,
+        uint256 amount
+    ) internal view returns (address[] memory) {
+        address[] memory allPools = poolFactory.getAllPools();
+        uint256 poolCount = allPools.length;
+
+        address[] memory path = new address[](poolCount);
+        uint256 pathLength = 0;
+        bool[] memory visited = new bool[](poolCount);
+
+        address[] memory queue = new address[](poolCount);
+        uint256 queueHead = 0;
+        uint256 queueTail = 0;
+
+        queue[queueTail++] = fromToken;
+
+        while (queueHead < queueTail) {
+            address currentToken = queue[queueHead++];
+            if (currentToken == toToken) {
+                address[] memory finalPath = new address[](pathLength);
+                for (uint256 i = 0; i < pathLength; i++) {
+                    finalPath[i] = path[i];
+                }
+                return finalPath;
+            }
+
+            for (uint256 i = 0; i < poolCount; i++) {
+                if (!visited[i]) {
+                    IBaluniV1Pool pool = IBaluniV1Pool(allPools[i]);
+                    address[] memory poolTokens = pool.getAssets();
+
+                    if (
+                        _containsToken(poolTokens, currentToken) && _hasSufficientLiquidity(pool, currentToken, amount)
+                    ) {
+                        address nextToken = _getOtherTokenInPool(poolTokens, currentToken);
+                        path[pathLength++] = allPools[i];
+                        queue[queueTail++] = nextToken;
+                        visited[i] = true;
+                    }
+                }
+            }
+        }
+
+        address[] memory addr = new address[](0);
+        return addr;
+    }
+
+    function _containsToken(address[] memory tokens, address token) internal pure returns (bool) {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokens[i] == token) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function _hasSufficientLiquidity(IBaluniV1Pool pool, address token, uint256 amount) internal view returns (bool) {
+        uint256[] memory reserves = getReserves(address(pool));
+        address[] memory assets = pool.getAssets();
+        for (uint256 i = 0; i < assets.length; i++) {
+            if (assets[i] == token) {
+                return reserves[i] >= amount;
+            }
+        }
+        return false;
+    }
+
+    function _getOtherTokenInPool(address[] memory tokens, address token) internal pure returns (address) {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokens[i] != token) {
+                return tokens[i];
+            }
+        }
+        revert('Token not found in pool');
+    }
+
+    /**
+     * @dev Adds liquidity to a BaluniV1Pool.
+     * @param amounts An array of amounts for each asset to add as liquidity.
+     */
+    function addLiquidity(uint256[] calldata amounts, address poolAddress, address receiver) external {
+        IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+        address[] memory assets = pool.getAssets();
+
+        for (uint256 i = 0; i < assets.length; i++) {
+            address asset = assets[i];
+            uint256 amount = amounts[i];
+            poolsReserves[poolAddress][asset] += amount;
+            IERC20(asset).transferFrom(msg.sender, address(this), amount);
+        }
+
+        pool.mint(receiver, amounts);
+    }
+
+    /**
+     * @dev Removes liquidity from a BaluniV1Pool.
+     * @param share The amount of liquidity tokens to remove.
+     * @param poolAddress The address of the BaluniV1Pool.
+     */
+    function removeLiquidity(uint256 share, address poolAddress, address receiver) external {
+        require(share > 0, 'Share must be greater than zero');
+        IERC20 poolToken = IERC20(poolAddress);
+
+        // Check allowance
+        uint256 allowance = poolToken.allowance(msg.sender, address(this));
+        require(allowance >= share, 'Insufficient allowance');
+
+        // Check balance
+        uint256 balance = poolToken.balanceOf(msg.sender);
+        require(balance >= share, 'Insufficient balance');
+
+        bool success = poolToken.transferFrom(msg.sender, address(this), share);
+        require(success, 'TransferFrom failed');
+
+        bool success2 = poolToken.transfer(poolAddress, share);
+        require(success2, 'Transfer failed');
+
+        uint256[] memory amountsOut = IBaluniV1Pool(poolAddress).burn(receiver);
+
+        address[] memory assets = IBaluniV1Pool(poolAddress).getAssets();
+
+        for (uint256 i = 0; i < assets.length; i++) {
+            require(IERC20(assets[i]).balanceOf(address(this)) >= amountsOut[i], 'Insufficient Liquidity');
+            poolsReserves[poolAddress][assets[i]] -= amountsOut[i];
+            bool assetTransferSuccess = IERC20(assets[i]).transfer(receiver, amountsOut[i]);
+            require(assetTransferSuccess, 'Asset transfer failed');
+        }
+    }
+
+    /**
+     * @dev Gets the amount of tokens received after a swap in a BaluniV1Pool.
+     * @param fromToken The address of the token to swap from.
+     * @param toToken The address of the token to swap to.
+     * @param amount The amount of tokens to swap.
+     * @return The amount of tokens received after the swap.
+     */
+    function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
+        address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
+        IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+        return pool.getAmountOut(fromToken, toToken, amount);
+    }
+
+    /**
+     * @dev Performs rebalance if needed for the given tokens.
+     * @param poolAddress The address of the token pool to rebalance.
+     */
+    function performRebalanceIfNeeded(address poolAddress) external {
+        IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+        uint256 balance = IERC20(poolAddress).balanceOf(msg.sender);
+        uint256 totalSupply = IERC20(poolAddress).totalSupply();
+        require((balance * 10000) / totalSupply >= 100, 'Insufficient balance');
+        (uint256[] memory amountsToAdd, uint256[] memory amountsToRemove) = pool.performRebalanceIfNeeded();
+
+        // update Pool reserves
+        address[] memory assets = pool.getAssets();
+        for (uint256 i = 0; i < assets.length; i++) {
+            poolsReserves[poolAddress][assets[i]] += amountsToAdd[i];
+            poolsReserves[poolAddress][assets[i]] -= amountsToRemove[i];
+        }
+    }
+
+    /**
+     * @dev Returns an array of pool addresses that contain the given token.
+     * @param token The address of the token to search for.
+     * @return An array of pool addresses.
+     */
+    function getPoolsContainingToken(address token) external view returns (address[] memory) {
+        return poolFactory.getPoolsByAsset(token);
+    }
+
+    /**
+     * @dev Returns the version of the contract.
+     * @return The version string.
+     */
+    function getVersion() external view returns (uint64) {
+        return _getInitializedVersion();
+    }
+
+    /**
+     * @dev Changes the address of the pool factory contract.
+     * Can only be called by the contract owner.
+     * @param _poolFactory The new address of the pool factory contract.
+     */
+    function changePoolFactory(address _poolFactory) external onlyOwner {
+        poolFactory = IBaluniV1PoolFactory(_poolFactory);
+    }
+
+    function getReserves(address pool) public view returns (uint256[] memory) {
+        address[] memory assets = IBaluniV1Pool(pool).getAssets();
+        uint256[] memory reserves = new uint256[](assets.length);
+        for (uint256 i = 0; i < assets.length; i++) {
+            reserves[i] = poolsReserves[pool][assets[i]];
+        }
+        return reserves;
+    }
+
+    function getAssetReserve(address pool, address asset) external view returns (uint256) {
+        return poolsReserves[pool][asset];
+    }
 }
