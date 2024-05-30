@@ -86,19 +86,15 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 _trigger,
         address _periphery
     ) ERC20('Baluni LP', 'BALUNI-LP') {
-        // Initialize contract state variables
         periphery = _periphery;
         factory = msg.sender;
         rebalancer = _rebalancer;
         ONE = 1e18;
 
-        // Initialize assets and weights
         initializeAssets(_assets, _weights);
 
-        // Set trigger value
         trigger = _trigger;
 
-        // Set base asset
         baseAsset = IBaluniV1Rebalancer(_rebalancer).USDC();
         //baseAsset = IBaluniV1Rebalancer(_rebalancer).WNATIVE();
 
@@ -113,31 +109,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     modifier onlyPeriphery() {
         require(msg.sender == periphery, 'Only Periphery');
         _;
-    }
-
-    function calcSpotPrice(address fromToken, address toToken) public view returns (uint256) {
-        uint256 reserveFrom = getAssetReserve(fromToken);
-        uint256 reserveTo = getAssetReserve(toToken);
-
-        // check decimal of from and to token and scale to 18 decimal
-        uint256 fromDecimal = IERC20Metadata(fromToken).decimals();
-        uint256 toDecimal = IERC20Metadata(toToken).decimals();
-
-        uint256 tokenBalanceIn = reserveFrom * 10 ** 18 - fromDecimal;
-        uint256 tokenBalanceOut = reserveTo * 10 ** 18 - toDecimal;
-
-        // convert the weight 3000 into 0.1*1e18 format
-        uint256 tokenWeightIn = (_getTargetWeight(fromToken) / 1000) * 10 ** 18;
-        uint256 tokenWeightOut = (_getTargetWeight(toToken) / 1000) * 10 ** 18;
-
-        return BMath.calcSpotPrice(tokenBalanceIn, tokenWeightIn, tokenBalanceOut, tokenWeightOut, SWAP_FEE_BPS);
-    }
-
-    function calcOraclePrice(address fromToken, address toToken) external view returns (uint256) {
-        uint256 reserveFrom = getAssetReserve(fromToken);
-        uint256 reserveTo = getAssetReserve(toToken);
-        uint fromDecimal = IERC20Metadata(fromToken).decimals();
-        return IBaluniV1Rebalancer(rebalancer).convert(fromToken, toToken, 1 * 10 ** fromDecimal);
     }
 
     /**
@@ -228,6 +199,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 fee = (receivedAmount * SWAP_FEE_BPS) / 10000;
         toSend = receivedAmount - fee;
 
+        require(toSend > 0, 'Amount to send must be greater than 0');
+
         emit Swap(receiver, fromToken, toToken, amount, toSend);
 
         return toSend;
@@ -256,14 +229,12 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
         uint256 toMint;
 
-        uint baseDecimal = IERC20Metadata(baseAsset).decimals();
-
         if (totalSupply == 0) {
-            toMint = totalValue * 10 ** 18 - baseDecimal;
+            toMint = totalValue;
         } else {
             (uint256 totalLiquidity, ) = _computeTotalValuation();
             require(totalLiquidity > 0, 'Total liquidity must be greater than 0');
-            toMint = (((totalValue) * totalSupply) / totalLiquidity) * 10 ** 18 - baseDecimal;
+            toMint = (((totalValue) * totalSupply) / totalLiquidity);
         }
         require(toMint != 0, 'Mint qty is 0');
 
@@ -550,6 +521,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
                 amountsToAdd[i] = targetValuation - valuations[i];
             }
         }
+
         return amountsToAdd;
     }
 
@@ -559,6 +531,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @param amountToAdd The amount of native tokens to add as liquidity.
      */
     function _calculateLiquidity(uint256 index, uint256 amountToAdd) internal view returns (uint256) {
+        if (assetInfos[index].asset == baseAsset) return amountToAdd;
+
         uint256 tokenAmount = _convertBaseToToken(assetInfos[index].asset, amountToAdd);
         require(tokenAmount > 0, 'Invalid token amount to add');
         return tokenAmount;
@@ -566,12 +540,12 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
     /**
      * @dev Converts the specified amount of native token to the corresponding token amount.
-     * @param fromToken The address of the native token to convert from.
+     * @param toToken The address of the native token to convert from.
      * @param amount The amount of native token to convert.
      * @return The corresponding token amount.
      */
-    function _convertBaseToToken(address fromToken, uint256 amount) internal view returns (uint256) {
-        uint256 tokenAmount = IBaluniV1Rebalancer(rebalancer).convert(baseAsset, fromToken, amount);
+    function _convertBaseToToken(address toToken, uint256 amount) internal view returns (uint256) {
+        uint256 tokenAmount = IBaluniV1Rebalancer(rebalancer).convert(baseAsset, toToken, amount);
         return tokenAmount;
     }
 

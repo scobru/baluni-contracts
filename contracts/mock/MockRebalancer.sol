@@ -123,6 +123,7 @@ contract MockRebalancer {
         uint256 tokenAmount = ((amount * rate) / 10 ** 18);
 
         if (fromDecimal == toDecimal) {
+            tokenAmount = ((amount * rate) / 10 ** 18);
             return tokenAmount;
         }
 

@@ -92,10 +92,9 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
 
         IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
+        poolsReserves[poolAddress][fromToken] += amount;
 
         uint256 toSend = pool.swap(fromToken, toToken, amount, receiver);
-
-        poolsReserves[poolAddress][fromToken] += amount;
         poolsReserves[poolAddress][toToken] -= toSend;
 
         IERC20(toToken).transfer(receiver, toSend);
@@ -130,10 +129,16 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
             require(amounts[i] > 0, 'Amount must be greater than zero');
             address poolAddress = poolFactory.getPoolByAssets(fromTokens[i], toTokens[i]);
             IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+
+            require(IERC20(fromTokens[i]).balanceOf(msg.sender) >= amounts[i], 'Insufficient Balance');
             IERC20(fromTokens[i]).transferFrom(msg.sender, address(this), amounts[i]);
-            uint256 amountOut = pool.swap(fromTokens[i], toTokens[i], amounts[i], receivers[i]);
             poolsReserves[poolAddress][fromTokens[i]] += amounts[i];
+
+            uint256 amountOut = pool.swap(fromTokens[i], toTokens[i], amounts[i], receivers[i]);
             poolsReserves[poolAddress][toTokens[i]] -= amountOut;
+
+            require(IERC20(toTokens[i]).balanceOf(address(this)) >= amountOut, 'Insufficient Liquidity');
+
             IERC20(toTokens[i]).transfer(receivers[i], amountOut);
         }
 
