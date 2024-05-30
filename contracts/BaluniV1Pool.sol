@@ -43,9 +43,8 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
 import './interfaces/IBaluniV1PoolPeriphery.sol';
-import './balancer/BMath.sol';
 
-contract BaluniV1Pool is ERC20, ReentrancyGuard, BMath {
+contract BaluniV1Pool is ERC20, ReentrancyGuard {
     AssetInfo[] public assetInfos;
     uint256 public trigger;
     uint256 public ONE;
@@ -223,15 +222,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard, BMath {
         require(fromToken != toToken, 'Cannot swap the same token');
         require(amount > 0, 'Amount must be greater than zero');
 
-        //uint256 receivedAmount = getAmountOut(fromToken, toToken, amount);
-
-        uint256 receivedAmount = _swapExactAmountIn(fromToken, amount, toToken, 1, 1e18);
-        receivedAmount /= 10 ** 18 - IERC20Metadata(toToken).decimals();
-
-        // uint256 toDecimal = IERC20Metadata(toToken).decimals();
-        // uint256 price = calcSpotPrice(fromToken, toToken);
-        // uint256 receivedAmount = (amount * price) / 10 ** 18 - toDecimal;
-
+        uint256 receivedAmount = getAmountOut(fromToken, toToken, amount);
         require(getAssetReserve(toToken) >= receivedAmount, 'Insufficient Liquidity');
 
         uint256 fee = (receivedAmount * SWAP_FEE_BPS) / 10000;
@@ -240,93 +231,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard, BMath {
         emit Swap(receiver, fromToken, toToken, amount, toSend);
 
         return toSend;
-    }
-
-    function _swapExactAmountIn(
-        address tokenIn,
-        uint tokenAmountIn,
-        address tokenOut,
-        uint minAmountOut,
-        uint maxPrice
-    ) internal returns (uint tokenAmountOut) {
-        uint256 tokenOutReserve = getAssetReserve(tokenOut);
-        uint256 tokenInReserve = getAssetReserve(tokenIn);
-
-        //uint spotPriceBefore = calcSpotPrice(tokenIn, tokenOut);
-        uint spotPriceBefore = calcSpotPrice(
-            tokenInReserve,
-            (_getTargetWeight(tokenIn) / 1000) * 1e18,
-            tokenOutReserve,
-            (_getTargetWeight(tokenOut) / 1000) * 1e18,
-            SWAP_FEE_BPS
-        );
-
-        //require(spotPriceBefore <= maxPrice, 'ERR_BAD_LIMIT_PRICE');
-
-        tokenAmountOut = calcOutGivenIn(
-            tokenInReserve,
-            (_getTargetWeight(tokenIn) / 1000) * 1e18,
-            tokenOutReserve,
-            (_getTargetWeight(tokenOut) / 1000) * 1e18,
-            tokenAmountIn,
-            SWAP_FEE_BPS
-        );
-        require(tokenAmountOut >= minAmountOut, 'ERR_LIMIT_OUT');
-
-        tokenInReserve = badd(tokenInReserve, tokenAmountIn);
-        tokenOutReserve = bsub(tokenOutReserve, tokenAmountOut);
-
-        uint256 spotPriceAfter = calcSpotPrice(
-            tokenInReserve,
-            (_getTargetWeight(tokenIn) / 1000) * 1e18,
-            tokenOutReserve,
-            (_getTargetWeight(tokenOut) / 1000) * 1e18,
-            SWAP_FEE_BPS
-        );
-        require(spotPriceAfter >= spotPriceBefore, 'ERR_MATH_APPROX');
-        //require(spotPriceAfter <= maxPrice, 'ERR_LIMIT_PRICE');
-        require(spotPriceBefore <= bdiv(tokenAmountIn, tokenAmountOut), 'ERR_MATH_APPROX');
-
-        return (tokenAmountOut);
-    }
-
-    function _swapExactAmountOut(
-        address tokenIn,
-        uint maxAmountIn,
-        address tokenOut,
-        uint tokenAmountOut,
-        uint maxPrice
-    ) internal returns (uint tokenAmountIn) {
-        uint256 tokenOutReserve = getAssetReserve(tokenOut);
-        uint256 tokenInReserve = getAssetReserve(tokenIn);
-
-        uint spotPriceBefore = calcSpotPrice(tokenIn, tokenOut);
-        require(spotPriceBefore <= maxPrice, 'ERR_BAD_LIMIT_PRICE');
-
-        tokenAmountIn = calcInGivenOut(
-            tokenInReserve,
-            (_getTargetWeight(tokenIn) / 1000) * 1e18,
-            tokenOutReserve,
-            (_getTargetWeight(tokenOut) / 1000) * 1e18,
-            tokenAmountOut,
-            SWAP_FEE_BPS
-        );
-
-        tokenInReserve = badd(tokenInReserve, tokenAmountIn);
-        tokenOutReserve = bsub(tokenOutReserve, tokenAmountOut);
-
-        uint256 spotPriceAfter = calcSpotPrice(
-            tokenInReserve,
-            (_getTargetWeight(tokenIn) / 1000) * 1e18,
-            tokenOutReserve,
-            (_getTargetWeight(tokenOut) / 1000) * 1e18,
-            SWAP_FEE_BPS
-        );
-        require(spotPriceAfter >= spotPriceBefore, 'ERR_MATH_APPROX');
-        require(spotPriceAfter <= maxPrice, 'ERR_LIMIT_PRICE');
-        require(spotPriceBefore <= bdiv(tokenAmountIn, tokenAmountOut), 'ERR_MATH_APPROX');
-
-        return (tokenAmountOut);
     }
 
     /**
@@ -351,8 +255,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard, BMath {
         require(totalValue > 0, 'Total value must be greater than 0');
 
         uint256 toMint;
-
-        // Calculate total added liquidity before minting
 
         uint baseDecimal = IERC20Metadata(baseAsset).decimals();
 
