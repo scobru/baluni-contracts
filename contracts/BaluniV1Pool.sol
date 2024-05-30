@@ -115,31 +115,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         _;
     }
 
-    function calcSpotPrice(address fromToken, address toToken) public view returns (uint256) {
-        uint256 reserveFrom = getAssetReserve(fromToken);
-        uint256 reserveTo = getAssetReserve(toToken);
-
-        // check decimal of from and to token and scale to 18 decimal
-        uint256 fromDecimal = IERC20Metadata(fromToken).decimals();
-        uint256 toDecimal = IERC20Metadata(toToken).decimals();
-
-        uint256 tokenBalanceIn = reserveFrom * 10 ** 18 - fromDecimal;
-        uint256 tokenBalanceOut = reserveTo * 10 ** 18 - toDecimal;
-
-        // convert the weight 3000 into 0.1*1e18 format
-        uint256 tokenWeightIn = (_getTargetWeight(fromToken) / 1000) * 10 ** 18;
-        uint256 tokenWeightOut = (_getTargetWeight(toToken) / 1000) * 10 ** 18;
-
-        return BMath.calcSpotPrice(tokenBalanceIn, tokenWeightIn, tokenBalanceOut, tokenWeightOut, SWAP_FEE_BPS);
-    }
-
-    function calcOraclePrice(address fromToken, address toToken) external view returns (uint256) {
-        uint256 reserveFrom = getAssetReserve(fromToken);
-        uint256 reserveTo = getAssetReserve(toToken);
-        uint fromDecimal = IERC20Metadata(fromToken).decimals();
-        return IBaluniV1Rebalancer(rebalancer).convert(fromToken, toToken, 1 * 10 ** fromDecimal);
-    }
-
     /**
      * @dev Initializes the assets and their weights for the pool.
      * @param _assets The array of asset addresses.
@@ -242,6 +217,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 totalSupply = totalSupply();
         uint256 totalValue = 0;
         uint256[] memory _reserves = getReserves();
+
         require(assetInfos.length == _reserves.length, 'Invalid reserves length');
         require(assetInfos.length > 0, 'No assets');
 

@@ -249,7 +249,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       // SWAP
       let toTokens = [await wbtc.getAddress(), await weth.getAddress()]
       let fromTokens = [await usdc.getAddress(), await usdt.getAddress()]
-      let amounts = [ethers.parseUnits('0.01', 8), ethers.parseUnits('0.5', 18)]
+      let amounts = [ethers.parseUnits('0.01', 8), ethers.parseUnits('0.1', 18)]
       let receivers = [await addr1.getAddress(), await addr1.getAddress()]
 
       usdt.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
