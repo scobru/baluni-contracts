@@ -99,8 +99,8 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
 
       await periphery.addLiquidity(
         [
-          ethers.parseUnits('1000', 6),
-          ethers.parseUnits('1000', 6),
+          ethers.parseUnits('10000', 6),
+          ethers.parseUnits('10000', 6),
           ethers.parseUnits('0.24631000000000003', 18),
           ethers.parseUnits('0.01405', 8),
         ],
@@ -169,12 +169,27 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       await usdc.transfer(await addr1.getAddress(), ethers.parseUnits('100', 6))
       usdc.connect(addr1).approve(await periphery.getAddress(), ethers.parseUnits('100', 6))
 
+      let reservesB4Swap = await pool.getReserves()
+      console.log(
+        '📊 Reserves Before Swap: ',
+        formatUnits(reservesB4Swap[0], 6),
+        formatUnits(reservesB4Swap[1], 6),
+        formatUnits(reservesB4Swap[2], 18),
+        formatUnits(reservesB4Swap[3], 8)
+      )
       await periphery
         .connect(addr1)
         .swap(await usdc.getAddress(), await usdt.getAddress(), ethers.parseUnits('100', 6), await addr1.getAddress())
       const usdtBalance = await usdt.balanceOf(await addr1.getAddress())
 
-      console.log('USDT Balance after swap: ', formatUnits(usdtBalance.toString(), 6))
+      reservesB4Swap = await pool.getReserves()
+      console.log(
+        '📊 Reserves After Swap: ',
+        formatUnits(reservesB4Swap[0], 6),
+        formatUnits(reservesB4Swap[1], 6),
+        formatUnits(reservesB4Swap[2], 18),
+        formatUnits(reservesB4Swap[3], 8)
+      )
       expect(usdtBalance).to.be.gt(ethers.parseUnits('97', 6))
       console.log('✅ Swap Completed Successfully ✅')
     })
@@ -236,24 +251,32 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       wbtc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
 
       // SWAP
-      console.log('🔄 Performing Swap: USDC to WETH 🔄')
-      await periphery
-        .connect(addr1)
-        .swap(await usdc.getAddress(), await weth.getAddress(), ethers.parseUnits('200', 6), await addr1.getAddress())
+      let toTokens = [await wbtc.getAddress(), await weth.getAddress()]
+      let fromTokens = [await usdc.getAddress(), await usdt.getAddress()]
+      let amounts = [ethers.parseUnits('0.01', 8), ethers.parseUnits('0.5', 18)]
+      let receivers = [await addr1.getAddress(), await addr1.getAddress()]
 
-      console.log('🔄 Performing Swap: WBTC to WETH 🔄')
-      await periphery
-        .connect(addr1)
-        .swap(await wbtc.getAddress(), await weth.getAddress(), ethers.parseUnits('0.005', 8), await addr1.getAddress())
+      usdt.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+      usdc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+      weth.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+      wbtc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
 
-      console.log('🔄 Performing Swap: USDC to WBTC 🔄')
-      await periphery
-        .connect(addr1)
-        .swap(await usdt.getAddress(), await wbtc.getAddress(), ethers.parseUnits('100', 6), await addr1.getAddress())
+      let reservesAfter = await pool.getReserves()
+
+      console.log(
+        '📊 Reserves: ',
+        formatUnits(reservesAfter[0], 6),
+        formatUnits(reservesAfter[1], 6),
+        formatUnits(reservesAfter[2], 18),
+        formatUnits(reservesAfter[3], 8)
+      )
 
       let deviation = await pool.getDeviation()
+      console.log('📉 Deviation: ', deviation.toString())
 
-      console.log('📉 Deviation after swap: ', deviation.toString())
+      // BATCH SWAP
+      console.log('🔄 Performing Batch Swap 🔄')
+      await periphery.connect(addr1).batchSwap(fromTokens, toTokens, amounts, receivers)
 
       totvals = await pool.computeTotalValuation()
       console.log('Total Valuation: ', formatUnits(totvals[0], baseDecimals))
@@ -261,16 +284,6 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       console.log('Valuation USDT: ', formatUnits(totvals[1][1], baseDecimals))
       console.log('Valuation WETH: ', formatUnits(totvals[1][2], baseDecimals))
       console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
-
-      const reservesBefore = await pool.getReserves()
-
-      console.log(
-        '📊 Reserves Before Rebalance: ',
-        formatUnits(reservesBefore[0], 6),
-        formatUnits(reservesBefore[1], 6),
-        formatUnits(reservesBefore[2], 18),
-        formatUnits(reservesBefore[3], 8)
-      )
 
       await usdc.approve(await periphery.getAddress(), ethers.MaxUint256)
       await usdt.approve(await periphery.getAddress(), ethers.MaxUint256)
@@ -288,10 +301,10 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       console.log('Valuation WETH: ', formatUnits(totvals[1][2], baseDecimals))
       console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
 
-      let reservesAfter = await pool.getReserves()
+      reservesAfter = await pool.getReserves()
 
       console.log(
-        '📊 Reserves After Rebalance 1: ',
+        '📊 Reserves: ',
         formatUnits(reservesAfter[0], 6),
         formatUnits(reservesAfter[1], 6),
         formatUnits(reservesAfter[2], 18),
@@ -299,7 +312,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       )
 
       deviation = await pool.getDeviation()
-      console.log('📉 Deviation after Rebalance 1: ', deviation.toString())
+      console.log('📉 Deviation: ', deviation.toString())
 
       console.log('⚖️ Performing Rebalance 2 ⚖️')
 
@@ -315,7 +328,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       reservesAfter = await pool.getReserves()
 
       console.log(
-        '📊 Reserves After Rebalance 2: ',
+        '📊 Reserves: ',
         formatUnits(reservesAfter[0], 6),
         formatUnits(reservesAfter[1], 6),
         formatUnits(reservesAfter[2], 18),
@@ -323,12 +336,12 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       )
 
       deviation = await pool.getDeviation()
-      console.log('📉 Deviation after Rebalance 2: ', deviation.toString())
+      console.log('📉 Deviation: ', deviation.toString())
 
-      const toTokens = [await wbtc.getAddress(), await usdc.getAddress()]
-      const fromTokens = [await weth.getAddress(), await weth.getAddress()]
-      const amounts = [ethers.parseUnits('0.01', 8), ethers.parseUnits('100', 6)]
-      const receivers = [await addr1.getAddress(), await addr1.getAddress()]
+      toTokens = [await wbtc.getAddress(), await usdc.getAddress()]
+      fromTokens = [await weth.getAddress(), await weth.getAddress()]
+      amounts = [ethers.parseUnits('0.01', 8), ethers.parseUnits('100', 6)]
+      receivers = [await addr1.getAddress(), await addr1.getAddress()]
 
       usdt.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
       usdc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
@@ -349,12 +362,40 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
 
       console.log(
-        '📊 Reserves After Batch Swap: ',
+        '📊 Reserves: ',
         formatUnits(reservesAfter[0], 6),
         formatUnits(reservesAfter[1], 6),
         formatUnits(reservesAfter[2], 18),
         formatUnits(reservesAfter[3], 8)
       )
+
+      deviation = await pool.getDeviation()
+      console.log('📉 Deviation: ', deviation.toString())
+
+      toTokens = [await weth.getAddress(), await usdc.getAddress()]
+      fromTokens = [await usdt.getAddress(), await weth.getAddress()]
+      amounts = [ethers.parseUnits('0.5', 18), ethers.parseUnits('5000', 6)]
+      receivers = [await addr1.getAddress(), await addr1.getAddress()]
+
+      usdt.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+      usdc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+      weth.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+      wbtc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+
+      // BATCH SWAP
+      console.log('🔄 Performing Batch Swap 🔄')
+      await periphery.connect(addr1).batchSwap(fromTokens, toTokens, amounts, receivers)
+
+      console.log(
+        '📊 Reserves: ',
+        formatUnits(reservesAfter[0], 6),
+        formatUnits(reservesAfter[1], 6),
+        formatUnits(reservesAfter[2], 18),
+        formatUnits(reservesAfter[3], 8)
+      )
+
+      deviation = await pool.getDeviation()
+      console.log('📉 Deviation: ', deviation.toString())
     })
   })
 })
