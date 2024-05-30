@@ -94,13 +94,11 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       await wbtc.approve(await periphery.getAddress(), ethers.parseUnits('4000', 8))
 
       console.log('🪙 Minting LP Tokens 🪙')
-      console.log('USDC Balance:', formatUnits(await usdc.balanceOf(await owner.getAddress()), 6))
-      console.log('USDT Balance:', formatUnits(await usdt.balanceOf(await owner.getAddress()), 6))
 
       await periphery.addLiquidity(
         [
-          ethers.parseUnits('10000', 6),
-          ethers.parseUnits('10000', 6),
+          ethers.parseUnits('1000', 6),
+          ethers.parseUnits('1000', 6),
           ethers.parseUnits('0.24631000000000003', 18),
           ethers.parseUnits('0.01405', 8),
         ],
@@ -123,8 +121,6 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       const lpBalance = await pool.balanceOf(await owner.getAddress())
 
       console.log('LP Balance: ', ethers.formatUnits(lpBalance.toString(), 18))
-      console.log('USDC Balance:', formatUnits(await usdc.balanceOf(await owner.getAddress()), 6))
-      console.log('USDT Balance:', formatUnits(await usdt.balanceOf(await owner.getAddress()), 6))
 
       const totvals = await pool.computeTotalValuation()
       console.log('Total Valuation: ', formatUnits(totvals[0], baseDecimals))
@@ -134,7 +130,6 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
 
       console.log('🪙 Burnning LP Tokens 🪙')
-
       await pool.approve(await periphery.getAddress(), lpBalance)
       await periphery.connect(owner).removeLiquidity(lpBalance, await pool.getAddress(), await owner.getAddress())
 
@@ -142,6 +137,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       const fee = (lpBalance * BigInt(pooFee) * 1n) / 10000n
 
       expect(await pool.totalSupply()).to.equal(BigInt(fee))
+
       console.log('✅ LP Tokens Minted Successfully ✅')
     })
   })
