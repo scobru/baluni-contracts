@@ -43,7 +43,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import './libs/AddressUpgradeable.sol';
 
 interface IRouter {
-    function getBpsFee() external view returns (uint256);
+    function _BPS_FEE() external view returns (uint256);
 }
 
 /**
@@ -132,7 +132,7 @@ contract BaluniV1Agent {
      */
     function _chargeFees(address[] memory tokensReturn) internal {
         uint256 amount;
-        uint256 bpsFee = IRouter(router).getBpsFee();
+        uint256 bpsFee = IRouter(router)._BPS_FEE();
         for (uint256 i = 0; i < tokensReturn.length; i++) {
             address token = tokensReturn[i];
             if (token == _NATIVE) {

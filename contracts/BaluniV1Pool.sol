@@ -238,12 +238,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         }
         require(toMint != 0, 'Mint qty is 0');
 
-        uint256 b4 = balanceOf(msg.sender);
         _mint(to, toMint);
-        uint256 b = balanceOf(to) - b4;
-
-        require(b == toMint, 'Mint Failed');
-
         emit Mint(to, toMint);
 
         return toMint;

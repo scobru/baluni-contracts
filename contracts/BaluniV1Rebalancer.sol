@@ -59,8 +59,6 @@ contract BaluniV1Rebalancer is
     address public baluniRouter;
     address public USDC;
     address public WNATIVE;
-    address public uniswapRouter;
-    address public uniswapFactory;
     address public _1InchSpotAgg;
     address public treasury;
 
@@ -154,8 +152,6 @@ contract BaluniV1Rebalancer is
                     continue;
                 }
 
-                secureApproval(asset, address(uniswapRouter), vars.overweightAmounts[i]);
-
                 if (asset == address(WNATIVE)) {
                     vars.amountOut += _singleSwap(asset, address(USDC), vars.overweightAmounts[i], address(this));
                 } else {
@@ -185,7 +181,6 @@ contract BaluniV1Rebalancer is
                 }
 
                 if (rebBuyQty > 0 && rebBuyQty <= usdBalance * 1e12) {
-                    secureApproval(address(USDC), address(uniswapRouter), rebBuyQty / 1e12);
                     require(usdBalance >= rebBuyQty / 1e12, 'Balance under RebuyQty');
 
                     uint256 amountOut;

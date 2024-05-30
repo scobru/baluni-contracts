@@ -46,9 +46,14 @@ import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
+import './interfaces/IBaluniV1PoolPeriphery.sol';
+import './interfaces/IBaluniV1PoolFactory.sol';
+
 abstract contract BaluniV1Uniswapper {
-    address private uniswapRouter;
-    address private uniswapFactory;
+    address public uniswapRouter;
+    address public uniswapFactory;
+    address public baluniPeriphery;
+    address public baluniFactory;
 
     /**
      * @dev Executes a single swap between two tokens using Uniswap.
@@ -74,7 +79,6 @@ abstract contract BaluniV1Uniswapper {
         require(amount > 0, 'Amount is 0');
         require(IERC20(token0).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
         IERC20(token0).transferFrom(msg.sender, address(this), amount);
-        secureApproval(token0, address(uniswapRouter), amount);
         return _singleSwap(token0, token1, amount, receiver);
     }
 
@@ -104,7 +108,6 @@ abstract contract BaluniV1Uniswapper {
         require(amount > 0, 'Amount is 0');
         require(IERC20(token0).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
         IERC20(token0).transferFrom(msg.sender, address(this), amount);
-        secureApproval(token0, address(uniswapRouter), amount);
         return _multiHopSwap(token0, token1, token2, amount, receiver);
     }
 
@@ -122,18 +125,28 @@ abstract contract BaluniV1Uniswapper {
         uint256 tokenBalance,
         address receiver
     ) internal returns (uint256 amountOut) {
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-            tokenIn: token0,
-            tokenOut: token1,
-            fee: 3000,
-            recipient: address(receiver),
-            deadline: block.timestamp,
-            amountIn: tokenBalance,
-            amountOutMinimum: 0,
-            sqrtPriceLimitX96: 0
-        });
+        IBaluniV1PoolPeriphery periphery = IBaluniV1PoolPeriphery(baluniPeriphery);
+        _secureApproval(token0, baluniPeriphery, tokenBalance);
+        try periphery.swap(token0, token1, tokenBalance, receiver) returns (uint256 amountReceived) {
+            if (amountReceived > 0) {
+                return amountReceived;
+            }
+        } catch {
+            _secureApproval(token0, uniswapRouter, tokenBalance);
 
-        return ISwapRouter(uniswapRouter).exactInputSingle(params);
+            ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+                tokenIn: token0,
+                tokenOut: token1,
+                fee: 3000,
+                recipient: address(receiver),
+                deadline: block.timestamp,
+                amountIn: tokenBalance,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            });
+
+            return ISwapRouter(uniswapRouter).exactInputSingle(params);
+        }
     }
 
     /**
@@ -152,6 +165,40 @@ abstract contract BaluniV1Uniswapper {
         uint256 tokenBalance,
         address receiver
     ) internal returns (uint256 amountOut) {
+        IBaluniV1PoolPeriphery periphery = IBaluniV1PoolPeriphery(baluniPeriphery);
+        uint256 intermediateBalance;
+        _secureApproval(token0, baluniPeriphery, tokenBalance);
+
+        try periphery.swap(token0, token1, tokenBalance, address(this)) returns (uint256 amountReceived) {
+            if (amountReceived > 0) {
+                intermediateBalance = amountReceived;
+            } else {
+                return _multiHopSwapFallback(token0, token1, token2, tokenBalance, receiver);
+            }
+        } catch {
+            return _multiHopSwapFallback(token0, token1, token2, tokenBalance, receiver);
+        }
+
+        try periphery.swap(token1, token2, intermediateBalance, receiver) returns (uint256 amountReceived) {
+            if (amountReceived > 0) {
+                return amountReceived;
+            } else {
+                return _multiHopSwapFallback(token0, token1, token2, tokenBalance, receiver);
+            }
+        } catch {
+            return _multiHopSwapFallback(token0, token1, token2, tokenBalance, receiver);
+        }
+    }
+
+    function _multiHopSwapFallback(
+        address token0,
+        address token1,
+        address token2,
+        uint256 tokenBalance,
+        address receiver
+    ) internal returns (uint256 amountOut) {
+        _secureApproval(token0, uniswapRouter, tokenBalance);
+
         ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
             path: abi.encodePacked(token0, uint24(3000), token1, uint24(3000), token2),
             recipient: address(receiver),
@@ -170,7 +217,7 @@ abstract contract BaluniV1Uniswapper {
      * @param amount The desired allowance amount.
      * @notice This function is internal and should not be called directly.
      */
-    function secureApproval(address token, address spender, uint256 amount) internal {
+    function _secureApproval(address token, address spender, uint256 amount) internal {
         IERC20 _token = IERC20(token);
         // check allowance thena pprove
         if (_token.allowance(address(this), spender) < amount) {

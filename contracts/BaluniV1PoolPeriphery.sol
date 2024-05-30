@@ -51,6 +51,12 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     IBaluniV1PoolFactory public poolFactory;
 
+    address public treasury;
+
+    uint256 public _MAX_BPS_FEE;
+    uint256 public _BPS_FEE;
+    uint256 public _BPS_BASE;
+
     mapping(address => mapping(address => uint256)) public poolsReserves; // Mapping of token address to pool addresses (for quick lookup
 
     /**
@@ -61,6 +67,10 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         __UUPSUpgradeable_init();
         __Ownable_init(msg.sender);
         poolFactory = IBaluniV1PoolFactory(_poolFactory);
+        treasury = msg.sender;
+        _MAX_BPS_FEE = 100;
+        _BPS_FEE = 30; // 0.3%.
+        _BPS_BASE = 10000;
     }
 
     /**
@@ -69,6 +79,10 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      */
     function reinitialize(address _poolFactory, uint64 version) public reinitializer(version) {
         poolFactory = IBaluniV1PoolFactory(_poolFactory);
+        treasury = msg.sender;
+        _MAX_BPS_FEE = 100;
+        _BPS_FEE = 30; // 0.3%.
+        _BPS_BASE = 10000;
     }
 
     /**
@@ -95,9 +109,14 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         poolsReserves[poolAddress][fromToken] += amount;
 
         uint256 toSend = pool.swap(fromToken, toToken, amount, receiver);
-        poolsReserves[poolAddress][toToken] -= toSend;
 
+        uint fee = ((toSend * _BPS_FEE) / _BPS_BASE);
+        IERC20(toToken).transfer(treasury, fee);
+
+        toSend -= fee;
         IERC20(toToken).transfer(receiver, toSend);
+
+        poolsReserves[poolAddress][toToken] -= toSend;
 
         return toSend;
     }
@@ -135,11 +154,16 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
             poolsReserves[poolAddress][fromTokens[i]] += amounts[i];
 
             uint256 amountOut = pool.swap(fromTokens[i], toTokens[i], amounts[i], receivers[i]);
-            poolsReserves[poolAddress][toTokens[i]] -= amountOut;
 
             require(IERC20(toTokens[i]).balanceOf(address(this)) >= amountOut, 'Insufficient Liquidity');
 
+            uint fee = ((amountOut * _BPS_FEE) / _BPS_BASE);
+            IERC20(toTokens[i]).transfer(treasury, fee);
+
+            amountOut -= fee;
             IERC20(toTokens[i]).transfer(receivers[i], amountOut);
+
+            poolsReserves[poolAddress][toTokens[i]] -= amountOut;
         }
 
         return amountsOut;
@@ -155,132 +179,6 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         }
     }
 
-    function smartSwap(
-        address fromToken,
-        address toToken,
-        uint256 amount,
-        address receiver
-    ) external returns (uint256) {
-        require(amount > 0, 'Amount must be greater than zero');
-
-        address[] memory pools = _findOptimalRoute(fromToken, toToken, amount);
-        require(pools.length > 0, 'No route found');
-
-        IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
-
-        uint256 amountRemaining = amount;
-        address currentToken = fromToken;
-        for (uint256 i = 0; i < pools.length; i++) {
-            IBaluniV1Pool pool = IBaluniV1Pool(pools[i]);
-            address[] memory poolTokens = pool.getAssets();
-            uint256[] memory reserves = getReserves(pools[i]);
-
-            address nextToken;
-            for (uint256 j = 0; j < poolTokens.length; j++) {
-                if (poolTokens[j] != currentToken && reserves[j] > 0) {
-                    nextToken = poolTokens[j];
-                    break;
-                }
-            }
-
-            require(nextToken != address(0), 'No valid next token found');
-            require(pool.getAssetReserve(nextToken) >= amountRemaining, 'Insufficient liquidity in pool for swap');
-
-            uint256 amountOut = pool.swap(
-                currentToken,
-                nextToken,
-                amountRemaining,
-                i == pools.length - 1 ? receiver : address(this)
-            );
-
-            poolsReserves[pools[i]][currentToken] += amountRemaining;
-            poolsReserves[pools[i]][nextToken] -= amountOut;
-
-            currentToken = nextToken;
-            amountRemaining = amountOut;
-        }
-
-        return amountRemaining;
-    }
-
-    function _findOptimalRoute(
-        address fromToken,
-        address toToken,
-        uint256 amount
-    ) internal view returns (address[] memory) {
-        address[] memory allPools = poolFactory.getAllPools();
-        uint256 poolCount = allPools.length;
-
-        address[] memory path = new address[](poolCount);
-        uint256 pathLength = 0;
-        bool[] memory visited = new bool[](poolCount);
-
-        address[] memory queue = new address[](poolCount);
-        uint256 queueHead = 0;
-        uint256 queueTail = 0;
-
-        queue[queueTail++] = fromToken;
-
-        while (queueHead < queueTail) {
-            address currentToken = queue[queueHead++];
-            if (currentToken == toToken) {
-                address[] memory finalPath = new address[](pathLength);
-                for (uint256 i = 0; i < pathLength; i++) {
-                    finalPath[i] = path[i];
-                }
-                return finalPath;
-            }
-
-            for (uint256 i = 0; i < poolCount; i++) {
-                if (!visited[i]) {
-                    IBaluniV1Pool pool = IBaluniV1Pool(allPools[i]);
-                    address[] memory poolTokens = pool.getAssets();
-
-                    if (
-                        _containsToken(poolTokens, currentToken) && _hasSufficientLiquidity(pool, currentToken, amount)
-                    ) {
-                        address nextToken = _getOtherTokenInPool(poolTokens, currentToken);
-                        path[pathLength++] = allPools[i];
-                        queue[queueTail++] = nextToken;
-                        visited[i] = true;
-                    }
-                }
-            }
-        }
-
-        address[] memory addr = new address[](0);
-        return addr;
-    }
-
-    function _containsToken(address[] memory tokens, address token) internal pure returns (bool) {
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (tokens[i] == token) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function _hasSufficientLiquidity(IBaluniV1Pool pool, address token, uint256 amount) internal view returns (bool) {
-        uint256[] memory reserves = getReserves(address(pool));
-        address[] memory assets = pool.getAssets();
-        for (uint256 i = 0; i < assets.length; i++) {
-            if (assets[i] == token) {
-                return reserves[i] >= amount;
-            }
-        }
-        return false;
-    }
-
-    function _getOtherTokenInPool(address[] memory tokens, address token) internal pure returns (address) {
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (tokens[i] != token) {
-                return tokens[i];
-            }
-        }
-        revert('Token not found in pool');
-    }
-
     /**
      * @dev Adds liquidity to a BaluniV1Pool.
      * @param amounts An array of amounts for each asset to add as liquidity.
@@ -292,8 +190,10 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         for (uint256 i = 0; i < assets.length; i++) {
             address asset = assets[i];
             uint256 amount = amounts[i];
-            poolsReserves[poolAddress][asset] += amount;
             IERC20(asset).transferFrom(msg.sender, address(this), amount);
+            uint fee = ((amount * _BPS_FEE) / _BPS_BASE);
+            IERC20(asset).transfer(treasury, fee);
+            poolsReserves[poolAddress][asset] += amount - fee;
         }
 
         pool.mint(receiver, amounts);
@@ -327,8 +227,11 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         address[] memory assets = IBaluniV1Pool(poolAddress).getAssets();
 
         for (uint256 i = 0; i < assets.length; i++) {
+            uint fee = ((amountsOut[i] * _BPS_FEE) / _BPS_BASE);
+            IERC20(assets[i]).transfer(treasury, fee);
             require(IERC20(assets[i]).balanceOf(address(this)) >= amountsOut[i], 'Insufficient Liquidity');
             poolsReserves[poolAddress][assets[i]] -= amountsOut[i];
+            amountsOut[i] -= fee;
             bool assetTransferSuccess = IERC20(assets[i]).transfer(receiver, amountsOut[i]);
             require(assetTransferSuccess, 'Asset transfer failed');
         }
@@ -355,7 +258,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
         uint256 balance = IERC20(poolAddress).balanceOf(msg.sender);
         uint256 totalSupply = IERC20(poolAddress).totalSupply();
-        require((balance * 10000) / totalSupply >= 100, 'Insufficient balance');
+        require((balance * _BPS_BASE) / totalSupply >= 100, 'Insufficient balance');
         (uint256[] memory amountsToAdd, uint256[] memory amountsToRemove) = pool.performRebalanceIfNeeded();
 
         // update Pool reserves
@@ -392,6 +295,15 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         poolFactory = IBaluniV1PoolFactory(_poolFactory);
     }
 
+    /**
+     * @dev Changes the treasury address.
+     * Can only be called by the contract owner.
+     * @param _treasury The new treasury address.
+     */
+    function changeTreausry(address _treasury) external onlyOwner {
+        treasury = _treasury;
+    }
+
     function getReserves(address pool) public view returns (uint256[] memory) {
         address[] memory assets = IBaluniV1Pool(pool).getAssets();
         uint256[] memory reserves = new uint256[](assets.length);
@@ -403,5 +315,14 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
 
     function getAssetReserve(address pool, address asset) external view returns (uint256) {
         return poolsReserves[pool][asset];
+    }
+
+    /**
+     * @dev Changes the basis points fee for the contract.
+     * @param _newFee The new basis points fee to be set.
+     */
+    function changeBpsFee(uint256 _newFee) external onlyOwner {
+        require(_newFee <= _MAX_BPS_FEE, 'Fee exceeds maximum');
+        _BPS_FEE = _newFee;
     }
 }

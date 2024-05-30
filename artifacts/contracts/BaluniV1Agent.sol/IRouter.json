@@ -5,7 +5,7 @@
   "abi": [
     {
       "inputs": [],
-      "name": "getBpsFee",
+      "name": "_BPS_FEE",
       "outputs": [
         {
           "internalType": "uint256",

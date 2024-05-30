@@ -47,8 +47,10 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 
+import './interfaces/IBaluniV1Agent.sol';
 import './interfaces/IBaluniV1AgentFactory.sol';
 import './interfaces/IBaluniV1Rebalancer.sol';
+import './interfaces/I1inchSpotAgg.sol';
 import './libs/EnumerableSetUpgradeable.sol';
 import './BaluniV1Uniswapper.sol';
 
@@ -77,16 +79,12 @@ contract BaluniV1Router is
     address public agentFactory;
     address public rebalancer;
     address public treasury;
-    address private uniswapRouter;
-    address private uniswapFactory;
 
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
     event Execute(address user, IBaluniV1Agent.Call[] calls, address[] tokensReturn);
     event Burn(address user, uint256 value);
     event Mint(address user, uint256 value);
-    event ChangeBpsFee(uint256 newFee);
-    event ChangeRewardPool(address pool);
     event Log(string message, uint256 value);
 
     /**
@@ -109,7 +107,7 @@ contract BaluniV1Router is
         __UUPSUpgradeable_init();
         _mint(address(this), 1 ether);
 
-        _MAX_BPS_FEE = 500;
+        _MAX_BPS_FEE = 100;
         _BPS_FEE = 30; // 0.3%.
         _BPS_BASE = 10000;
         USDC = _usdc;
@@ -175,8 +173,9 @@ contract BaluniV1Router is
      * @param _newFee The new basis points fee to be set.
      */
     function changeBpsFee(uint256 _newFee) external onlyOwner {
+        require(_newFee <= _MAX_BPS_FEE, 'Fee exceeds maximum');
+
         _BPS_FEE = _newFee;
-        emit ChangeBpsFee(_newFee);
     }
 
     /**
@@ -269,7 +268,6 @@ contract BaluniV1Router is
     function liquidate(address token) public {
         uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
         address pool = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 3000);
-        secureApproval(token, address(uniswapRouter), totalERC20Balance);
         bool haveBalance = totalERC20Balance > 0;
         if (pool != address(0) && haveBalance) {
             uint256 singleSwapResult = _singleSwap(token, address(USDC), totalERC20Balance, address(this));
@@ -353,7 +351,6 @@ contract BaluniV1Router is
             }
 
             address pool = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 3000);
-            secureApproval(token, address(uniswapRouter), burnAmountToken);
 
             if (pool != address(0)) {
                 uint256 amountOut = _singleSwap(token, address(USDC), burnAmountToken, address(this));
@@ -617,5 +614,17 @@ contract BaluniV1Router is
      */
     function getTokens() external view returns (address[] memory) {
         return tokens.values();
+    }
+
+    /**
+     * @dev Sets the protocol addresses for BaluniV1Uniswapper.
+     * Can only be called by the contract owner.
+     *
+     * @param _baluniPeriphery The address of the Baluni periphery contract.
+     * @param _baluniFactory The address of the Baluni factory contract.
+     */
+    function setBaluniDexAddresses(address _baluniPeriphery, address _baluniFactory) external onlyOwner {
+        baluniPeriphery = _baluniPeriphery;
+        baluniFactory = _baluniFactory;
     }
 }

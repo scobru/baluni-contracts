@@ -2,6 +2,8 @@
 pragma solidity 0.8.25;
 
 import '../interfaces/IBaluniV1Rebalancer.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 
 contract MockRebalancer {
     mapping(address => mapping(address => uint256)) public rates;
