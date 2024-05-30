@@ -42,6 +42,7 @@ import './interfaces/IBaluniV1Pool.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import './interfaces/IBaluniV1Registry.sol';
 
 /**
  * @title BaluniV1PoolPeriphery
@@ -49,40 +50,18 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
  * It provides functions for swapping tokens, adding liquidity, removing liquidity, and getting the amount out for a given swap.
  */
 contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
-    IBaluniV1PoolFactory public poolFactory;
-
-    address public treasury;
-
-    uint256 public _MAX_BPS_FEE;
-    uint256 public _BPS_FEE;
-    uint256 public _BPS_BASE;
+    IBaluniV1Registry public registry;
 
     mapping(address => mapping(address => uint256)) public poolsReserves; // Mapping of token address to pool addresses (for quick lookup
 
-    /**
-     * @dev Initializes the contract by setting the pool factory address.
-     * @param _poolFactory The address of the BaluniV1PoolFactory contract.
-     */
-    function initialize(address _poolFactory) public initializer {
+    function initialize(address _registry) public initializer {
         __UUPSUpgradeable_init();
         __Ownable_init(msg.sender);
-        poolFactory = IBaluniV1PoolFactory(_poolFactory);
-        treasury = msg.sender;
-        _MAX_BPS_FEE = 100;
-        _BPS_FEE = 30; // 0.3%.
-        _BPS_BASE = 10000;
+        registry = IBaluniV1Registry(_registry);
     }
 
-    /**
-     * @dev Initializes the contract by setting the pool factory address.
-     * @param _poolFactory The address of the BaluniV1PoolFactory contract.
-     */
-    function reinitialize(address _poolFactory, uint64 version) public reinitializer(version) {
-        poolFactory = IBaluniV1PoolFactory(_poolFactory);
-        treasury = msg.sender;
-        _MAX_BPS_FEE = 100;
-        _BPS_FEE = 30; // 0.3%.
-        _BPS_BASE = 10000;
+    function reinitialize(address _registry, uint64 version) public reinitializer(version) {
+        registry = IBaluniV1Registry(_registry);
     }
 
     /**
@@ -100,6 +79,11 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @return The amount of tokens received after the swap.
      */
     function swap(address fromToken, address toToken, uint256 amount, address receiver) external returns (uint256) {
+        IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
+        address treasury = registry.getTreasury();
+        uint256 _BPS_FEE = registry.getBPS_FEE();
+        uint256 _BPS_BASE = registry.getBPS_BASE();
+
         require(amount > 0, 'Amount must be greater than zero');
 
         address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
@@ -135,6 +119,11 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         uint256[] calldata amounts,
         address[] calldata receivers
     ) external returns (uint256[] memory) {
+        IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
+        uint256 _BPS_FEE = registry.getBPS_FEE();
+        uint256 _BPS_BASE = registry.getBPS_BASE();
+        address treasury = registry.getTreasury();
+
         require(
             fromTokens.length == toTokens.length &&
                 toTokens.length == amounts.length &&
@@ -184,6 +173,9 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @param amounts An array of amounts for each asset to add as liquidity.
      */
     function addLiquidity(uint256[] calldata amounts, address poolAddress, address receiver) external {
+        address treasury = registry.getTreasury();
+        uint256 _BPS_FEE = registry.getBPS_FEE();
+        uint256 _BPS_BASE = registry.getBPS_BASE();
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
         address[] memory assets = pool.getAssets();
 
@@ -205,6 +197,9 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @param poolAddress The address of the BaluniV1Pool.
      */
     function removeLiquidity(uint256 share, address poolAddress, address receiver) external {
+        address treasury = registry.getTreasury();
+        uint256 _BPS_FEE = registry.getBPS_FEE();
+        uint256 _BPS_BASE = registry.getBPS_BASE();
         require(share > 0, 'Share must be greater than zero');
         IERC20 poolToken = IERC20(poolAddress);
 
@@ -245,6 +240,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @return The amount of tokens received after the swap.
      */
     function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
+        IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
         address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
         return pool.getAmountOut(fromToken, toToken, amount);
@@ -255,6 +251,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @param poolAddress The address of the token pool to rebalance.
      */
     function performRebalanceIfNeeded(address poolAddress) external {
+        uint256 _BPS_BASE = registry.getBPS_BASE();
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
         uint256 balance = IERC20(poolAddress).balanceOf(msg.sender);
         uint256 totalSupply = IERC20(poolAddress).totalSupply();
@@ -275,6 +272,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @return An array of pool addresses.
      */
     function getPoolsContainingToken(address token) external view returns (address[] memory) {
+        IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
         return poolFactory.getPoolsByAsset(token);
     }
 
@@ -284,24 +282,6 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      */
     function getVersion() external view returns (uint64) {
         return _getInitializedVersion();
-    }
-
-    /**
-     * @dev Changes the address of the pool factory contract.
-     * Can only be called by the contract owner.
-     * @param _poolFactory The new address of the pool factory contract.
-     */
-    function changePoolFactory(address _poolFactory) external onlyOwner {
-        poolFactory = IBaluniV1PoolFactory(_poolFactory);
-    }
-
-    /**
-     * @dev Changes the treasury address.
-     * Can only be called by the contract owner.
-     * @param _treasury The new treasury address.
-     */
-    function changeTreausry(address _treasury) external onlyOwner {
-        treasury = _treasury;
     }
 
     function getReserves(address pool) public view returns (uint256[] memory) {
@@ -322,6 +302,8 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @param _newFee The new basis points fee to be set.
      */
     function changeBpsFee(uint256 _newFee) external onlyOwner {
+        uint256 _MAX_BPS_FEE = registry.getMAX_BPS_FEE();
+        uint256 _BPS_FEE = registry.getBPS_FEE();
         require(_newFee <= _MAX_BPS_FEE, 'Fee exceeds maximum');
         _BPS_FEE = _newFee;
     }

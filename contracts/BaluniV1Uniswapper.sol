@@ -48,12 +48,10 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
 import './interfaces/IBaluniV1PoolPeriphery.sol';
 import './interfaces/IBaluniV1PoolFactory.sol';
+import './interfaces/IBaluniV1Registry.sol';
 
 abstract contract BaluniV1Uniswapper {
-    address public uniswapRouter;
-    address public uniswapFactory;
-    address public baluniPeriphery;
-    address public baluniFactory;
+    IBaluniV1Registry private registry;
 
     /**
      * @dev Executes a single swap between two tokens using Uniswap.
@@ -125,6 +123,9 @@ abstract contract BaluniV1Uniswapper {
         uint256 tokenBalance,
         address receiver
     ) internal returns (uint256 amountOut) {
+        address baluniPeriphery = registry.getBaluniPoolPeriphery();
+        address uniswapRouter = registry.getUniswapRouter();
+
         IBaluniV1PoolPeriphery periphery = IBaluniV1PoolPeriphery(baluniPeriphery);
         _secureApproval(token0, baluniPeriphery, tokenBalance);
         try periphery.swap(token0, token1, tokenBalance, receiver) returns (uint256 amountReceived) {
@@ -165,6 +166,9 @@ abstract contract BaluniV1Uniswapper {
         uint256 tokenBalance,
         address receiver
     ) internal returns (uint256 amountOut) {
+        address baluniPeriphery = registry.getBaluniPoolPeriphery();
+        address uniswapRouter = registry.getUniswapRouter();
+
         IBaluniV1PoolPeriphery periphery = IBaluniV1PoolPeriphery(baluniPeriphery);
         uint256 intermediateBalance;
         _secureApproval(token0, baluniPeriphery, tokenBalance);
@@ -197,6 +201,7 @@ abstract contract BaluniV1Uniswapper {
         uint256 tokenBalance,
         address receiver
     ) internal returns (uint256 amountOut) {
+        address uniswapRouter = registry.getUniswapRouter();
         _secureApproval(token0, uniswapRouter, tokenBalance);
 
         ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({

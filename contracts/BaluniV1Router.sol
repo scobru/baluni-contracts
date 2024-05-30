@@ -68,17 +68,9 @@ contract BaluniV1Router is
         bytes data;
     }
 
-    uint256 public _MAX_BPS_FEE;
-    uint256 public _BPS_FEE;
-    uint256 public _BPS_BASE;
-
     EnumerableSetUpgradeable.AddressSet private tokens;
-    address public USDC;
-    address public WNATIVE;
-    address public oracle;
-    address public agentFactory;
-    address public rebalancer;
-    address public treasury;
+
+    IBaluniV1Registry public registry;
 
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
 
@@ -93,64 +85,24 @@ contract BaluniV1Router is
      * It also sets the USDC token address, WNATIVE token address, oracle address, Uniswap router address, and Uniswap factory address.
      * Finally, it adds the USDC token address to the tokens set.
      */
-    function initialize(
-        address _usdc,
-        address _wnative,
-        address _1inchSpotAgg,
-        address _uniRouter,
-        address _uniFactory,
-        address _rebalancer
-    ) public initializer {
+    function initialize(address _registry) public initializer {
         __ERC20_init('Baluni', 'BALUNI');
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
         _mint(address(this), 1 ether);
 
-        _MAX_BPS_FEE = 100;
-        _BPS_FEE = 30; // 0.3%.
-        _BPS_BASE = 10000;
-        USDC = _usdc;
-        WNATIVE = _wnative;
-        oracle = _1inchSpotAgg; // 1inch Spot Aggregator
-        uniswapRouter = _uniRouter;
-        uniswapFactory = _uniFactory;
-        EnumerableSetUpgradeable.add(tokens, address(USDC));
-        rebalancer = _rebalancer;
-        treasury = msg.sender;
+        registry = IBaluniV1Registry(_registry);
     }
 
-    /**
-     * @dev Reinitializes the BaluniV1Router contract with the specified parameters.
-     * @param _usdc The address of the USDC token contract.
-     * @param _wnative The address of the WNative token contract.
-     * @param _1inchSpotAgg The address of the 1inch Spot Aggregator oracle contract.
-     * @param _uniRouter The address of the Uniswap router contract.
-     * @param _uniFactory The address of the Uniswap factory contract.
-     * @param version The version of the contract.
-     */
-    function reinitialize(
-        address _usdc,
-        address _wnative,
-        address _1inchSpotAgg,
-        address _uniRouter,
-        address _uniFactory,
-        address _rebalancer,
-        uint64 version
-    ) public reinitializer(version) {
+    function reinitialize(address _registry, uint64 version) public reinitializer(version) {
         // __UUPSUpgradeable_init();
         // __Ownable_init(msg.sender);
-        _MAX_BPS_FEE = 500;
-        _BPS_FEE = 30; // 0.3%.
-        _BPS_BASE = 10000;
-        USDC = _usdc;
-        WNATIVE = _wnative;
-        oracle = _1inchSpotAgg; // 1inch Spot Aggregator
-        uniswapRouter = _uniRouter;
-        uniswapFactory = _uniFactory;
-        EnumerableSetUpgradeable.add(tokens, address(USDC));
-        rebalancer = _rebalancer;
-        treasury = msg.sender;
+        registry = IBaluniV1Registry(_registry);
+    }
+
+    function resetContract(address _registry) public onlyOwner {
+        registry = IBaluniV1Registry(_registry);
     }
 
     /**
@@ -169,44 +121,6 @@ contract BaluniV1Router is
     }
 
     /**
-     * @dev Changes the basis points fee for the contract.
-     * @param _newFee The new basis points fee to be set.
-     */
-    function changeBpsFee(uint256 _newFee) external onlyOwner {
-        require(_newFee <= _MAX_BPS_FEE, 'Fee exceeds maximum');
-
-        _BPS_FEE = _newFee;
-    }
-
-    /**
-     * @dev Changes the treasury address.
-     * Can only be called by the contract owner.
-     * @param _newTreasury The new treasury address.
-     */
-    function changeTreasury(address _newTreasury) external onlyOwner {
-        treasury = _newTreasury;
-    }
-
-    /**
-     * @dev Changes the address of the rebalancer contract.
-     * Can only be called by the contract owner.
-     *
-     * @param _newRebalancer The new address of the rebalancer contract.
-     */
-    function changeRebalancer(address _newRebalancer) external onlyOwner {
-        rebalancer = _newRebalancer;
-    }
-
-    /**
-     * @dev Changes the address of the agent factory contract.
-     * Can only be called by the contract owner.
-     * @param _agentFactory The new address of the agent factory contract.
-     */
-    function changeAgentFactory(address _agentFactory) external onlyOwner {
-        agentFactory = _agentFactory;
-    }
-
-    /**
      * @dev Executes a series of calls to a BaluniV1Agent contract and handles token returns.
      * @param calls An array of IBaluniV1Agent.Call structs representing the calls to be executed.
      * @param tokensReturn An array of addresses representing the tokens to be returned.
@@ -215,6 +129,14 @@ contract BaluniV1Router is
      * @notice If no Uniswap pool exists for a token, the token balance is transferred back to the caller.
      */
     function execute(IBaluniV1Agent.Call[] memory calls, address[] memory tokensReturn) external nonReentrant {
+        address agentFactory = registry.getBaluniAgentFactory();
+        address treasury = registry.getTreasury();
+        address uniswapFactory = registry.getUniswapFactory();
+        address WNATIVE = registry.getWNATIVE();
+        address USDC = registry.getUSDC();
+        uint256 _BPS_FEE = registry.getBPS_FEE();
+        uint256 _BPS_BASE = registry.getBPS_BASE();
+
         require(address(agentFactory) != address(0), 'Agent factory not set');
         address agent = IBaluniV1AgentFactory(agentFactory).getOrCreateAgent(msg.sender);
         bool[] memory isTokenNew = new bool[](tokensReturn.length);
@@ -266,6 +188,10 @@ contract BaluniV1Router is
      * @notice If the swap fails, the `burn` function should be called to handle the failed swap.
      */
     function liquidate(address token) public {
+        address USDC = registry.getUSDC();
+        address WNATIVE = registry.getWNATIVE();
+        address uniswapFactory = registry.getUniswapFactory();
+
         uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
         address pool = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 3000);
         bool haveBalance = totalERC20Balance > 0;
@@ -307,6 +233,8 @@ contract BaluniV1Router is
      * @notice Finally, the function emits a `Burn` event with the caller's address and the amount of tokens burned.
      */
     function burnERC20(uint256 burnAmount) external nonReentrant {
+        address treasury = registry.getTreasury();
+
         require(balanceOf(msg.sender) >= burnAmount, 'Insufficient BAL');
 
         for (uint256 i; i < tokens.length(); i++) {
@@ -331,6 +259,11 @@ contract BaluniV1Router is
      * @param burnAmount The amount of BAL tokens to burn.
      */
     function burnUSDC(uint256 burnAmount) public nonReentrant {
+        address uniswapFactory = registry.getUniswapFactory();
+        address treasury = registry.getTreasury();
+        address USDC = registry.getUSDC();
+        address WNATIVE = registry.getWNATIVE();
+
         require(burnAmount > 0, 'Insufficient BAL');
 
         for (uint256 i; i < tokens.length(); i++) {
@@ -382,6 +315,7 @@ contract BaluniV1Router is
      * @return The agent address.
      */
     function getAgentAddress(address _user) external view returns (address) {
+        address agentFactory = registry.getBaluniAgentFactory();
         return IBaluniV1AgentFactory(agentFactory).getAgentAddress(_user);
     }
 
@@ -390,6 +324,11 @@ contract BaluniV1Router is
      * @param balAmountToMint The amount of BALUNI tokens to mint.
      */
     function mintWithUSDC(uint256 balAmountToMint) public nonReentrant {
+        address treasury = registry.getTreasury();
+        address USDC = registry.getUSDC();
+        uint256 _BPS_FEE = registry.getBPS_FEE();
+        uint256 _BPS_BASE = registry.getBPS_BASE();
+
         uint256 totalUSDValuation = _totalValuation();
         uint256 totalBalSupply = totalSupply();
         uint256 usdcRequired = (balAmountToMint * totalUSDValuation) / totalBalSupply;
@@ -423,6 +362,8 @@ contract BaluniV1Router is
         uint256 limit,
         address /* baseAsset */
     ) external {
+        address USDC = registry.getUSDC();
+        address rebalancer = registry.getBaluniRebalancer();
         uint256[] memory balances = new uint256[](0);
         IBaluniV1Rebalancer(rebalancer).rebalance(balances, assets, weights, limit, sender, receiver, USDC);
     }
@@ -490,11 +431,14 @@ contract BaluniV1Router is
      * @return valuation The valuation of the token.
      */
     function _calculateERC20Valuation(uint256 amount, address token) internal view returns (uint256 valuation) {
+        address baluniPeriphery = registry.getBaluniPoolPeriphery();
+        address oracle = registry.get1inchSpotAgg();
+        address USDC = registry.getUSDC();
         uint256 rate;
         uint8 tokenDecimal = IERC20Metadata(token).decimals();
-        uint8 usdcDecimal = IERC20Metadata(address(USDC)).decimals();
+        uint8 usdcDecimal = IERC20Metadata(USDC).decimals();
 
-        if (token == address(USDC)) return amount * 1e12;
+        if (token == USDC) return amount * 1e12;
 
         try I1inchSpotAgg(oracle).getRate(IERC20(token), IERC20(USDC), false) returns (uint256 _rate) {
             rate = _rate;
@@ -582,6 +526,9 @@ contract BaluniV1Router is
      * @return The net amount after deducting the fee.
      */
     function _calculateNetAmountAfterFee(uint256 _amount) internal view returns (uint256) {
+        uint256 _BPS_FEE = registry.getBPS_FEE();
+        uint256 _BPS_BASE = registry.getBPS_BASE();
+
         uint256 amountInWithFee = (_amount * (_BPS_BASE - (_BPS_FEE))) / _BPS_BASE;
         return amountInWithFee;
     }
@@ -614,17 +561,5 @@ contract BaluniV1Router is
      */
     function getTokens() external view returns (address[] memory) {
         return tokens.values();
-    }
-
-    /**
-     * @dev Sets the protocol addresses for BaluniV1Uniswapper.
-     * Can only be called by the contract owner.
-     *
-     * @param _baluniPeriphery The address of the Baluni periphery contract.
-     * @param _baluniFactory The address of the Baluni factory contract.
-     */
-    function setBaluniDexAddresses(address _baluniPeriphery, address _baluniFactory) external onlyOwner {
-        baluniPeriphery = _baluniPeriphery;
-        baluniFactory = _baluniFactory;
     }
 }

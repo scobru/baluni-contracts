@@ -54,69 +54,16 @@ contract BaluniV1Rebalancer is
     IBaluniV1Rebalancer,
     BaluniV1Uniswapper
 {
-    uint256 internal multiplier;
+    IBaluniV1Registry public registry;
 
-    address public baluniRouter;
-    address public USDC;
-    address public WNATIVE;
-    address public _1InchSpotAgg;
-    address public treasury;
-
-    /**
-     * @dev Initializes the contract with the specified addresses and sets the multiplier value.
-     * @param _baluniRouter The address of the BaluniV1Router contract.
-     * @param _usdc The address of the USDC token contract.
-     * @param _wnative The address of the WNATIVE token contract.
-     * @param _uniRouter The address of the Uniswap router contract.
-     * @param _uniFactory The address of the Uniswap factory contract.
-     */
-    function initialize(
-        address _baluniRouter,
-        address _usdc,
-        address _wnative,
-        address _uniRouter,
-        address _uniFactory,
-        address _1InchSpotAggAddress
-    ) public initializer {
+    function initialize(address _registry) public initializer {
         __UUPSUpgradeable_init();
         __Ownable_init(msg.sender);
-
-        USDC = _usdc;
-        WNATIVE = _wnative;
-        uniswapRouter = _uniRouter;
-        uniswapFactory = _uniFactory;
-        baluniRouter = _baluniRouter;
-        _1InchSpotAgg = _1InchSpotAggAddress;
-        treasury = IBaluniV1Router(baluniRouter).treasury();
-        multiplier = 1e12;
+        registry = IBaluniV1Registry(_registry);
     }
 
-    /**
-     * @dev Reinitializes the contract with the specified addresses and sets the multiplier value.
-     * @param _baluniRouter The address of the BaluniV1Router contract.
-     * @param _usdc The address of the USDC token contract.
-     * @param _wnative The address of the WNATIVE token contract.
-     * @param _uniRouter The address of the Uniswap router contract.
-     * @param _uniFactory The address of the Uniswap factory contract.
-     * @param version The version of the contract.
-     */
-    function reinitialize(
-        address _baluniRouter,
-        address _usdc,
-        address _wnative,
-        address _uniRouter,
-        address _uniFactory,
-        address _1InchSpotAggAddress,
-        uint64 version
-    ) public reinitializer(version) {
-        USDC = _usdc;
-        WNATIVE = _wnative;
-        uniswapRouter = _uniRouter;
-        uniswapFactory = _uniFactory;
-        baluniRouter = _baluniRouter;
-        _1InchSpotAgg = _1InchSpotAggAddress;
-        treasury = IBaluniV1Router(baluniRouter).treasury();
-        multiplier = 1e12;
+    function reinitialize(address _registry, uint64 version) public reinitializer(version) {
+        registry = IBaluniV1Registry(_registry);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -140,6 +87,11 @@ contract BaluniV1Rebalancer is
         address receiver,
         address baseAsset
     ) external override {
+        address USDC = registry.getUSDC();
+        address WNATIVE = registry.getWNATIVE();
+        address baluniRouter = registry.getBaluniRouter();
+        address treasury = registry.getTreasury();
+
         RebalanceVars memory vars = _checkRebalance(balances, assets, weights, limit, sender, baseAsset);
 
         for (uint256 i = 0; i < vars.overweightVaults.length; i++) {
@@ -254,6 +206,8 @@ contract BaluniV1Rebalancer is
         address sender,
         address baseAsset
     ) internal view returns (RebalanceVars memory) {
+        address baluniRouter = registry.getBaluniRouter();
+
         if (balances.length == 0) {
             for (uint256 i = 0; i < assets.length; i++) {
                 balances[i] = IERC20(assets[i]).balanceOf(sender);
@@ -349,8 +303,8 @@ contract BaluniV1Rebalancer is
      * The product is then divided by the BPS base to get the net amount.
      */
     function calculateNetAmountAfterFee(uint256 _amount) internal view returns (uint256) {
-        uint256 _BPS_BASE = 10000;
-        uint256 _BPS_FEE = IBaluniV1Router(baluniRouter)._BPS_FEE();
+        uint256 _BPS_BASE = registry.getBPS_BASE();
+        uint256 _BPS_FEE = registry.getBPS_FEE();
         uint256 amountInWithFee = (_amount * (_BPS_BASE - (_BPS_FEE))) / _BPS_BASE;
         return amountInWithFee;
     }
@@ -361,6 +315,9 @@ contract BaluniV1Rebalancer is
      * @return The total value of the assets held by the caller.
      */
     function calculateTotalValue(address[] memory assets, address user) private view returns (uint256) {
+        address USDC = registry.getUSDC();
+        address baluniRouter = registry.getBaluniRouter();
+
         uint256 _tokenValue = 0;
         for (uint256 i = 0; i < assets.length; i++) {
             uint256 balance = IERC20(assets[i]).balanceOf(user);
@@ -376,16 +333,6 @@ contract BaluniV1Rebalancer is
     }
 
     /**
-     * @dev Changes the Baluni router address.
-     * Can only be called by the contract owner.
-     *
-     * @param _newRouter The new address of the Baluni router.
-     */
-    function changeBaluniRouter(address _newRouter) external onlyOwner {
-        baluniRouter = _newRouter;
-    }
-
-    /**
      * @dev Converts an amount of tokens from one token to another based on the current exchange rate.
      * @param fromToken The address of the token to convert from.
      * @param toToken The address of the token to convert to.
@@ -394,10 +341,9 @@ contract BaluniV1Rebalancer is
      */
     function convert(address fromToken, address toToken, uint256 amount) public view returns (uint256) {
         uint256 rate;
-
+        address _1InchSpotAgg = registry.get1inchSpotAgg();
         uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
         uint8 toDecimal = IERC20Metadata(toToken).decimals();
-
         uint256 numerator = 10 ** fromDecimal;
         uint256 denominator = 10 ** toDecimal;
 

@@ -17,17 +17,6 @@ interface IBaluniV1Rebalancer {
         uint256[] balances;
     }
 
-    // Variables
-    function baluniRouter() external view returns (address);
-
-    function USDC() external view returns (address);
-
-    function WNATIVE() external view returns (address);
-
-    function _1InchSpotAgg() external view returns (address);
-
-    function treasury() external view returns (address);
-
     // Functions
     function rebalance(
         uint256[] memory balances,

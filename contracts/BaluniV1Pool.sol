@@ -43,16 +43,15 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
 import './interfaces/IBaluniV1PoolPeriphery.sol';
+import './interfaces/IBaluniV1Registry.sol';
 
 contract BaluniV1Pool is ERC20, ReentrancyGuard {
     AssetInfo[] public assetInfos;
     uint256 public trigger;
     uint256 public ONE;
-    address public periphery;
-    address public factory;
-    uint256 public constant SWAP_FEE_BPS = 30; // 0.3%
     address public baseAsset;
-    address public rebalancer;
+
+    IBaluniV1Registry public registry;
 
     struct AssetInfo {
         address asset;
@@ -71,31 +70,19 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 amountOut
     );
 
-    /**
-     * @dev Initializes a new instance of the BaluniV1Pool contract.
-     * @param _rebalancer The address of the rebalancer contract.
-     * @param _assets An array of addresses representing the assets in the pool.
-     * @param _weights An array of weights corresponding to the assets in the pool.
-     * @param _trigger The trigger value for rebalancing the pool.
-     * @param _periphery The address of the periphery contract.
-     */
     constructor(
         address _rebalancer,
         address[] memory _assets,
         uint256[] memory _weights,
-        uint256 _trigger,
-        address _periphery
+        uint256 _trigger
     ) ERC20('Baluni LP', 'BALUNI-LP') {
-        periphery = _periphery;
-        factory = msg.sender;
-        rebalancer = _rebalancer;
         ONE = 1e18;
 
         initializeAssets(_assets, _weights);
 
         trigger = _trigger;
 
-        baseAsset = IBaluniV1Rebalancer(_rebalancer).USDC();
+        baseAsset = registry.getUSDC();
         //baseAsset = IBaluniV1Rebalancer(_rebalancer).WNATIVE();
 
         // Ensure the sum of weights equals 10000
@@ -107,6 +94,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     }
 
     modifier onlyPeriphery() {
+        address periphery = registry.getBaluniPoolPeriphery();
         require(msg.sender == periphery, 'Only Periphery');
         _;
     }
@@ -117,6 +105,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @param _weights The array of weights corresponding to each asset.
      */
     function initializeAssets(address[] memory _assets, uint256[] memory _weights) internal {
+        address rebalancer = registry.getBaluniRebalancer();
         require(_assets.length == _weights.length, 'Assets and weights length mismatch');
 
         for (uint256 i = 0; i < _assets.length; i++) {
@@ -190,13 +179,14 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 amount,
         address receiver
     ) external nonReentrant returns (uint256 toSend) {
+        uint256 _BPS_FEE = registry.getBPS_FEE();
         require(fromToken != toToken, 'Cannot swap the same token');
         require(amount > 0, 'Amount must be greater than zero');
 
         uint256 receivedAmount = getAmountOut(fromToken, toToken, amount);
         require(getAssetReserve(toToken) >= receivedAmount, 'Insufficient Liquidity');
 
-        uint256 fee = (receivedAmount * SWAP_FEE_BPS) / 10000;
+        uint256 fee = (receivedAmount * _BPS_FEE) / 10000;
         toSend = receivedAmount - fee;
 
         require(toSend > 0, 'Amount to send must be greater than 0');
@@ -258,6 +248,11 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @notice Emits a `Burn` event with the address and share of pool tokens burned.
      */
     function burn(address to) external onlyPeriphery returns (uint256[] memory) {
+        uint256 _BPS_FEE = registry.getBPS_FEE();
+        address periphery = registry.getBaluniPoolPeriphery();
+        address rebalancer = registry.getBaluniRebalancer();
+        address treasury = registry.getTreasury();
+
         uint256 share = balanceOf(address(this));
         require(share > 0, 'Share must be greater than 0');
 
@@ -265,7 +260,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         require(totalSupply > 0, 'No liquidity');
 
         uint256[] memory amounts = new uint256[](assetInfos.length);
-        uint256 fee = (share * SWAP_FEE_BPS) / 10000;
+        uint256 fee = (share * _BPS_FEE) / 10000;
         uint256 shareAfterFee = share - fee;
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
@@ -278,7 +273,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
         require(balanceOf(address(this)) >= shareAfterFee, 'Insufficient BALUNI liquidity');
 
-        bool feeTransferSuccess = IERC20(address(this)).transfer(IBaluniV1Rebalancer(rebalancer).treasury(), fee);
+        bool feeTransferSuccess = IERC20(address(this)).transfer(treasury, fee);
         require(feeTransferSuccess, 'Fee transfer failed');
 
         _burn(address(this), shareAfterFee);
@@ -296,6 +291,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @return The amount of `toToken` that will be received.
      */
     function getAmountOut(address fromToken, address toToken, uint256 amount) public view returns (uint256) {
+        address rebalancer = registry.getBaluniRebalancer();
+
         return IBaluniV1Rebalancer(rebalancer).convert(fromToken, toToken, amount);
     }
 
@@ -386,6 +383,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @return An array of reserves.
      */
     function getReserves() public view returns (uint256[] memory) {
+        address periphery = registry.getBaluniPoolPeriphery();
         return IBaluniV1PoolPeriphery(periphery).getReserves(address(this));
     }
 
@@ -395,6 +393,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @return The reserve amount of the asset.
      */
     function getAssetReserve(address asset) public view returns (uint256) {
+        address periphery = registry.getBaluniPoolPeriphery();
+
         return IBaluniV1PoolPeriphery(periphery).getAssetReserve(address(this), asset);
     }
 
@@ -453,6 +453,9 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @notice This function should only be called internally.
      */
     function _performRebalanceIfNeeded() internal returns (uint256[] memory, uint256[] memory) {
+        address periphery = registry.getBaluniPoolPeriphery();
+        address rebalancer = registry.getBaluniRebalancer();
+
         address[] memory assets = new address[](assetInfos.length);
         uint256[] memory weights = new uint256[](assetInfos.length);
         uint256[] memory peripheryBalancesB4 = new uint256[](assetInfos.length);
@@ -540,6 +543,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @return The corresponding token amount.
      */
     function _convertBaseToToken(address toToken, uint256 amount) internal view returns (uint256) {
+        address rebalancer = registry.getBaluniRebalancer();
         uint256 tokenAmount = IBaluniV1Rebalancer(rebalancer).convert(baseAsset, toToken, amount);
         return tokenAmount;
     }
@@ -571,6 +575,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @return scaledAmount The converted amount of tokens.
      */
     function _convertTokenToBase(address fromToken, uint256 amount) internal view returns (uint256 scaledAmount) {
+        address rebalancer = registry.getBaluniRebalancer();
+
         uint256 tokenAmount = IBaluniV1Rebalancer(rebalancer).convert(fromToken, baseAsset, amount);
         return tokenAmount;
     }
