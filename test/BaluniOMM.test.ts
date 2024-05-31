@@ -162,7 +162,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       await pool.approve(await periphery.getAddress(), lpBalance)
       await periphery.connect(owner).removeLiquidity(lpBalance, await pool.getAddress(), await owner.getAddress())
 
-      const pooFee = await pool.SWAP_FEE_BPS()
+      const pooFee = await registry.getBPS_FEE()
       const fee = (lpBalance * BigInt(pooFee) * 1n) / 10000n
 
       expect(await pool.totalSupply()).to.equal(BigInt(fee))

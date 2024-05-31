@@ -81,7 +81,7 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
             }
         }
 
-        BaluniV1Pool newPool = new BaluniV1Pool(assets, weights, trigger);
+        BaluniV1Pool newPool = new BaluniV1Pool(assets, weights, trigger, address(registry));
 
         address poolAddress = address(newPool);
 

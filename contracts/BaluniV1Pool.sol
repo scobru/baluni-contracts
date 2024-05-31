@@ -71,17 +71,25 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 amountOut
     );
 
-    constructor(address[] memory _assets, uint256[] memory _weights, uint256 _trigger) ERC20('Baluni LP', 'BALUNI-LP') {
+    constructor(
+        address[] memory _assets,
+        uint256[] memory _weights,
+        uint256 _trigger,
+        address _registry
+    ) ERC20('Baluni LP', 'BALUNI-LP') {
+        registry = IBaluniV1Registry(_registry);
+
         ONE = 1e18;
 
-        initializeAssets(_assets, _weights);
+        bool result = initializeAssets(_assets, _weights);
+        require(result, 'Initialization failed');
 
         trigger = _trigger;
 
-        baseAsset = registry.getUSDC();
+        //baseAsset = registry.getUSDC();
         require(registry.getUSDC() != address(0), 'Invalid base asset address');
 
-        //baseAsset = IBaluniV1Rebalancer(_rebalancer).WNATIVE();
+        baseAsset = registry.getWNATIVE();
 
         uint256 totalWeight = 0;
         for (uint256 i = 0; i < _weights.length; i++) {
@@ -101,7 +109,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @param _assets The array of asset addresses.
      * @param _weights The array of weights corresponding to each asset.
      */
-    function initializeAssets(address[] memory _assets, uint256[] memory _weights) internal {
+    function initializeAssets(address[] memory _assets, uint256[] memory _weights) internal returns (bool) {
         address rebalancer = registry.getBaluniRebalancer();
 
         require(registry.getBaluniRebalancer() != address(0), 'Invalid rebalancer address');
@@ -118,6 +126,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
                 asset.approve(address(rebalancer), type(uint256).max);
             }
         }
+        return true;
     }
 
     /**
