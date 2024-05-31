@@ -130,12 +130,9 @@ contract BaluniV1Router is
      */
     function execute(IBaluniV1Agent.Call[] memory calls, address[] memory tokensReturn) external nonReentrant {
         address agentFactory = registry.getBaluniAgentFactory();
-        address treasury = registry.getTreasury();
         address uniswapFactory = registry.getUniswapFactory();
         address WNATIVE = registry.getWNATIVE();
         address USDC = registry.getUSDC();
-        uint256 _BPS_FEE = registry.getBPS_FEE();
-        uint256 _BPS_BASE = registry.getBPS_BASE();
 
         require(address(agentFactory) != address(0), 'Agent factory not set');
         address agent = IBaluniV1AgentFactory(agentFactory).getOrCreateAgent(msg.sender);
@@ -172,9 +169,13 @@ contract BaluniV1Router is
                 return;
             }
 
+            address treasury = registry.getTreasury();
+            uint256 _BPS_FEE = registry.getBPS_FEE();
+            uint256 _BPS_BASE = registry.getBPS_BASE();
+
             if (balance > tokenBalances[i]) {
                 uint256 fee = (amountReceived * _BPS_FEE) / _BPS_BASE;
-                IERC20(tokensReturn[i]).transfer(treasury, fee);
+                IERC20(token).transfer(treasury, fee);
             }
         }
     }
@@ -431,7 +432,6 @@ contract BaluniV1Router is
      * @return valuation The valuation of the token.
      */
     function _calculateERC20Valuation(uint256 amount, address token) internal view returns (uint256 valuation) {
-        address baluniPeriphery = registry.getBaluniPoolPeriphery();
         address oracle = registry.get1inchSpotAgg();
         address USDC = registry.getUSDC();
         uint256 rate;

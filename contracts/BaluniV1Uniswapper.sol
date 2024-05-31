@@ -167,8 +167,6 @@ abstract contract BaluniV1Uniswapper {
         address receiver
     ) internal returns (uint256 amountOut) {
         address baluniPeriphery = registry.getBaluniPoolPeriphery();
-        address uniswapRouter = registry.getUniswapRouter();
-
         IBaluniV1PoolPeriphery periphery = IBaluniV1PoolPeriphery(baluniPeriphery);
         uint256 intermediateBalance;
         _secureApproval(token0, baluniPeriphery, tokenBalance);

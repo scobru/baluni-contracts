@@ -26,6 +26,8 @@ interface IBaluniV1Registry {
 
     function setUSDC(address _USDC) external;
 
+    function setTreasury(address _treasury) external;
+
     function set1inchSpotAgg(address __1inchSpotAgg) external;
 
     function setBPS_FEE(uint256 __BPS_FEE) external;

@@ -1,1 +1,1 @@
-[{"inputs":[],"name":"getBpsFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]
+[{"inputs":[],"name":"_BPS_FEE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]

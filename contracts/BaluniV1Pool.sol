@@ -37,6 +37,7 @@ pragma solidity 0.8.25;
  *                           _.-' :      ``.
  *                           \ r=._\        `.
  */
+
 import './interfaces/IBaluniV1Rebalancer.sol';
 import './interfaces/IBaluniV1Router.sol';
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
@@ -70,12 +71,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 amountOut
     );
 
-    constructor(
-        address _rebalancer,
-        address[] memory _assets,
-        uint256[] memory _weights,
-        uint256 _trigger
-    ) ERC20('Baluni LP', 'BALUNI-LP') {
+    constructor(address[] memory _assets, uint256[] memory _weights, uint256 _trigger) ERC20('Baluni LP', 'BALUNI-LP') {
         ONE = 1e18;
 
         initializeAssets(_assets, _weights);
@@ -83,9 +79,10 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         trigger = _trigger;
 
         baseAsset = registry.getUSDC();
+        require(registry.getUSDC() != address(0), 'Invalid base asset address');
+
         //baseAsset = IBaluniV1Rebalancer(_rebalancer).WNATIVE();
 
-        // Ensure the sum of weights equals 10000
         uint256 totalWeight = 0;
         for (uint256 i = 0; i < _weights.length; i++) {
             totalWeight += _weights[i];
@@ -106,6 +103,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      */
     function initializeAssets(address[] memory _assets, uint256[] memory _weights) internal {
         address rebalancer = registry.getBaluniRebalancer();
+
+        require(registry.getBaluniRebalancer() != address(0), 'Invalid rebalancer address');
         require(_assets.length == _weights.length, 'Assets and weights length mismatch');
 
         for (uint256 i = 0; i < _assets.length; i++) {
@@ -250,8 +249,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     function burn(address to) external onlyPeriphery returns (uint256[] memory) {
         uint256 _BPS_FEE = registry.getBPS_FEE();
         address periphery = registry.getBaluniPoolPeriphery();
-        address rebalancer = registry.getBaluniRebalancer();
-        address treasury = registry.getTreasury();
 
         uint256 share = balanceOf(address(this));
         require(share > 0, 'Share must be greater than 0');
@@ -273,6 +270,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
         require(balanceOf(address(this)) >= shareAfterFee, 'Insufficient BALUNI liquidity');
 
+        address treasury = registry.getTreasury();
         bool feeTransferSuccess = IERC20(address(this)).transfer(treasury, fee);
         require(feeTransferSuccess, 'Fee transfer failed');
 

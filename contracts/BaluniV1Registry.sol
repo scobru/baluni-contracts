@@ -1,6 +1,44 @@
 // SPDX-License-Identifier: GNU AGPLv3
 pragma solidity 0.8.25;
 
+/**
+ *  __                  __                      __
+ * /  |                /  |                    /  |
+ * $$ |____    ______  $$ | __    __  _______  $$/
+ * $$      \  /      \ $$ |/  |  /  |/       \ /  |
+ * $$$$$$$  | $$$$$$  |$$ |$$ |  $$ |$$$$$$$  |$$ |
+ * $$ |  $$ | /    $$ |$$ |$$ |  $$ |$$ |  $$ |$$ |
+ * $$ |__$$ |/$$$$$$$ |$$ |$$ \__$$ |$$ |  $$ |$$ |
+ * $$    $$/ $$    $$ |$$ |$$    $$/ $$ |  $$ |$$ |
+ * $$$$$$$/   $$$$$$$/ $$/  $$$$$$/  $$/   $$/ $$/
+ *
+ *
+ *                  ,-""""-.
+ *                ,'      _ `.
+ *               /       )_)  \
+ *              :              :
+ *              \              /
+ *               \            /
+ *                `.        ,'
+ *                  `.    ,'
+ *                    `.,'
+ *                     /\`.   ,-._
+ *                         `-'    \__
+ *                              .
+ *               s                \
+ *                                \\
+ *                                 \\
+ *                                  >\/7
+ *                              _.-(6'  \
+ *                             (=___._/` \
+ *                                  )  \ |
+ *                                 /   / |
+ *                                /    > /
+ *                               j    < _\
+ *                           _.-' :      ``.
+ *                           \ r=._\        `.
+ */
+
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';

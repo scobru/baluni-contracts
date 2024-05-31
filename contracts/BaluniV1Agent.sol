@@ -41,10 +41,7 @@ pragma solidity 0.8.25;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import './libs/AddressUpgradeable.sol';
-
-interface IRouter {
-    function _BPS_FEE() external view returns (uint256);
-}
+import './interfaces/IBaluniV1Registry.sol';
 
 /**
  * @title BaluniV1Agent
@@ -54,14 +51,11 @@ contract BaluniV1Agent {
     using AddressUpgradeable for address payable;
 
     address public owner;
-    address private router;
     address private factory;
     address internal constant _NATIVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-
-    IERC20Metadata internal constant WNATIVE = IERC20Metadata(0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270);
-
     uint256 internal constant _DUST = 10;
-    uint256 internal constant _BPS_BASE = 10000;
+
+    IBaluniV1Registry public registry;
 
     struct Call {
         address to;
@@ -76,13 +70,13 @@ contract BaluniV1Agent {
     /**
      * @dev Initializes the contract with the specified owner and router addresses.
      * @param _owner The address of the contract owner.
-     * @param _router The address of the router contract.
+     * @param _registry The address of the registry contract.
      */
-    function initialize(address _owner, address _router) external {
+    function initialize(address _owner, address _registry) external {
         require(owner == address(0), 'Already initialized');
         owner = _owner;
-        router = _router;
         factory = msg.sender;
+        registry = IBaluniV1Registry(_registry);
     }
 
     /**
@@ -91,6 +85,7 @@ contract BaluniV1Agent {
      * @notice If the caller is not the router, the function call will revert.
      */
     modifier onlyRouter() {
+        address router = registry.getBaluniRouter();
         require(msg.sender == router, 'Callable only by the router');
         _;
     }
@@ -115,7 +110,7 @@ contract BaluniV1Agent {
      * @return The address of the router contract.
      */
     function getRouter() public view returns (address) {
-        return router;
+        return registry.getBaluniRouter();
     }
 
     /**
@@ -131,16 +126,18 @@ contract BaluniV1Agent {
      * @param tokensReturn The array of tokens to charge fees for.
      */
     function _chargeFees(address[] memory tokensReturn) internal {
+        address router = registry.getBaluniRouter();
         uint256 amount;
-        uint256 bpsFee = IRouter(router)._BPS_FEE();
+        uint256 bpsFee = registry.getBPS_FEE();
+        uint256 bpsBase = registry.getBPS_BASE();
         for (uint256 i = 0; i < tokensReturn.length; i++) {
             address token = tokensReturn[i];
             if (token == _NATIVE) {
-                amount = (address(this).balance * bpsFee) / _BPS_BASE;
+                amount = (address(this).balance * bpsFee) / bpsBase;
                 payable(router).sendValue(amount);
             } else {
                 uint256 balance = IERC20Metadata(token).balanceOf(address(this));
-                amount = (balance * bpsFee) / _BPS_BASE;
+                amount = (balance * bpsFee) / bpsBase;
                 IERC20Metadata(token).transfer(router, amount);
             }
         }

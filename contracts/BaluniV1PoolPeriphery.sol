@@ -135,24 +135,28 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
 
         for (uint256 i = 0; i < fromTokens.length; i++) {
             require(amounts[i] > 0, 'Amount must be greater than zero');
-            address poolAddress = poolFactory.getPoolByAssets(fromTokens[i], toTokens[i]);
+            address fromToken = fromTokens[i];
+            address toToken = toTokens[i];
+            uint256 amount = amounts[i];
+            address receiver = receivers[i];
+            address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
             IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
 
-            require(IERC20(fromTokens[i]).balanceOf(msg.sender) >= amounts[i], 'Insufficient Balance');
-            IERC20(fromTokens[i]).transferFrom(msg.sender, address(this), amounts[i]);
-            poolsReserves[poolAddress][fromTokens[i]] += amounts[i];
+            require(IERC20(fromToken).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
+            IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
+            poolsReserves[poolAddress][fromToken] += amount;
 
-            uint256 amountOut = pool.swap(fromTokens[i], toTokens[i], amounts[i], receivers[i]);
+            uint256 amountOut = pool.swap(fromToken, toToken, amount, receiver);
 
-            require(IERC20(toTokens[i]).balanceOf(address(this)) >= amountOut, 'Insufficient Liquidity');
+            require(IERC20(toToken).balanceOf(address(this)) >= amountOut, 'Insufficient Liquidity');
 
             uint fee = ((amountOut * _BPS_FEE) / _BPS_BASE);
-            IERC20(toTokens[i]).transfer(treasury, fee);
+            IERC20(toToken).transfer(treasury, fee);
 
             amountOut -= fee;
-            IERC20(toTokens[i]).transfer(receivers[i], amountOut);
+            IERC20(toToken).transfer(receiver, amountOut);
 
-            poolsReserves[poolAddress][toTokens[i]] -= amountOut;
+            poolsReserves[poolAddress][toToken] -= amountOut;
         }
 
         return amountsOut;
@@ -220,14 +224,16 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         uint256[] memory amountsOut = IBaluniV1Pool(poolAddress).burn(receiver);
 
         address[] memory assets = IBaluniV1Pool(poolAddress).getAssets();
+        address _poolAddress = poolAddress;
+        address _receiver = receiver;
 
         for (uint256 i = 0; i < assets.length; i++) {
             uint fee = ((amountsOut[i] * _BPS_FEE) / _BPS_BASE);
             IERC20(assets[i]).transfer(treasury, fee);
             require(IERC20(assets[i]).balanceOf(address(this)) >= amountsOut[i], 'Insufficient Liquidity');
-            poolsReserves[poolAddress][assets[i]] -= amountsOut[i];
+            poolsReserves[_poolAddress][assets[i]] -= amountsOut[i];
             amountsOut[i] -= fee;
-            bool assetTransferSuccess = IERC20(assets[i]).transfer(receiver, amountsOut[i]);
+            bool assetTransferSuccess = IERC20(assets[i]).transfer(_receiver, amountsOut[i]);
             require(assetTransferSuccess, 'Asset transfer failed');
         }
     }
@@ -295,16 +301,5 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
 
     function getAssetReserve(address pool, address asset) external view returns (uint256) {
         return poolsReserves[pool][asset];
-    }
-
-    /**
-     * @dev Changes the basis points fee for the contract.
-     * @param _newFee The new basis points fee to be set.
-     */
-    function changeBpsFee(uint256 _newFee) external onlyOwner {
-        uint256 _MAX_BPS_FEE = registry.getMAX_BPS_FEE();
-        uint256 _BPS_FEE = registry.getBPS_FEE();
-        require(_newFee <= _MAX_BPS_FEE, 'Fee exceeds maximum');
-        _BPS_FEE = _newFee;
     }
 }

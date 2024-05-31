@@ -50,7 +50,7 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
 
     mapping(address => mapping(address => address)) public getPool;
 
-    event PoolCreated(address indexed pool, address[] assets, address rebalancer);
+    event PoolCreated(address indexed pool, address[] assets);
 
     function initialize(address _register) public initializer {
         __UUPSUpgradeable_init();
@@ -72,9 +72,6 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
      * @return The address of the newly created pool.
      */
     function createPool(address[] memory assets, uint256[] memory weights, uint256 trigger) external returns (address) {
-        address rebalancer = registry.getBaluniRebalancer();
-        address periphery = registry.getBaluniPoolPeriphery();
-
         require(assets.length > 1, 'At least two assets are required');
         require(assets.length == weights.length, 'Assets and weights length mismatch');
 
@@ -84,7 +81,7 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
             }
         }
 
-        BaluniV1Pool newPool = new BaluniV1Pool(rebalancer, assets, weights, trigger, periphery);
+        BaluniV1Pool newPool = new BaluniV1Pool(assets, weights, trigger);
 
         address poolAddress = address(newPool);
 
@@ -96,7 +93,7 @@ contract BaluniV1PoolFactory is Initializable, UUPSUpgradeable, OwnableUpgradeab
             }
         }
 
-        emit PoolCreated(poolAddress, assets, rebalancer);
+        emit PoolCreated(poolAddress, assets);
 
         return poolAddress;
     }

@@ -89,8 +89,6 @@ contract BaluniV1Rebalancer is
     ) external override {
         address USDC = registry.getUSDC();
         address WNATIVE = registry.getWNATIVE();
-        address baluniRouter = registry.getBaluniRouter();
-        address treasury = registry.getTreasury();
 
         RebalanceVars memory vars = _checkRebalance(balances, assets, weights, limit, sender, baseAsset);
 
@@ -121,14 +119,18 @@ contract BaluniV1Rebalancer is
         uint256 usdBalance = IERC20(USDC).balanceOf(address(this));
         require(usdBalance >= vars.amountOut, 'Insufficient USDC Balance');
 
+        address _receiver = receiver;
+
+        address[] memory _assets = assets;
+
         for (uint256 i = 0; i < vars.underweightVaults.length; i++) {
             if (vars.underweightAmounts[i] > 0) {
-                address asset = assets[vars.underweightVaults[i]];
+                address asset = _assets[vars.underweightVaults[i]];
                 uint256 rebaseActiveWgt = (vars.underweightAmounts[i] * 10000) / vars.totalActiveWeight;
                 uint256 rebBuyQty = (rebaseActiveWgt * usdBalance * 1e12) / 10000;
 
                 if (asset == address(USDC)) {
-                    IERC20(USDC).transfer(receiver, rebBuyQty / 1e12);
+                    IERC20(USDC).transfer(_receiver, rebBuyQty / 1e12);
                     continue;
                 }
 
@@ -158,8 +160,10 @@ contract BaluniV1Rebalancer is
                         IERC20(asset).balanceOf(address(this)) >= amountToReceiver,
                         'Balance under amountToTransfer'
                     );
+                    address baluniRouter = registry.getBaluniRouter();
+                    address treasury = registry.getTreasury();
 
-                    IERC20(asset).transfer(address(receiver), amountToReceiver);
+                    IERC20(asset).transfer(address(_receiver), amountToReceiver);
                     IERC20(asset).transfer(address(baluniRouter), amountToRouter);
                     IERC20(asset).transfer(address(treasury), amountToTreasury);
                 }
@@ -206,8 +210,6 @@ contract BaluniV1Rebalancer is
         address sender,
         address baseAsset
     ) internal view returns (RebalanceVars memory) {
-        address baluniRouter = registry.getBaluniRouter();
-
         if (balances.length == 0) {
             for (uint256 i = 0; i < assets.length; i++) {
                 balances[i] = IERC20(assets[i]).balanceOf(sender);
@@ -231,20 +233,22 @@ contract BaluniV1Rebalancer is
         );
 
         vars.balances = balances;
+        address[] memory _assets = assets;
+        address baluniRouter = registry.getBaluniRouter();
 
-        for (uint256 i = 0; i < assets.length; i++) {
+        for (uint256 i = 0; i < _assets.length; i++) {
             //vars.balances[i] = balances[i];
             uint256 decimals = IERC20Metadata(assets[i]).decimals();
             uint256 tokensTotalValue;
 
-            uint256 price = IBaluniV1Router(baluniRouter).tokenValuation(1 * 10 ** decimals, assets[i]);
+            uint256 price = IBaluniV1Router(baluniRouter).tokenValuation(1 * 10 ** decimals, _assets[i]);
 
-            if (assets[i] == address(baseAsset)) {
+            if (_assets[i] == address(baseAsset)) {
                 uint256 baseAssetDecimals = IERC20Metadata(baseAsset).decimals();
                 uint256 factor = 10 ** (18 - baseAssetDecimals);
                 tokensTotalValue = vars.balances[i] * factor;
             } else {
-                tokensTotalValue = convert(assets[i], baseAsset, vars.balances[i]);
+                tokensTotalValue = convert(_assets[i], baseAsset, vars.balances[i]);
             }
 
             uint256 targetWeight = weights[i];

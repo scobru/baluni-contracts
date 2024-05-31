@@ -25,14 +25,6 @@ const WBTC = '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6'
 const WETH = '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'
 
 const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const BaluniV1PoolFactory = await ethers.getContractFactory('BaluniV1PoolFactory')
-  const baluniV1PoolFactory = await upgrades.deployProxy(BaluniV1PoolFactory, [oldRebalancer], { kind: 'uups' })
-  const instancePoolFactory = await baluniV1PoolFactory?.waitForDeployment()
-  console.log('BaluniV1PoolFactory deployed to:', instancePoolFactory.target)
-
-  // wait 5 second
-  await new Promise((resolve) => setTimeout(resolve, 5000))
-
   const BaluniV1PoolPeriphery = await ethers.getContractFactory('BaluniV1PoolPeriphery')
   const baluniV1PoolPeriphery = await upgrades.deployProxy(
     BaluniV1PoolPeriphery,
@@ -89,6 +81,13 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   await instanceRouter.changeRebalancer(instanceRebalance.target)
   console.log('Set Rebalancer in Router')
+
+  const BaluniV1PoolFactory = await ethers.getContractFactory('BaluniV1PoolFactory')
+  const baluniV1PoolFactory = await upgrades.deployProxy(BaluniV1PoolFactory, [instanceRebalance.target], {
+    kind: 'uups',
+  })
+  const instancePoolFactory = await baluniV1PoolFactory?.waitForDeployment()
+  console.log('BaluniV1PoolFactory deployed to:', instancePoolFactory.target)
 }
 
 export default deployProtocol
