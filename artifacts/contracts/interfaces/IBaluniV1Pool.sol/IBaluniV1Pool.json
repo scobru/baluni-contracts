@@ -220,7 +220,13 @@
         }
       ],
       "name": "burn",
-      "outputs": [],
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -287,6 +293,25 @@
         }
       ],
       "name": "getAmountOut",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "asset",
+          "type": "address"
+        }
+      ],
+      "name": "getAssetReserve",
       "outputs": [
         {
           "internalType": "uint256",
@@ -373,6 +398,11 @@
           "internalType": "address",
           "name": "to",
           "type": "address"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "amounts",
+          "type": "uint256[]"
         }
       ],
       "name": "mint",
@@ -387,44 +417,20 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "assetIndex",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "receiver",
-          "type": "address"
-        }
-      ],
-      "name": "mintOneSide",
+      "inputs": [],
+      "name": "performRebalanceIfNeeded",
       "outputs": [
         {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
+          "internalType": "uint256[]",
+          "name": "amountsToAdd",
+          "type": "uint256[]"
+        },
         {
-          "internalType": "address",
-          "name": "_sender",
-          "type": "address"
+          "internalType": "uint256[]",
+          "name": "amountsToRemove",
+          "type": "uint256[]"
         }
       ],
-      "name": "performRebalanceIfNeeded",
-      "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -437,7 +443,13 @@
         }
       ],
       "name": "rebalanceWeights",
-      "outputs": [],
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "",
+          "type": "uint256[]"
+        }
+      ],
       "stateMutability": "nonpayable",
       "type": "function"
     },
@@ -494,7 +506,7 @@
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "toSend",
           "type": "uint256"
         }
       ],
@@ -525,6 +537,24 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "amounts",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "bool",
+          "name": "increase",
+          "type": "bool"
+        }
+      ],
+      "name": "updateReserves",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
