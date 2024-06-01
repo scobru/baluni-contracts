@@ -102,9 +102,8 @@ contract BaluniV1AgentFactory is Initializable, OwnableUpgradeable, UUPSUpgradea
      * @return The address of the newly created BaluniV1Agent contract instance.
      */
     function _createAgent(bytes32 salt, address user) internal returns (BaluniV1Agent) {
-        address router = registry.getBaluniRouter();
         address clone = ClonesUpgradeable.cloneDeterministic(implementation, salt);
-        BaluniV1Agent(clone).initialize(user, router);
+        BaluniV1Agent(clone).initialize(user, address(registry));
         return BaluniV1Agent(clone);
     }
 

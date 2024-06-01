@@ -25,12 +25,12 @@ contract MockRebalancer {
     uint256 public constant WBTC_TO_USDC_RATE = 683003374554512029990;
 
     uint256 public constant USDT_TO_WBTC_RATE = 1457844841452943;
-    uint256 public constant USDT_TO_USDC_RATE = 998588636583774074;
+    uint256 public constant USDT_TO_USDC_RATE = 998840977600189233;
     uint256 public constant USDT_TO_WETH_RATE = 256884484348670192973112135;
     uint256 public constant USDT_TO_WMATIC_RATE = 1351542478738482785523886658083;
 
     uint256 public constant WETH_TO_WMATIC_RATE = 5273576410685072782753;
-    uint256 public constant WETH_TO_USDC_RATE = 3836478742;
+    uint256 public constant WETH_TO_USDC_RATE = 3781382154;
     uint256 public constant WETH_TO_USDT_RATE = 3749163887;
     uint256 public constant WETH_TO_WBTC_RATE = 5561821;
 
@@ -108,35 +108,5 @@ contract MockRebalancer {
 
     function setTreasury(address _treasury) external {
         treasury = _treasury;
-    }
-
-    function convert(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
-        uint256 rate;
-
-        uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-        uint8 toDecimal = IERC20Metadata(toToken).decimals();
-
-        uint256 numerator = 10 ** fromDecimal;
-        uint256 denominator = 10 ** toDecimal;
-
-        rate = rates[address(fromToken)][address(toToken)];
-        rate = (rate * numerator) / denominator;
-
-        uint256 tokenAmount = ((amount * rate) / 10 ** 18);
-
-        if (fromDecimal == toDecimal) {
-            tokenAmount = ((amount * rate) / 10 ** 18);
-            return tokenAmount;
-        }
-
-        uint256 factor = 10 ** (fromDecimal > toDecimal ? fromDecimal - toDecimal : toDecimal - fromDecimal);
-
-        if (fromDecimal > toDecimal) {
-            tokenAmount /= factor;
-        } else {
-            tokenAmount *= factor;
-        }
-
-        return tokenAmount;
     }
 }

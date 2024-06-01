@@ -39,6 +39,8 @@ pragma solidity 0.8.25;
  */
 import './interfaces/IBaluniV1PoolFactory.sol';
 import './interfaces/IBaluniV1Pool.sol';
+import './interfaces/IBaluniV1PoolPeriphery.sol';
+
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
@@ -49,7 +51,7 @@ import './interfaces/IBaluniV1Registry.sol';
  * @dev This contract serves as the periphery contract for interacting with BaluniV1Pool contracts.
  * It provides functions for swapping tokens, adding liquidity, removing liquidity, and getting the amount out for a given swap.
  */
-contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgradeable, IBaluniV1PoolPeriphery {
     IBaluniV1Registry public registry;
 
     mapping(address => mapping(address => uint256)) public poolsReserves; // Mapping of token address to pool addresses (for quick lookup
@@ -78,12 +80,13 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @param amount The amount of tokens to swap.
      * @return The amount of tokens received after the swap.
      */
-    function swap(address fromToken, address toToken, uint256 amount, address receiver) external returns (uint256) {
+    function swap(
+        address fromToken,
+        address toToken,
+        uint256 amount,
+        address receiver
+    ) public override returns (uint256) {
         IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
-        address treasury = registry.getTreasury();
-        uint256 _BPS_FEE = registry.getBPS_FEE();
-        uint256 _BPS_BASE = registry.getBPS_BASE();
-
         require(amount > 0, 'Amount must be greater than zero');
 
         address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
@@ -92,17 +95,13 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
         poolsReserves[poolAddress][fromToken] += amount;
 
-        uint256 toSend = pool.swap(fromToken, toToken, amount, receiver);
+        uint256 amountOut = pool.swap(fromToken, toToken, amount, receiver);
 
-        uint fee = ((toSend * _BPS_FEE) / _BPS_BASE);
-        IERC20(toToken).transfer(treasury, fee);
+        poolsReserves[poolAddress][toToken] -= amountOut;
 
-        toSend -= fee;
-        IERC20(toToken).transfer(receiver, toSend);
+        IERC20(toToken).transfer(receiver, amountOut);
 
-        poolsReserves[poolAddress][toToken] -= toSend;
-
-        return toSend;
+        return amountOut;
     }
 
     /**
@@ -118,12 +117,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         address[] calldata toTokens,
         uint256[] calldata amounts,
         address[] calldata receivers
-    ) external returns (uint256[] memory) {
-        IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
-        uint256 _BPS_FEE = registry.getBPS_FEE();
-        uint256 _BPS_BASE = registry.getBPS_BASE();
-        address treasury = registry.getTreasury();
-
+    ) external override returns (uint256[] memory) {
         require(
             fromTokens.length == toTokens.length &&
                 toTokens.length == amounts.length &&
@@ -135,72 +129,49 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
 
         for (uint256 i = 0; i < fromTokens.length; i++) {
             require(amounts[i] > 0, 'Amount must be greater than zero');
+
             address fromToken = fromTokens[i];
             address toToken = toTokens[i];
+
             uint256 amount = amounts[i];
             address receiver = receivers[i];
-            address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
-            IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
 
             require(IERC20(fromToken).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
-            IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
-            poolsReserves[poolAddress][fromToken] += amount;
-
-            uint256 amountOut = pool.swap(fromToken, toToken, amount, receiver);
-
-            require(IERC20(toToken).balanceOf(address(this)) >= amountOut, 'Insufficient Liquidity');
-
-            uint fee = ((amountOut * _BPS_FEE) / _BPS_BASE);
-            IERC20(toToken).transfer(treasury, fee);
-
-            amountOut -= fee;
-            IERC20(toToken).transfer(receiver, amountOut);
-
-            poolsReserves[poolAddress][toToken] -= amountOut;
+            amountsOut[i] = swap(fromToken, toToken, amount, receiver);
         }
 
         return amountsOut;
     }
 
-    function rebalanceWeights(address poolAddress, address receiver) external {
+    function rebalanceWeights(address poolAddress, address receiver) external override {
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+
         uint256[] memory amounts = pool.rebalanceWeights(receiver);
         address[] memory assets = pool.getAssets();
+
         for (uint256 i = 0; i < assets.length; i++) {
             poolsReserves[poolAddress][assets[i]] += amounts[i];
             IERC20(assets[i]).transferFrom(receiver, address(this), amounts[i]);
         }
     }
 
-    /**
-     * @dev Adds liquidity to a BaluniV1Pool.
-     * @param amounts An array of amounts for each asset to add as liquidity.
-     */
-    function addLiquidity(uint256[] calldata amounts, address poolAddress, address receiver) external {
-        address treasury = registry.getTreasury();
-        uint256 _BPS_FEE = registry.getBPS_FEE();
-        uint256 _BPS_BASE = registry.getBPS_BASE();
+    function addLiquidity(
+        uint256[] memory amounts,
+        address poolAddress,
+        address receiver
+    ) external override returns (uint256) {
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
         address[] memory assets = pool.getAssets();
 
         for (uint256 i = 0; i < assets.length; i++) {
-            address asset = assets[i];
-            uint256 amount = amounts[i];
-            IERC20(asset).transferFrom(msg.sender, address(this), amount);
-            uint fee = ((amount * _BPS_FEE) / _BPS_BASE);
-            IERC20(asset).transfer(treasury, fee);
-            poolsReserves[poolAddress][asset] += amount - fee;
+            IERC20(assets[i]).transferFrom(msg.sender, address(this), amounts[i]);
+            poolsReserves[poolAddress][assets[i]] += amounts[i];
         }
 
-        pool.mint(receiver, amounts);
+        return pool.mint(receiver, amounts);
     }
 
-    /**
-     * @dev Removes liquidity from a BaluniV1Pool.
-     * @param share The amount of liquidity tokens to remove.
-     * @param poolAddress The address of the BaluniV1Pool.
-     */
-    function removeLiquidity(uint256 share, address poolAddress, address receiver) external {
+    function removeLiquidity(uint256 share, address poolAddress, address receiver) external override {
         address treasury = registry.getTreasury();
         uint256 _BPS_FEE = registry.getBPS_FEE();
         uint256 _BPS_BASE = registry.getBPS_BASE();
@@ -245,7 +216,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @param amount The amount of tokens to swap.
      * @return The amount of tokens received after the swap.
      */
-    function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256) {
+    function getAmountOut(address fromToken, address toToken, uint256 amount) external view override returns (uint256) {
         IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
         address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
@@ -256,7 +227,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @dev Performs rebalance if needed for the given tokens.
      * @param poolAddress The address of the token pool to rebalance.
      */
-    function performRebalanceIfNeeded(address poolAddress) external {
+    function performRebalanceIfNeeded(address poolAddress) external override {
         uint256 _BPS_BASE = registry.getBPS_BASE();
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
         uint256 balance = IERC20(poolAddress).balanceOf(msg.sender);
@@ -277,7 +248,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @param token The address of the token to search for.
      * @return An array of pool addresses.
      */
-    function getPoolsContainingToken(address token) external view returns (address[] memory) {
+    function getPoolsContainingToken(address token) external view override returns (address[] memory) {
         IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
         return poolFactory.getPoolsByAsset(token);
     }
@@ -286,11 +257,11 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @dev Returns the version of the contract.
      * @return The version string.
      */
-    function getVersion() external view returns (uint64) {
+    function getVersion() external view override returns (uint64) {
         return _getInitializedVersion();
     }
 
-    function getReserves(address pool) public view returns (uint256[] memory) {
+    function getReserves(address pool) public view override returns (uint256[] memory) {
         address[] memory assets = IBaluniV1Pool(pool).getAssets();
         uint256[] memory reserves = new uint256[](assets.length);
         for (uint256 i = 0; i < assets.length; i++) {

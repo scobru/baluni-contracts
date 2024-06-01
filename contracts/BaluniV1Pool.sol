@@ -38,19 +38,21 @@ pragma solidity 0.8.25;
  *                           \ r=._\        `.
  */
 
-import './interfaces/IBaluniV1Rebalancer.sol';
-import './interfaces/IBaluniV1Router.sol';
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
 import './interfaces/IBaluniV1PoolPeriphery.sol';
 import './interfaces/IBaluniV1Registry.sol';
+import './interfaces/IBaluniV1Rebalancer.sol';
+import './interfaces/IBaluniV1Oracle.sol';
 
 contract BaluniV1Pool is ERC20, ReentrancyGuard {
     AssetInfo[] public assetInfos;
+
     uint256 public trigger;
     uint256 public ONE;
     address public baseAsset;
+    uint256 private scalingFactor;
 
     IBaluniV1Registry public registry;
 
@@ -86,15 +88,18 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
         trigger = _trigger;
 
-        //baseAsset = registry.getUSDC();
-        require(registry.getUSDC() != address(0), 'Invalid base asset address');
+        baseAsset = registry.getUSDC();
 
-        baseAsset = registry.getWNATIVE();
+        scalingFactor = 10 ** (18 - 6);
+
+        require(baseAsset != address(0), 'Invalid base asset address');
 
         uint256 totalWeight = 0;
+
         for (uint256 i = 0; i < _weights.length; i++) {
             totalWeight += _weights[i];
         }
+
         require(totalWeight == 10000, 'Invalid weights');
     }
 
@@ -137,16 +142,12 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      */
     function rebalanceWeights(address receiver) external onlyPeriphery returns (uint256[] memory) {
         require(isRebalanceNeeded(), 'Rebalance not needed');
-        (uint256 totalValuation, uint256[] memory valuations) = _computeTotalValuation();
+        (uint256 totalValuation, uint256[] memory valuations) = _computeTotalValuation(); // 6dec
 
-        uint256[] memory amountsToAdd = _calculateAmountsToAdd(totalValuation, valuations);
-
-        // Calculate total added liquidity before minting
+        uint256[] memory amountsToAdd = _calculateAmountsToAdd(totalValuation, valuations); // 6dec
         uint256 totalAddedLiquidity = _calculateTotalAddedLiquidity(amountsToAdd);
 
-        uint baseDecimal = IERC20Metadata(baseAsset).decimals();
-
-        totalAddedLiquidity *= 10 ** 18 - baseDecimal;
+        totalAddedLiquidity *= scalingFactor;
 
         uint256[] memory amounts = new uint256[](assetInfos.length);
 
@@ -179,14 +180,14 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @param toToken The address of the token to swap to.
      * @param amount The amount of `fromToken` to swap.
      * @param receiver The address to receive the swapped tokens.
-     * @return toSend The amount of `toToken` received after the swap.
+     * @return amountOut The amount of `toToken` received after the swap.
      */
     function swap(
         address fromToken,
         address toToken,
         uint256 amount,
         address receiver
-    ) external nonReentrant returns (uint256 toSend) {
+    ) external nonReentrant returns (uint256 amountOut) {
         uint256 _BPS_FEE = registry.getBPS_FEE();
         require(fromToken != toToken, 'Cannot swap the same token');
         require(amount > 0, 'Amount must be greater than zero');
@@ -195,13 +196,13 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         require(getAssetReserve(toToken) >= receivedAmount, 'Insufficient Liquidity');
 
         uint256 fee = (receivedAmount * _BPS_FEE) / 10000;
-        toSend = receivedAmount - fee;
+        amountOut = receivedAmount - fee;
 
-        require(toSend > 0, 'Amount to send must be greater than 0');
+        require(amountOut > 0, 'Amount to send must be greater than 0');
 
-        emit Swap(receiver, fromToken, toToken, amount, toSend);
+        emit Swap(receiver, fromToken, toToken, amount, amountOut);
 
-        return toSend;
+        return amountOut;
     }
 
     /**
@@ -218,7 +219,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
             address asset = assetInfos[i].asset;
-
             uint256 valuation = _convertTokenToBase(asset, amounts[i]);
             totalValue += valuation;
         }
@@ -228,15 +228,16 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 toMint;
 
         if (totalSupply == 0) {
-            toMint = totalValue;
+            toMint = totalValue * scalingFactor;
         } else {
             (uint256 totalLiquidity, ) = _computeTotalValuation();
             require(totalLiquidity > 0, 'Total liquidity must be greater than 0');
-            toMint = (((totalValue) * totalSupply) / totalLiquidity);
+            toMint = (((totalValue) * totalSupply) / totalLiquidity) * scalingFactor;
         }
         require(toMint != 0, 'Mint qty is 0');
 
         _mint(to, toMint);
+
         emit Mint(to, toMint);
 
         return toMint;
@@ -298,9 +299,10 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @return The amount of `toToken` that will be received.
      */
     function getAmountOut(address fromToken, address toToken, uint256 amount) public view returns (uint256) {
-        address rebalancer = registry.getBaluniRebalancer();
-
-        return IBaluniV1Rebalancer(rebalancer).convert(fromToken, toToken, amount);
+        IBaluniV1Oracle baluniOracle = IBaluniV1Oracle(registry.getBaluniOracle());
+        require(registry.getBaluniOracle() != address(0), 'Invalid oracle address');
+        uint256 amountOut = baluniOracle.convert(fromToken, toToken, amount);
+        return amountOut;
     }
 
     /**
@@ -401,7 +403,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      */
     function getAssetReserve(address asset) public view returns (uint256) {
         address periphery = registry.getBaluniPoolPeriphery();
-
         return IBaluniV1PoolPeriphery(periphery).getAssetReserve(address(this), asset);
     }
 
@@ -537,7 +538,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      */
     function _calculateLiquidity(uint256 index, uint256 amountToAdd) internal view returns (uint256) {
         if (assetInfos[index].asset == baseAsset) return amountToAdd;
-
         uint256 tokenAmount = _convertBaseToToken(assetInfos[index].asset, amountToAdd);
         require(tokenAmount > 0, 'Invalid token amount to add');
         return tokenAmount;
@@ -550,42 +550,17 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @return The corresponding token amount.
      */
     function _convertBaseToToken(address toToken, uint256 amount) internal view returns (uint256) {
-        address rebalancer = registry.getBaluniRebalancer();
-        uint256 tokenAmount = IBaluniV1Rebalancer(rebalancer).convert(baseAsset, toToken, amount);
-        return tokenAmount;
-    }
-
-    /**
-     * @dev Returns the maximum of two uint8 values.
-     * @param a The first uint8 value.
-     * @param b The second uint8 value.
-     * @return The maximum value between a and b.
-     */
-    function max(uint8 a, uint8 b) private pure returns (uint8) {
-        return a >= b ? a : b;
-    }
-
-    /**
-     * @dev Returns the minimum of two uint8 values.
-     * @param a The first uint8 value.
-     * @param b The second uint8 value.
-     * @return The minimum value between a and b.
-     */
-    function min(uint8 a, uint8 b) private pure returns (uint8) {
-        return a <= b ? a : b;
+        return getAmountOut(baseAsset, toToken, amount);
     }
 
     /**
      * @dev Converts the specified token to the native token using the rebalancer contract.
      * @param fromToken The address of the token to convert from.
      * @param amount The amount of tokens to convert.
-     * @return scaledAmount The converted amount of tokens.
+     * @return tokenAmount The converted amount of tokens.
      */
-    function _convertTokenToBase(address fromToken, uint256 amount) internal view returns (uint256 scaledAmount) {
-        address rebalancer = registry.getBaluniRebalancer();
-
-        uint256 tokenAmount = IBaluniV1Rebalancer(rebalancer).convert(fromToken, baseAsset, amount);
-        return tokenAmount;
+    function _convertTokenToBase(address fromToken, uint256 amount) internal view returns (uint256 tokenAmount) {
+        return getAmountOut(fromToken, baseAsset, amount);
     }
 
     // return true if one of the deviation overcome the trigger
@@ -601,14 +576,5 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
             }
         }
         return false;
-    }
-
-    function _getTargetWeight(address _token) internal view returns (uint256) {
-        for (uint256 i = 0; i < assetInfos.length; i++) {
-            if (assetInfos[i].asset == _token) {
-                return assetInfos[i].weight;
-            }
-        }
-        return 0;
     }
 }

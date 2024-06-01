@@ -7,19 +7,6 @@ pragma solidity 0.8.25;
  */
 interface IBaluniV1PoolPeriphery {
     /**
-     * @dev Initializes the contract by setting the pool factory address.
-     * @param _poolFactory The address of the BaluniV1PoolFactory contract.
-     */
-    function initialize(address _poolFactory) external;
-
-    /**
-     * @dev Reinitializes the contract by setting the pool factory address.
-     * @param _poolFactory The address of the BaluniV1PoolFactory contract.
-     * @param version The version number.
-     */
-    function reinitialize(address _poolFactory, uint64 version) external;
-
-    /**
      * @dev Swaps tokens in a BaluniV1Pool.
      * @param fromToken The address of the token to swap from.
      * @param toToken The address of the token to swap to.
@@ -57,7 +44,7 @@ interface IBaluniV1PoolPeriphery {
      * @param poolAddress The address of the pool.
      * @param receiver The address of the receiver.
      */
-    function addLiquidity(uint256[] calldata amounts, address poolAddress, address receiver) external;
+    function addLiquidity(uint256[] memory amounts, address poolAddress, address receiver) external returns (uint256);
 
     /**
      * @dev Removes liquidity from a BaluniV1Pool.
@@ -94,13 +81,6 @@ interface IBaluniV1PoolPeriphery {
      * @return The version string.
      */
     function getVersion() external view returns (uint64);
-
-    /**
-     * @dev Changes the address of the pool factory contract.
-     * Can only be called by the contract owner.
-     * @param _poolFactory The new address of the pool factory contract.
-     */
-    function changePoolFactory(address _poolFactory) external;
 
     /**
      * @dev Returns the reserves of the pool.

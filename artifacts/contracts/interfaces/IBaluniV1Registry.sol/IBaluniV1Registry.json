@@ -57,6 +57,19 @@
     },
     {
       "inputs": [],
+      "name": "getBaluniOracle",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getBaluniPoolFactory",
       "outputs": [
         {
@@ -110,6 +123,19 @@
     {
       "inputs": [],
       "name": "getBaluniRouter",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getBaluniSwapper",
       "outputs": [
         {
           "internalType": "address",
@@ -241,6 +267,19 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "_baluniOracle",
+          "type": "address"
+        }
+      ],
+      "name": "setBaluniOracle",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "_baluniPoolFactory",
           "type": "address"
         }
@@ -298,6 +337,19 @@
         }
       ],
       "name": "setBaluniRouter",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_baluniSwapper",
+          "type": "address"
+        }
+      ],
+      "name": "setBaluniSwapper",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

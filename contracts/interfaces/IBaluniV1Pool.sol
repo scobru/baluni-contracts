@@ -16,8 +16,6 @@ interface IBaluniV1Pool {
 
     function router() external view returns (address);
 
-    function SWAP_FEE_BPS() external view returns (uint256);
-
     function getReserves() external view returns (uint256[] memory);
 
     function getAssets() external view returns (address[] memory);
@@ -51,13 +49,7 @@ interface IBaluniV1Pool {
 
     function burn(address to) external returns (uint256[] memory);
 
-    function changeRebalancer(address _newRebalancer) external;
-
-    function changeRouter(address _newRouter) external;
-
     function computeTotalValuation() external view returns (uint256 totalVal, uint256[] memory valuations);
-
-    function updateReserves(uint256[] memory amounts, bool increase) external;
 
     function rebalanceWeights(address receiver) external returns (uint256[] memory);
 

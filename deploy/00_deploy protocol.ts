@@ -29,6 +29,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const registry = await baluniV1Registry?.waitForDeployment()
   console.log('BaluniV1Registry deployed to:', registry.target)
 
+  // set constnt
   await registry.setWNATIVE(WNATIVE)
   await registry.setUSDC(USDC)
   await registry.set1inchSpotAgg(_1INCHSPOTAGG)
@@ -36,6 +37,24 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   await registry.setUniswapFactory(uniswapFactory)
   await registry.setUniswapRouter(uniswapRouter)
   await registry.setBaluniRegistry(await registry.getAddress())
+
+  const BaluniV1Swapper = await ethers.getContractFactory('BaluniV1Swapper')
+  const baluniSwapper = await upgrades.deployProxy(BaluniV1Swapper, [await registry.getAddress()], {
+    kind: 'uups',
+  })
+  const instanceSwapper = await baluniSwapper?.waitForDeployment()
+  console.log('BaluniV1Swapper deployed to:', instanceSwapper.target)
+
+  await registry.setBaluniSwapper(await instanceSwapper.target)
+
+  const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
+  const baluniOracle = await upgrades.deployProxy(BaluniV1Oracle, [await registry.getAddress()], {
+    kind: 'uups',
+  })
+  const instanceOracle = await baluniOracle?.waitForDeployment()
+  console.log('BaluniV1Oracle deployed to:', instanceOracle.target)
+
+  await registry.setBaluniOracle(await instanceOracle.target)
 
   const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
   const baluniRebalancer = await upgrades.deployProxy(BaluniV1Rebalancer, [await registry.getAddress()], {
@@ -47,9 +66,13 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   await registry.setBaluniRebalancer(await instanceRebalance.target)
 
   const BaluniV1AgentFactory = await ethers.getContractFactory('BaluniV1AgentFactory')
-  const agentFactory = await upgrades.deployProxy(BaluniV1AgentFactory, [await registry.getAddress()], {
-    kind: 'uups',
-  })
+  const agentFactory = await upgrades.deployProxy(
+    BaluniV1AgentFactory,
+    ['0xe4B9f8d8E52164F34450f1dFaC9B9b1B3c9FC448'],
+    {
+      kind: 'uups',
+    }
+  )
   const instanceAgentFactory = await agentFactory?.waitForDeployment()
   console.log('BaluniV1AgentFactory deployed to:', instanceAgentFactory.target)
 

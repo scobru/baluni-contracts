@@ -43,18 +43,27 @@ import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import './interfaces/IBaluniV1Router.sol';
-import './interfaces/IBaluniV1Rebalancer.sol';
-import './interfaces/I1inchSpotAgg.sol';
-import './BaluniV1Uniswapper.sol';
+import './interfaces/IBaluniV1Swapper.sol';
+import './interfaces/IBaluniV1Registry.sol';
+import './interfaces/IBaluniV1Oracle.sol';
 
-contract BaluniV1Rebalancer is
-    Initializable,
-    OwnableUpgradeable,
-    UUPSUpgradeable,
-    IBaluniV1Rebalancer,
-    BaluniV1Uniswapper
-{
+contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     IBaluniV1Registry public registry;
+
+    struct RebalanceVars {
+        uint256 length;
+        uint256 totalValue;
+        uint256 finalUsdBalance;
+        uint256 overweightVaultsLength;
+        uint256 underweightVaultsLength;
+        uint256 totalActiveWeight;
+        uint256 amountOut;
+        uint256[] overweightVaults;
+        uint256[] overweightAmounts;
+        uint256[] underweightVaults;
+        uint256[] underweightAmounts;
+        uint256[] balances;
+    }
 
     function initialize(address _registry) public initializer {
         __UUPSUpgradeable_init();
@@ -86,29 +95,43 @@ contract BaluniV1Rebalancer is
         address sender,
         address receiver,
         address baseAsset
-    ) external override {
+    ) external {
         address USDC = registry.getUSDC();
         address WNATIVE = registry.getWNATIVE();
 
-        RebalanceVars memory vars = _checkRebalance(balances, assets, weights, limit, sender, baseAsset);
+        if (balances.length == 0) {
+            for (uint256 i = 0; i < assets.length; i++) {
+                balances[i] = IERC20(assets[i]).balanceOf(sender);
+            }
+        }
+
+        RebalanceVars memory vars = _checkRebalance(balances, assets, weights, limit, baseAsset);
 
         for (uint256 i = 0; i < vars.overweightVaults.length; i++) {
             if (vars.overweightAmounts[i] > 0) {
                 address asset = assets[vars.overweightVaults[i]];
-                require(vars.balances[i] >= vars.overweightAmounts[i], 'Balance under overweight amounts');
+                require(vars.balances[i] >= vars.overweightAmounts[i], 'Under Overweight Amount');
                 IERC20(asset).transferFrom(sender, address(this), vars.overweightAmounts[i]);
 
-                if (asset == address(USDC)) {
+                if (asset == baseAsset) {
                     continue;
                 }
 
+                address baluniSwapper = registry.getBaluniSwapper();
+                IERC20(asset).approve(baluniSwapper, vars.overweightAmounts[i]);
+
                 if (asset == address(WNATIVE)) {
-                    vars.amountOut += _singleSwap(asset, address(USDC), vars.overweightAmounts[i], address(this));
+                    vars.amountOut += IBaluniV1Swapper(baluniSwapper).singleSwap(
+                        asset,
+                        baseAsset,
+                        vars.overweightAmounts[i],
+                        address(this)
+                    );
                 } else {
-                    vars.amountOut += _multiHopSwap(
+                    vars.amountOut += IBaluniV1Swapper(baluniSwapper).multiHopSwap(
                         asset,
                         address(WNATIVE),
-                        address(USDC),
+                        baseAsset,
                         vars.overweightAmounts[i],
                         address(this)
                     );
@@ -129,7 +152,7 @@ contract BaluniV1Rebalancer is
                 uint256 rebaseActiveWgt = (vars.underweightAmounts[i] * 10000) / vars.totalActiveWeight;
                 uint256 rebBuyQty = (rebaseActiveWgt * usdBalance * 1e12) / 10000;
 
-                if (asset == address(USDC)) {
+                if (asset == baseAsset) {
                     IERC20(USDC).transfer(_receiver, rebBuyQty / 1e12);
                     continue;
                 }
@@ -137,12 +160,20 @@ contract BaluniV1Rebalancer is
                 if (rebBuyQty > 0 && rebBuyQty <= usdBalance * 1e12) {
                     require(usdBalance >= rebBuyQty / 1e12, 'Balance under RebuyQty');
 
+                    address baluniSwapper = registry.getBaluniSwapper();
+                    IERC20(baseAsset).approve(baluniSwapper, rebBuyQty / 1e12);
+
                     uint256 amountOut;
                     if (asset == address(WNATIVE)) {
-                        amountOut = _singleSwap(address(USDC), address(WNATIVE), rebBuyQty / 1e12, address(this));
+                        amountOut = IBaluniV1Swapper(baluniSwapper).singleSwap(
+                            baseAsset,
+                            asset,
+                            rebBuyQty / 1e12,
+                            address(this)
+                        );
                     } else {
-                        amountOut = _multiHopSwap(
-                            address(USDC),
+                        amountOut = IBaluniV1Swapper(baluniSwapper).multiHopSwap(
+                            baseAsset,
                             address(WNATIVE),
                             asset,
                             rebBuyQty / 1e12,
@@ -188,8 +219,13 @@ contract BaluniV1Rebalancer is
         uint256 limit,
         address sender,
         address baseAsset
-    ) public view override returns (RebalanceVars memory) {
-        return _checkRebalance(balances, assets, weights, limit, sender, baseAsset);
+    ) public view returns (RebalanceVars memory) {
+        if (balances.length == 0) {
+            for (uint256 i = 0; i < assets.length; i++) {
+                balances[i] = IERC20(assets[i]).balanceOf(sender);
+            }
+        }
+        return _checkRebalance(balances, assets, weights, limit, baseAsset);
     }
 
     /**
@@ -198,7 +234,6 @@ contract BaluniV1Rebalancer is
      * @param assets An array of token addresses.
      * @param weights An array of target weights for each token.
      * @param limit The maximum allowed deviation from the target weight.
-     * @param sender The address of the sender.
      * @param baseAsset The address of the base asset.
      * @return rebalanceVars A struct containing rebalance variables.
      */
@@ -207,16 +242,10 @@ contract BaluniV1Rebalancer is
         address[] calldata assets,
         uint256[] calldata weights,
         uint256 limit,
-        address sender,
         address baseAsset
     ) internal view returns (RebalanceVars memory) {
-        if (balances.length == 0) {
-            for (uint256 i = 0; i < assets.length; i++) {
-                balances[i] = IERC20(assets[i]).balanceOf(sender);
-            }
-        }
+        uint256 totalValue = calculateTotalValue(balances, assets, baseAsset);
 
-        uint256 totalValue = calculateTotalValue(assets, sender);
         RebalanceVars memory vars = RebalanceVars(
             assets.length,
             totalValue,
@@ -232,53 +261,59 @@ contract BaluniV1Rebalancer is
             new uint256[](assets.length)
         );
 
-        vars.balances = balances;
+        // STACK TO DEEP reassignment
         address[] memory _assets = assets;
-        address baluniRouter = registry.getBaluniRouter();
+        uint256[] memory _weights = weights;
+        uint256 _limit = limit;
+        address base = baseAsset;
+        uint256 _totalValue = totalValue;
+        RebalanceVars memory _vars = vars;
 
         for (uint256 i = 0; i < _assets.length; i++) {
-            //vars.balances[i] = balances[i];
-            uint256 decimals = IERC20Metadata(assets[i]).decimals();
+            uint256 decimals = IERC20Metadata(_assets[i]).decimals();
             uint256 tokensTotalValue;
 
-            uint256 price = IBaluniV1Router(baluniRouter).tokenValuation(1 * 10 ** decimals, _assets[i]);
+            uint256 baseAssetDecimals = IERC20Metadata(base).decimals();
+            uint256 factor = 10 ** (18 - baseAssetDecimals);
 
-            if (_assets[i] == address(baseAsset)) {
-                uint256 baseAssetDecimals = IERC20Metadata(baseAsset).decimals();
-                uint256 factor = 10 ** (18 - baseAssetDecimals);
-                tokensTotalValue = vars.balances[i] * factor;
+            IBaluniV1Oracle baluniOracle = IBaluniV1Oracle(registry.getBaluniOracle());
+
+            uint256 price = baluniOracle.convertScaled(_assets[i], base, 1 * 10 ** decimals);
+
+            if (_assets[i] == address(base)) {
+                tokensTotalValue = _vars.balances[i] * factor;
             } else {
-                tokensTotalValue = convert(_assets[i], baseAsset, vars.balances[i]);
+                tokensTotalValue = baluniOracle.convertScaled(_assets[i], base, _vars.balances[i]);
             }
 
-            uint256 targetWeight = weights[i];
-            uint256 currentWeight = (tokensTotalValue * 10000) / totalValue;
+            uint256 targetWeight = _weights[i];
+            uint256 currentWeight = (tokensTotalValue * 10000) / _totalValue;
             bool overweight = currentWeight > targetWeight;
             uint256 overweightPercent = overweight ? currentWeight - targetWeight : targetWeight - currentWeight;
 
-            if (overweight && overweightPercent > limit) {
-                uint256 overweightAmount = (overweightPercent * totalValue) / 10000;
-                vars.finalUsdBalance += overweightAmount;
+            if (overweight && overweightPercent > _limit) {
+                uint256 overweightAmount = (overweightPercent * _totalValue) / 10000;
+                _vars.finalUsdBalance += overweightAmount;
 
                 overweightAmount = (overweightAmount * 1e18) / price;
                 overweightAmount = overweightAmount / (10 ** (18 - decimals));
-                vars.overweightVaults[vars.overweightVaultsLength] = i;
-                vars.overweightAmounts[vars.overweightVaultsLength] = overweightAmount;
-                vars.overweightVaultsLength++;
-            } else if (!overweight && overweightPercent > limit) {
-                vars.totalActiveWeight += overweightPercent;
-                vars.underweightVaults[vars.underweightVaultsLength] = i;
-                vars.underweightAmounts[vars.underweightVaultsLength] = overweightPercent;
-                vars.underweightVaultsLength++;
+                _vars.overweightVaults[_vars.overweightVaultsLength] = i;
+                _vars.overweightAmounts[_vars.overweightVaultsLength] = overweightAmount;
+                _vars.overweightVaultsLength++;
+            } else if (!overweight && overweightPercent > _limit) {
+                _vars.totalActiveWeight += overweightPercent;
+                _vars.underweightVaults[_vars.underweightVaultsLength] = i;
+                _vars.underweightAmounts[_vars.underweightVaultsLength] = overweightPercent;
+                _vars.underweightVaultsLength++;
             }
         }
 
-        vars.overweightVaults = _resize(vars.overweightVaults, vars.overweightVaultsLength);
-        vars.overweightAmounts = _resize(vars.overweightAmounts, vars.overweightVaultsLength);
-        vars.underweightVaults = _resize(vars.underweightVaults, vars.underweightVaultsLength);
-        vars.underweightAmounts = _resize(vars.underweightAmounts, vars.underweightVaultsLength);
+        _vars.overweightVaults = _resize(_vars.overweightVaults, _vars.overweightVaultsLength);
+        _vars.overweightAmounts = _resize(_vars.overweightAmounts, _vars.overweightVaultsLength);
+        _vars.underweightVaults = _resize(_vars.underweightVaults, _vars.underweightVaultsLength);
+        _vars.underweightAmounts = _resize(_vars.underweightAmounts, _vars.underweightVaultsLength);
 
-        return vars;
+        return _vars;
     }
 
     /**
@@ -318,57 +353,25 @@ contract BaluniV1Rebalancer is
      * @param assets An array of asset addresses.
      * @return The total value of the assets held by the caller.
      */
-    function calculateTotalValue(address[] memory assets, address user) private view returns (uint256) {
+    function calculateTotalValue(
+        uint256[] memory balances,
+        address[] memory assets,
+        address baseAsset
+    ) private view returns (uint256) {
         address USDC = registry.getUSDC();
-        address baluniRouter = registry.getBaluniRouter();
+        uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
+        uint256 factor = 10 ** (18 - baseDecimal);
+        IBaluniV1Oracle baluniOracle = IBaluniV1Oracle(registry.getBaluniOracle());
 
         uint256 _tokenValue = 0;
         for (uint256 i = 0; i < assets.length; i++) {
-            uint256 balance = IERC20(assets[i]).balanceOf(user);
-
             if (assets[i] == address(USDC)) {
-                _tokenValue += balance * 1e12;
+                _tokenValue += balances[i] * factor;
             } else {
-                _tokenValue += IBaluniV1Router(baluniRouter).tokenValuation(balance, assets[i]);
+                _tokenValue += baluniOracle.convertScaled(assets[i], baseAsset, balances[i]);
             }
         }
 
         return _tokenValue;
-    }
-
-    /**
-     * @dev Converts an amount of tokens from one token to another based on the current exchange rate.
-     * @param fromToken The address of the token to convert from.
-     * @param toToken The address of the token to convert to.
-     * @param amount The amount of tokens to convert.
-     * @return The converted amount of tokens.
-     */
-    function convert(address fromToken, address toToken, uint256 amount) public view returns (uint256) {
-        uint256 rate;
-        address _1InchSpotAgg = registry.get1inchSpotAgg();
-        uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-        uint8 toDecimal = IERC20Metadata(toToken).decimals();
-        uint256 numerator = 10 ** fromDecimal;
-        uint256 denominator = 10 ** toDecimal;
-
-        rate = I1inchSpotAgg(_1InchSpotAgg).getRate(IERC20(fromToken), IERC20(toToken), false);
-        rate = (rate * numerator) / denominator;
-
-        uint256 tokenAmount = ((amount * rate) / 10 ** 18);
-
-        if (fromDecimal == toDecimal) {
-            tokenAmount = ((amount * rate) / 10 ** 18);
-            return tokenAmount;
-        }
-
-        uint256 factor = 10 ** (fromDecimal > toDecimal ? fromDecimal - toDecimal : toDecimal - fromDecimal);
-
-        if (fromDecimal > toDecimal) {
-            tokenAmount /= factor;
-        } else {
-            tokenAmount *= factor;
-        }
-
-        return tokenAmount;
     }
 }

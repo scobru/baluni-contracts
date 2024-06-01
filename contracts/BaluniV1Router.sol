@@ -45,22 +45,22 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 
 import './interfaces/IBaluniV1Agent.sol';
 import './interfaces/IBaluniV1AgentFactory.sol';
 import './interfaces/IBaluniV1Rebalancer.sol';
 import './interfaces/I1inchSpotAgg.sol';
+import './interfaces/IBaluniV1Oracle.sol';
 import './libs/EnumerableSetUpgradeable.sol';
-import './BaluniV1Uniswapper.sol';
+import './interfaces/IBaluniV1Swapper.sol';
+import './interfaces/IBaluniV1Registry.sol';
 
 contract BaluniV1Router is
     Initializable,
     ERC20Upgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    UUPSUpgradeable,
-    BaluniV1Uniswapper
+    UUPSUpgradeable
 {
     struct Call {
         address to;
@@ -73,6 +73,8 @@ contract BaluniV1Router is
     IBaluniV1Registry public registry;
 
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+
+    address public baseAsset;
 
     event Execute(address user, IBaluniV1Agent.Call[] calls, address[] tokensReturn);
     event Burn(address user, uint256 value);
@@ -93,6 +95,7 @@ contract BaluniV1Router is
         _mint(address(this), 1 ether);
 
         registry = IBaluniV1Registry(_registry);
+        baseAsset = registry.getUSDC();
     }
 
     function reinitialize(address _registry, uint64 version) public reinitializer(version) {
@@ -192,22 +195,32 @@ contract BaluniV1Router is
         address USDC = registry.getUSDC();
         address WNATIVE = registry.getWNATIVE();
         address uniswapFactory = registry.getUniswapFactory();
+        address baluniSwapper = registry.getBaluniSwapper();
 
         uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
         address pool = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 3000);
         bool haveBalance = totalERC20Balance > 0;
+
         if (pool != address(0) && haveBalance) {
-            uint256 singleSwapResult = _singleSwap(token, address(USDC), totalERC20Balance, address(this));
+            IERC20(token).approve(baluniSwapper, totalERC20Balance);
+            uint256 singleSwapResult = IBaluniV1Swapper(baluniSwapper).singleSwap(
+                token,
+                address(USDC),
+                totalERC20Balance,
+                address(this)
+            );
             require(singleSwapResult > 0, 'Swap Failed, Try Burn()');
         } else if (pool == address(0) && haveBalance) {
-            uint256 amountOutHop = _multiHopSwap(
+            IERC20(token).approve(baluniSwapper, totalERC20Balance);
+            uint256 multiHopSwapResult = IBaluniV1Swapper(baluniSwapper).multiHopSwap(
                 token,
                 address(WNATIVE),
                 address(USDC),
                 totalERC20Balance,
                 address(this)
             );
-            require(amountOutHop > 0, 'Swap Failed, Try Burn()');
+
+            require(multiHopSwapResult > 0, 'Swap Failed, Try Burn()');
         }
     }
 
@@ -235,8 +248,8 @@ contract BaluniV1Router is
      */
     function burnERC20(uint256 burnAmount) external nonReentrant {
         address treasury = registry.getTreasury();
-
         require(balanceOf(msg.sender) >= burnAmount, 'Insufficient BAL');
+        uint256 burnAmountAfterFee = _calculateNetAmountAfterFee(burnAmount);
 
         for (uint256 i; i < tokens.length(); i++) {
             address token = tokens.at(i);
@@ -246,13 +259,14 @@ contract BaluniV1Router is
             if (totalERC20Balance == 0 || token == address(this)) continue;
 
             uint256 decimals = IERC20Metadata(token).decimals();
-            uint256 share = _calculateERC20Share(totalBaluni, totalERC20Balance, burnAmount, decimals);
-            uint256 amountAfterFee = _calculateNetAmountAfterFee(share);
-            IERC20(token).transfer(msg.sender, amountAfterFee);
-            IERC20(token).transfer(treasury, share - amountAfterFee);
+
+            transfer(treasury, burnAmount - burnAmountAfterFee);
+
+            uint256 share = _calculateERC20Share(totalBaluni, totalERC20Balance, burnAmountAfterFee, decimals);
+            IERC20(token).transfer(msg.sender, share);
         }
-        _burn(msg.sender, burnAmount);
-        emit Burn(msg.sender, burnAmount);
+        _burn(msg.sender, burnAmountAfterFee);
+        emit Burn(msg.sender, burnAmountAfterFee);
     }
 
     /**
@@ -266,6 +280,7 @@ contract BaluniV1Router is
         address WNATIVE = registry.getWNATIVE();
 
         require(burnAmount > 0, 'Insufficient BAL');
+        uint256 burnAmountAfterFee = _calculateNetAmountAfterFee(burnAmount);
 
         for (uint256 i; i < tokens.length(); i++) {
             address token = tokens.at(i);
@@ -277,7 +292,15 @@ contract BaluniV1Router is
             if (token == address(this)) continue;
 
             uint256 decimals = IERC20Metadata(token).decimals();
-            uint256 burnAmountToken = _calculateERC20Share(totalBaluni, totalERC20Balance, burnAmount, decimals);
+
+            transfer(treasury, burnAmount - burnAmountAfterFee);
+
+            uint256 burnAmountToken = _calculateERC20Share(
+                totalBaluni,
+                totalERC20Balance,
+                burnAmountAfterFee,
+                decimals
+            );
 
             if (token == address(USDC)) {
                 IERC20(USDC).transfer(msg.sender, burnAmountToken);
@@ -285,29 +308,33 @@ contract BaluniV1Router is
             }
 
             address pool = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 3000);
+            address baluniSwapper = registry.getBaluniSwapper();
 
             if (pool != address(0)) {
-                uint256 amountOut = _singleSwap(token, address(USDC), burnAmountToken, address(this));
-                uint256 amountAfterFee = _calculateNetAmountAfterFee(amountOut);
-                IERC20(address(USDC)).transfer(msg.sender, amountAfterFee);
-                IERC20(address(USDC)).transfer(treasury, amountOut - amountAfterFee);
+                IERC20(token).approve(baluniSwapper, burnAmountToken);
+                uint256 amountOut = IBaluniV1Swapper(baluniSwapper).singleSwap(
+                    token,
+                    address(USDC),
+                    burnAmountToken,
+                    msg.sender
+                );
+                IERC20(address(USDC)).transfer(msg.sender, amountOut);
                 require(amountOut > 0, 'Swap Failed, Try Burn()');
             } else {
-                uint256 amountOutHop = _multiHopSwap(
+                IERC20(token).approve(baluniSwapper, burnAmountToken);
+                uint256 amountOutHop = IBaluniV1Swapper(baluniSwapper).multiHopSwap(
                     token,
                     address(WNATIVE),
                     address(USDC),
                     burnAmountToken,
                     msg.sender
                 );
-                uint256 amountAfterFee = _calculateNetAmountAfterFee(amountOutHop);
-                IERC20(address(USDC)).transfer(msg.sender, amountAfterFee);
-                IERC20(address(USDC)).transfer(treasury, amountOutHop - amountAfterFee);
+                IERC20(address(USDC)).transfer(msg.sender, amountOutHop);
                 require(amountOutHop > 0, 'Swap Failed, Try Burn()');
             }
         }
-        _burn(msg.sender, burnAmount);
-        emit Burn(msg.sender, burnAmount);
+        _burn(msg.sender, burnAmountAfterFee);
+        emit Burn(msg.sender, burnAmountAfterFee);
     }
 
     /**
@@ -405,7 +432,8 @@ contract BaluniV1Router is
      * @return The calculated valuation of the ERC20 token.
      */
     function tokenValuation(uint256 amount, address token) external view returns (uint256) {
-        return _calculateERC20Valuation(amount, token);
+        address baluniOracle = registry.getBaluniOracle();
+        return IBaluniV1Oracle(baluniOracle).convertScaled(token, baseAsset, amount);
     }
 
     /**
@@ -431,28 +459,9 @@ contract BaluniV1Router is
      * @param token The address of the token.
      * @return valuation The valuation of the token.
      */
-    function _calculateERC20Valuation(uint256 amount, address token) internal view returns (uint256 valuation) {
-        address oracle = registry.get1inchSpotAgg();
-        address USDC = registry.getUSDC();
-        uint256 rate;
-        uint8 tokenDecimal = IERC20Metadata(token).decimals();
-        uint8 usdcDecimal = IERC20Metadata(USDC).decimals();
-
-        if (token == USDC) return amount * 1e12;
-
-        try I1inchSpotAgg(oracle).getRate(IERC20(token), IERC20(USDC), false) returns (uint256 _rate) {
-            rate = _rate;
-        } catch {
-            return 0;
-        }
-
-        if (tokenDecimal == usdcDecimal) return ((amount * 1e12) * (rate)) / 1e18;
-
-        uint256 factor = (10 ** (tokenDecimal - usdcDecimal));
-
-        if (tokenDecimal < 18) return ((amount * factor) * (rate * factor)) / 1e18;
-
-        return ((amount) * (rate * factor)) / 1e18;
+    function _calculateERC20ValuationScaled(uint256 amount, address token) internal view returns (uint256 valuation) {
+        address baluniOracle = registry.getBaluniOracle();
+        return IBaluniV1Oracle(baluniOracle).convertScaled(token, baseAsset, amount);
     }
 
     /**
@@ -490,9 +499,11 @@ contract BaluniV1Router is
         uint256 baluniAdjusted;
         uint256 amountAdjusted;
 
+        uint256 factor = (10 ** (18 - tokenDecimals));
+
         if (tokenDecimals < 18) {
-            baluniAdjusted = totalBaluni / (10 ** (18 - tokenDecimals));
-            amountAdjusted = baluniAmount / (10 ** (18 - tokenDecimals));
+            baluniAdjusted = totalBaluni / factor;
+            amountAdjusted = baluniAmount / factor;
         } else {
             baluniAdjusted = totalBaluni;
             amountAdjusted = baluniAmount;
@@ -513,7 +524,7 @@ contract BaluniV1Router is
         for (uint256 i; i < tokens.length(); i++) {
             address token = tokens.at(i);
             uint256 balance = IERC20(token).balanceOf(address(this));
-            uint256 tokenBalanceValuation = _calculateERC20Valuation(balance, token);
+            uint256 tokenBalanceValuation = _calculateERC20ValuationScaled(balance, token);
             _totalV += tokenBalanceValuation;
         }
 

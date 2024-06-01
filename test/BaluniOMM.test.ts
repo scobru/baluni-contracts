@@ -1,9 +1,6 @@
-/* eslint-disable prefer-const */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { expect } from 'chai'
 import { ethers, upgrades } from 'hardhat'
-import { formatEther, formatUnits, Signer } from 'ethers'
+import { formatUnits, Signer } from 'ethers'
 import {
   BaluniV1Pool,
   BaluniV1PoolPeriphery,
@@ -11,9 +8,9 @@ import {
   MockToken,
   BaluniV1PoolFactory,
   BaluniV1Registry,
+  BaluniV1Swapper,
+  MockOracle,
 } from '../typechain-types'
-
-import hre from 'hardhat'
 
 const _1INCHSPOTAGG = '0x0AdDd25a91563696D8567Df78D5A01C9a991F9B8' // 1inch Spot Aggregator
 const uniswapRouter = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
@@ -24,7 +21,9 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
   let periphery: BaluniV1PoolPeriphery
   let factory: BaluniV1PoolFactory
   let rebalancer: MockRebalancer
+  let oracle: MockOracle
   let registry: BaluniV1Registry
+  let swapper: BaluniV1Swapper
   let usdc: MockToken
   let usdt: MockToken
   let wmatic: MockToken
@@ -39,7 +38,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
     ;[owner, addr1, addr2] = await ethers.getSigners()
 
     // Deploy Mock Tokens
-    const MockToken = await hre.ethers.getContractFactory('MockToken')
+    const MockToken = await ethers.getContractFactory('MockToken')
     usdc = (await MockToken.deploy('USD Coin', 'USDC', 6)) as MockToken
     await usdc.waitForDeployment()
     usdt = (await MockToken.deploy('Tether USD', 'USDT', 6)) as MockToken
@@ -52,21 +51,40 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
     await wbtc.waitForDeployment()
 
     console.log('Deploying BaluniV1Registry')
-    const BaluniV1Registry = await hre.ethers.getContractFactory('BaluniV1Registry')
+    const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
     registry = (await upgrades.deployProxy(BaluniV1Registry, [])) as unknown as BaluniV1Registry
+    await registry.waitForDeployment()
 
-    const _registry = await registry.waitForDeployment()
+    await registry.setWNATIVE(await wmatic.getAddress())
+    await registry.setUSDC(await usdc.getAddress())
+    await registry.set1inchSpotAgg(_1INCHSPOTAGG)
+    await registry.setTreasury(await owner.getAddress())
+    await registry.setUniswapFactory(uniswapFactory)
+    await registry.setUniswapRouter(uniswapRouter)
+    await registry.setBaluniRegistry(await registry.getAddress())
 
-    await _registry.setWNATIVE(await wmatic.getAddress())
-    await _registry.setUSDC(await usdc.getAddress())
-    await _registry.set1inchSpotAgg(_1INCHSPOTAGG)
-    await _registry.setTreasury(await owner.getAddress())
-    await _registry.setUniswapFactory(uniswapFactory)
-    await _registry.setUniswapRouter(uniswapRouter)
-    await _registry.setBaluniRegistry(await registry.getAddress())
+    console.log('Deploying BaluniOracle')
+    const MockOracle = await ethers.getContractFactory('MockOracle')
+    oracle = (await MockOracle.deploy(
+      await usdt.getAddress(),
+      await usdc.getAddress(),
+      await wmatic.getAddress(),
+      await weth.getAddress(),
+      await wbtc.getAddress()
+    )) as MockOracle
+    await oracle.waitForDeployment()
+
+    await registry.setBaluniOracle(await oracle.getAddress())
+
+    console.log('Deploying BaluniSwapper')
+    const BaluniV1Swapper = await ethers.getContractFactory('BaluniV1Swapper')
+    swapper = (await upgrades.deployProxy(BaluniV1Swapper, [await registry.getAddress()])) as unknown as BaluniV1Swapper
+    await swapper.waitForDeployment()
+
+    await registry.setBaluniSwapper(await swapper.getAddress())
 
     console.log('Deploying MockRebalancer')
-    const MockRebalancer = await hre.ethers.getContractFactory('MockRebalancer')
+    const MockRebalancer = await ethers.getContractFactory('MockRebalancer')
     rebalancer = (await MockRebalancer.deploy(
       await usdt.getAddress(),
       await usdc.getAddress(),
@@ -75,25 +93,23 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       await wbtc.getAddress()
     )) as MockRebalancer
     await rebalancer.waitForDeployment()
-    await _registry.setBaluniRebalancer(await rebalancer.getAddress())
-
-    console.log('Deploying BaluniV1PoolFactory')
-    const BaluniV1PoolFactory = await hre.ethers.getContractFactory('BaluniV1PoolFactory')
-    factory = (await upgrades.deployProxy(BaluniV1PoolFactory, [
-      await _registry.getAddress(),
-    ])) as unknown as BaluniV1PoolFactory
-
-    await factory.waitForDeployment()
-    await _registry.setBaluniPoolFactory(await factory.getAddress())
+    await registry.setBaluniRebalancer(await rebalancer.getAddress())
 
     console.log('Deploying BaluniV1PoolPeriphery')
-    const BaluniV1PoolPeriphery = await hre.ethers.getContractFactory('BaluniV1PoolPeriphery')
+    const BaluniV1PoolPeriphery = await ethers.getContractFactory('BaluniV1PoolPeriphery')
     periphery = (await upgrades.deployProxy(BaluniV1PoolPeriphery, [
-      await _registry.getAddress(),
+      await registry.getAddress(),
     ])) as unknown as BaluniV1PoolPeriphery
-
     await periphery.waitForDeployment()
-    await _registry.setBaluniPoolPeriphery(await periphery.getAddress())
+    await registry.setBaluniPoolPeriphery(await periphery.getAddress())
+
+    console.log('Deploying BaluniV1PoolFactory')
+    const BaluniV1PoolFactory = await ethers.getContractFactory('BaluniV1PoolFactory')
+    factory = (await upgrades.deployProxy(BaluniV1PoolFactory, [
+      await registry.getAddress(),
+    ])) as unknown as BaluniV1PoolFactory
+    await factory.waitForDeployment()
+    await registry.setBaluniPoolFactory(await factory.getAddress())
 
     console.log('Minting Tokens')
     await usdc.mint(await owner.getAddress(), ethers.parseUnits('100000', 6))
@@ -108,12 +124,13 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       50
     )
 
-    console.log('Getting Pool Address')
-
     const poolAddress = await factory.getPoolByAssets(await usdc.getAddress(), await usdt.getAddress())
     pool = (await ethers.getContractAt('BaluniV1Pool', poolAddress)) as BaluniV1Pool
 
     baseAddress = await pool.baseAsset()
+
+    console.log('Base Asset Address:', baseAddress)
+    console.log('Periphery Address:', await periphery.getAddress())
   })
 
   describe('Minting and Burn', function () {
@@ -125,6 +142,41 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
 
       console.log('🪙 Minting LP Tokens 🪙')
 
+      try {
+        await periphery
+          .connect(owner)
+          .addLiquidity(
+            [
+              ethers.parseUnits('1000', 6),
+              ethers.parseUnits('1000', 6),
+              ethers.parseUnits('0.24631000000000003', 18),
+              ethers.parseUnits('0.01405', 8),
+            ],
+            await pool.getAddress(),
+            await owner.getAddress()
+          )
+      } catch (error) {
+        console.error('Error during addLiquidity:', error)
+      }
+
+      let balance = await pool.balanceOf(await owner.getAddress())
+      console.log('LP Token Balance:', Number(balance))
+      expect(balance).to.be.gt(0)
+      expect(await pool.totalSupply()).to.equal(balance)
+
+      let baseDecimals
+
+      if (baseAddress === (await usdc.getAddress())) {
+        baseDecimals = await usdc.decimals()
+      } else if (baseAddress === (await wmatic.getAddress())) {
+        baseDecimals = await wmatic.decimals()
+      }
+
+      let lpBalance = await pool.balanceOf(await owner.getAddress())
+      console.log('LP Balance: ', ethers.formatUnits(lpBalance.toString(), 18))
+
+      console.log('🪙 Minting LP Tokens 2 🪙')
+
       await periphery.addLiquidity(
         [
           ethers.parseUnits('1000', 6),
@@ -135,19 +187,18 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
         await pool.getAddress(),
         await owner.getAddress()
       )
-      const balance = await pool.balanceOf(await owner.getAddress())
+
+      balance = await pool.balanceOf(await owner.getAddress())
       expect(balance).to.be.gt(0)
       expect(await pool.totalSupply()).to.equal(balance)
 
-      let baseDecimals
-
-      if (baseAddress == (await usdc.getAddress())) {
+      if (baseAddress === (await usdc.getAddress())) {
         baseDecimals = await usdc.decimals()
-      } else if (baseAddress == (await wmatic.getAddress())) {
+      } else if (baseAddress === (await wmatic.getAddress())) {
         baseDecimals = await wmatic.decimals()
       }
 
-      const lpBalance = await pool.balanceOf(await owner.getAddress())
+      lpBalance = await pool.balanceOf(await owner.getAddress())
       console.log('LP Balance: ', ethers.formatUnits(lpBalance.toString(), 18))
 
       const totvals = await pool.computeTotalValuation()
@@ -157,7 +208,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       console.log('Valuation WETH: ', formatUnits(totvals[1][2], baseDecimals))
       console.log('Valuation WBTC: ', formatUnits(totvals[1][3], baseDecimals))
 
-      console.log('🪙 Burnning LP Tokens 🪙')
+      console.log('🪙 Burning LP Tokens 🪙')
 
       await pool.approve(await periphery.getAddress(), lpBalance)
       await periphery.connect(owner).removeLiquidity(lpBalance, await pool.getAddress(), await owner.getAddress())
@@ -178,7 +229,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       await wbtc.approve(await periphery.getAddress(), ethers.parseUnits('4000', 8))
       await weth.approve(await periphery.getAddress(), ethers.parseUnits('4000', 18))
 
-      console.log('🔄 Swapping USDC to USDT 🔄')
+      console.log('🔄 Swapping 🔄')
 
       await periphery.addLiquidity(
         [
@@ -191,8 +242,17 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
         await owner.getAddress()
       )
 
-      await usdc.transfer(await addr1.getAddress(), ethers.parseUnits('100', 6))
-      usdc.connect(addr1).approve(await periphery.getAddress(), ethers.parseUnits('100', 6))
+      await usdt.transfer(await addr1.getAddress(), ethers.parseUnits('10000', 6))
+      usdt.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+
+      await usdc.transfer(await addr1.getAddress(), ethers.parseUnits('10000', 6))
+      usdc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+
+      await weth.transfer(await addr1.getAddress(), ethers.parseUnits('10', 18))
+      weth.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
+
+      await wbtc.transfer(await addr1.getAddress(), ethers.parseUnits('10', 8))
+      wbtc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
 
       let reservesB4Swap = await pool.getReserves()
       console.log(
@@ -202,10 +262,19 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
         formatUnits(reservesB4Swap[2], 18),
         formatUnits(reservesB4Swap[3], 8)
       )
+
       await periphery
         .connect(addr1)
         .swap(await usdc.getAddress(), await usdt.getAddress(), ethers.parseUnits('100', 6), await addr1.getAddress())
       const usdtBalance = await usdt.balanceOf(await addr1.getAddress())
+
+      await periphery
+        .connect(addr1)
+        .swap(await wbtc.getAddress(), await weth.getAddress(), ethers.parseUnits('0.01', 8), await addr1.getAddress())
+
+      await periphery
+        .connect(addr1)
+        .swap(await usdc.getAddress(), await wbtc.getAddress(), ethers.parseUnits('200', 6), await addr1.getAddress())
 
       reservesB4Swap = await pool.getReserves()
       console.log(
@@ -279,17 +348,18 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       let deviation = await pool.getDeviation()
       console.log('📉 Deviation: ', deviation.toString())
 
+      console.log('🔄 Performing Batch Swap 1 🔄')
+
       let fromTokens = [await weth.getAddress(), await wbtc.getAddress()]
-      let toTokens = [await wbtc.getAddress(), await usdc.getAddress()]
-      let amounts = [ethers.parseUnits('0.01', 18), ethers.parseUnits('0.01', 8)]
+      let amounts = [ethers.parseUnits('0.05', 18), ethers.parseUnits('0.009', 8)]
+
+      let toTokens = [await usdt.getAddress(), await usdc.getAddress()]
       let receivers = [await addr1.getAddress(), await addr1.getAddress()]
 
       usdt.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
       usdc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
       weth.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
       wbtc.connect(addr1).approve(await periphery.getAddress(), ethers.MaxUint256)
-
-      console.log('🔄 Performing Batch Swap 1 🔄')
 
       await periphery.connect(addr1).batchSwap(fromTokens, toTokens, amounts, receivers)
 
@@ -319,7 +389,19 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       deviation = await pool.getDeviation()
       console.log('📉 Deviation: ', deviation.toString())
 
+      let poolBalances = await pool.balanceOf(await owner.getAddress())
+      console.log('POOL BALANCE:', formatUnits(poolBalances, 18))
+
+      let totalVal = await pool.computeTotalValuation()
+      console.log(totalVal)
+
       await periphery.rebalanceWeights(await pool.getAddress(), await owner.getAddress())
+
+      poolBalances = await pool.balanceOf(await owner.getAddress())
+      console.log('POOL BALANCE:', formatUnits(poolBalances, 18))
+
+      totalVal = await pool.computeTotalValuation()
+      console.log(totalVal)
 
       totvals = await pool.computeTotalValuation()
       console.log('Total Valuation: ', formatUnits(totvals[0], baseDecimals))

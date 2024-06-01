@@ -53,6 +53,8 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
     address public baluniRebalancer;
     address public baluniRouter;
     address public baluniRegistry;
+    address public baluniOracle;
+    address public baluniSwapper;
     address public treasury;
     address public WNATIVE;
     address public USDC;
@@ -81,6 +83,14 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
 
     function setUniswapRouter(address _uniswapRouter) external override onlyOwner {
         uniswapRouter = _uniswapRouter;
+    }
+
+    function setBaluniSwapper(address _baluniSwapper) external override onlyOwner {
+        baluniSwapper = _baluniSwapper;
+    }
+
+    function setBaluniOracle(address _baluniOracle) external override onlyOwner {
+        baluniOracle = _baluniOracle;
     }
 
     function setBaluniAgentFactory(address _baluniAgentFactory) external override onlyOwner {
@@ -129,6 +139,14 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
 
     function getUniswapRouter() external view override returns (address) {
         return uniswapRouter;
+    }
+
+    function getBaluniSwapper() external view override returns (address) {
+        return baluniSwapper;
+    }
+
+    function getBaluniOracle() external view override returns (address) {
+        return baluniOracle;
     }
 
     function getBaluniAgentFactory() external view override returns (address) {
