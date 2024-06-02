@@ -379,12 +379,14 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      * @return The unit price of the pool.
      */
     function unitPrice() external view returns (uint256) {
+        uint256 baseDecimal = IERC20Metadata(baseAsset).decimals();
+        uint256 factor = 10 ** (18 - baseDecimal);
         (uint256 totalVal, ) = _computeTotalValuation();
         uint256 totalSupply = totalSupply();
         if (totalSupply == 0) {
             return 0;
         }
-        return (totalVal * ONE) / totalSupply;
+        return (((totalVal * factor) / totalSupply) * ONE);
     }
 
     /**

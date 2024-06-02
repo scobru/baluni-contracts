@@ -1,0 +1,280 @@
+type Query {
+  call(id: String!): Call
+  calls(where: CallFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): CallPage!
+  token(id: String!): Token
+  tokens(where: TokenFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): TokenPage!
+  executeEvent(id: String!): ExecuteEvent
+  executeEvents(where: ExecuteEventFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): ExecuteEventPage!
+  burnEvent(id: String!): BurnEvent
+  burnEvents(where: BurnEventFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): BurnEventPage!
+  mintEvent(id: String!): MintEvent
+  mintEvents(where: MintEventFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): MintEventPage!
+  logEvent(id: String!): LogEvent
+  logEvents(where: LogEventFilter, orderBy: String, orderDirection: String, before: String, after: String, limit: Int): LogEventPage!
+}
+
+type Call {
+  id: String!
+  to: String!
+  value: BigInt!
+  data: String!
+}
+
+scalar BigInt
+
+type CallPage {
+  items: [Call!]!
+  pageInfo: PageInfo!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+input CallFilter {
+  AND: [CallFilter]
+  OR: [CallFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  to: String
+  to_not: String
+  to_in: [String]
+  to_not_in: [String]
+  to_gt: String
+  to_lt: String
+  to_gte: String
+  to_lte: String
+  value: BigInt
+  value_not: BigInt
+  value_in: [BigInt]
+  value_not_in: [BigInt]
+  value_gt: BigInt
+  value_lt: BigInt
+  value_gte: BigInt
+  value_lte: BigInt
+  data: String
+  data_not: String
+  data_in: [String]
+  data_not_in: [String]
+  data_contains: String
+  data_not_contains: String
+  data_starts_with: String
+  data_ends_with: String
+  data_not_starts_with: String
+  data_not_ends_with: String
+}
+
+type Token {
+  id: String!
+  address: String!
+}
+
+type TokenPage {
+  items: [Token!]!
+  pageInfo: PageInfo!
+}
+
+input TokenFilter {
+  AND: [TokenFilter]
+  OR: [TokenFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  address: String
+  address_not: String
+  address_in: [String]
+  address_not_in: [String]
+  address_gt: String
+  address_lt: String
+  address_gte: String
+  address_lte: String
+}
+
+type ExecuteEvent {
+  id: String!
+  user: String!
+  calls: [String!]!
+  tokensReturn: [String!]!
+}
+
+type ExecuteEventPage {
+  items: [ExecuteEvent!]!
+  pageInfo: PageInfo!
+}
+
+input ExecuteEventFilter {
+  AND: [ExecuteEventFilter]
+  OR: [ExecuteEventFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  user: String
+  user_not: String
+  user_in: [String]
+  user_not_in: [String]
+  user_gt: String
+  user_lt: String
+  user_gte: String
+  user_lte: String
+  calls: [String]
+  calls_not: [String]
+  calls_has: String
+  calls_not_has: String
+  tokensReturn: [String]
+  tokensReturn_not: [String]
+  tokensReturn_has: String
+  tokensReturn_not_has: String
+}
+
+type BurnEvent {
+  id: String!
+  user: String!
+  value: BigInt!
+}
+
+type BurnEventPage {
+  items: [BurnEvent!]!
+  pageInfo: PageInfo!
+}
+
+input BurnEventFilter {
+  AND: [BurnEventFilter]
+  OR: [BurnEventFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  user: String
+  user_not: String
+  user_in: [String]
+  user_not_in: [String]
+  user_gt: String
+  user_lt: String
+  user_gte: String
+  user_lte: String
+  value: BigInt
+  value_not: BigInt
+  value_in: [BigInt]
+  value_not_in: [BigInt]
+  value_gt: BigInt
+  value_lt: BigInt
+  value_gte: BigInt
+  value_lte: BigInt
+}
+
+type MintEvent {
+  id: String!
+  user: String
+  value: BigInt!
+}
+
+type MintEventPage {
+  items: [MintEvent!]!
+  pageInfo: PageInfo!
+}
+
+input MintEventFilter {
+  AND: [MintEventFilter]
+  OR: [MintEventFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  user: String
+  user_not: String
+  user_in: [String]
+  user_not_in: [String]
+  user_gt: String
+  user_lt: String
+  user_gte: String
+  user_lte: String
+  value: BigInt
+  value_not: BigInt
+  value_in: [BigInt]
+  value_not_in: [BigInt]
+  value_gt: BigInt
+  value_lt: BigInt
+  value_gte: BigInt
+  value_lte: BigInt
+}
+
+type LogEvent {
+  id: String!
+  message: String!
+  value: BigInt!
+}
+
+type LogEventPage {
+  items: [LogEvent!]!
+  pageInfo: PageInfo!
+}
+
+input LogEventFilter {
+  AND: [LogEventFilter]
+  OR: [LogEventFilter]
+  id: String
+  id_not: String
+  id_in: [String]
+  id_not_in: [String]
+  id_contains: String
+  id_not_contains: String
+  id_starts_with: String
+  id_ends_with: String
+  id_not_starts_with: String
+  id_not_ends_with: String
+  message: String
+  message_not: String
+  message_in: [String]
+  message_not_in: [String]
+  message_contains: String
+  message_not_contains: String
+  message_starts_with: String
+  message_ends_with: String
+  message_not_starts_with: String
+  message_not_ends_with: String
+  value: BigInt
+  value_not: BigInt
+  value_in: [BigInt]
+  value_not_in: [BigInt]
+  value_gt: BigInt
+  value_lt: BigInt
+  value_gte: BigInt
+  value_lte: BigInt
+}

@@ -241,18 +241,25 @@ contract BaluniV1Router is
      * @notice Finally, the function emits a `Burn` event with the caller's address and the amount of tokens burned.
      */
     function burnERC20(uint256 burnAmount) external nonReentrant {
+        require(burnAmount > 0, 'Burn amount must be greater than 0');
         address treasury = registry.getTreasury();
+        require(treasury != address(0), 'Treasury not set');
         require(balanceOf(msg.sender) >= burnAmount, 'Insufficient BAL');
         uint256 burnAmountAfterFee = _calculateNetAmountAfterFee(burnAmount);
+        require(burnAmountAfterFee <= burnAmount, 'Fee calculation error');
+        transfer(treasury, burnAmount - burnAmountAfterFee);
+
         for (uint256 i; i < tokens.length(); i++) {
             address token = tokens.at(i);
+            require(token != address(0), 'Invalid token address');
             uint256 totalBaluni = totalSupply();
+            require(totalBaluni > 0, 'Total supply is 0');
             uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
+
             if (totalERC20Balance == 0 || token == address(this)) continue;
             uint256 decimals = IERC20Metadata(token).decimals();
-            transfer(treasury, burnAmount - burnAmountAfterFee);
-
             uint256 share = _calculateERC20Share(totalBaluni, totalERC20Balance, burnAmountAfterFee, decimals);
+            require(share <= totalERC20Balance, 'Share calculation error');
             IERC20(token).transfer(msg.sender, share);
         }
         _burn(msg.sender, burnAmountAfterFee);
@@ -264,25 +271,29 @@ contract BaluniV1Router is
      * @param burnAmount The amount of BAL tokens to burn.
      */
     function burnUSDC(uint256 burnAmount) public nonReentrant {
+        require(burnAmount > 0, 'Burn amount must be greater than 0');
         address uniswapFactory = registry.getUniswapFactory();
+        require(uniswapFactory != address(0), 'UniswapFactory not set');
         address treasury = registry.getTreasury();
+        require(treasury != address(0), 'Treasury not set');
         address USDC = registry.getUSDC();
+        require(USDC != address(0), 'USDC not set');
         address WNATIVE = registry.getWNATIVE();
+        require(WNATIVE != address(0), 'WNATIVE not set');
 
-        require(burnAmount > 0, 'Insufficient BAL');
         uint256 burnAmountAfterFee = _calculateNetAmountAfterFee(burnAmount);
+        require(burnAmountAfterFee <= burnAmount, 'Fee calculation error');
 
         for (uint256 i; i < tokens.length(); i++) {
             address token = tokens.at(i);
+            require(token != address(0), 'Invalid token address');
             uint256 totalBaluni = totalSupply();
+            require(totalBaluni > 0, 'Total supply is 0');
             uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
 
-            if (totalERC20Balance > 0 == false) continue;
-
-            if (token == address(this)) continue;
+            if (totalERC20Balance == 0 || token == address(this)) continue;
 
             uint256 decimals = IERC20Metadata(token).decimals();
-
             transfer(treasury, burnAmount - burnAmountAfterFee);
 
             uint256 burnAmountToken = _calculateERC20Share(
@@ -291,6 +302,7 @@ contract BaluniV1Router is
                 burnAmountAfterFee,
                 decimals
             );
+            require(burnAmountToken <= totalERC20Balance, 'Share calculation error');
 
             if (token == baseAsset) {
                 IERC20(USDC).transfer(msg.sender, burnAmountToken);
@@ -298,11 +310,13 @@ contract BaluniV1Router is
             }
 
             address baluniSwapper = registry.getBaluniSwapper();
+            require(baluniSwapper != address(0), 'BaluniSwapper not set');
             IERC20(token).approve(baluniSwapper, burnAmountToken);
 
             try IBaluniV1Swapper(baluniSwapper).singleSwap(token, baseAsset, burnAmountToken, msg.sender) returns (
                 uint256 amountOut
             ) {
+                require(amountOut > 0, 'Swap Failed');
                 IERC20(baseAsset).transfer(msg.sender, amountOut);
             } catch {
                 uint256 amountOutHop = IBaluniV1Swapper(baluniSwapper).multiHopSwap(
@@ -312,8 +326,8 @@ contract BaluniV1Router is
                     burnAmountToken,
                     msg.sender
                 );
+                require(amountOutHop > 0, 'MultiHopSwap Failed');
                 IERC20(baseAsset).transfer(msg.sender, amountOutHop);
-                require(amountOutHop > 0, 'Swap Failed, Try Burn()');
             }
         }
 
@@ -340,13 +354,13 @@ contract BaluniV1Router is
         address USDC = registry.getUSDC();
         uint256 _BPS_FEE = registry.getBPS_FEE();
         uint256 _BPS_BASE = registry.getBPS_BASE();
-
         uint256 totalUSDValuation = _totalValuation();
         uint256 totalBalSupply = totalSupply();
         uint256 usdcRequired = (balAmountToMint * totalUSDValuation) / totalBalSupply;
         IERC20(USDC).transferFrom(msg.sender, address(this), usdcRequired / 1e12);
         uint256 balance = IERC20(USDC).balanceOf(msg.sender);
         uint256 allowed = IERC20(USDC).allowance(msg.sender, address(this));
+
         require(totalBalSupply > 0, 'Total BALUNI supply cannot be zero');
         require(balance >= usdcRequired / 1e12, 'USDC balance is insufficient');
         require(allowed >= usdcRequired / 1e12, 'Check the token allowance');
@@ -482,7 +496,6 @@ contract BaluniV1Router is
         require(tokenDecimals <= 18, 'Token decimals should be <= 18');
         uint256 baluniAdjusted;
         uint256 amountAdjusted;
-
         uint256 factor = (10 ** (18 - tokenDecimals));
 
         if (tokenDecimals < 18) {
@@ -504,10 +517,10 @@ contract BaluniV1Router is
      */
     function _totalValuation() internal view returns (uint256) {
         uint256 _totalV;
-
         for (uint256 i; i < tokens.length(); i++) {
             address token = tokens.at(i);
             uint256 balance = IERC20(token).balanceOf(address(this));
+            if (token == baseAsset) return balance * 1e12;
             uint256 tokenBalanceValuation = _calculateERC20ValuationScaled(balance, token);
             _totalV += tokenBalanceValuation;
         }
@@ -523,7 +536,6 @@ contract BaluniV1Router is
     function _calculateNetAmountAfterFee(uint256 _amount) internal view returns (uint256) {
         uint256 _BPS_FEE = registry.getBPS_FEE();
         uint256 _BPS_BASE = registry.getBPS_BASE();
-
         uint256 amountInWithFee = (_amount * (_BPS_BASE - (_BPS_FEE))) / _BPS_BASE;
         return amountInWithFee;
     }
@@ -558,6 +570,11 @@ contract BaluniV1Router is
         return tokens.values();
     }
 
+    /**
+     * @dev Adds a token to the `tokens` set.
+     * Can only be called by the contract owner.
+     * @param _token The address of the token to be added.
+     */
     function addToken(address _token) external onlyOwner {
         EnumerableSetUpgradeable.add(tokens, _token);
     }

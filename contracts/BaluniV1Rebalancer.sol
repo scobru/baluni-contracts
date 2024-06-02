@@ -110,7 +110,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         for (uint256 i = 0; i < vars.overweightVaults.length; i++) {
             if (vars.overweightAmounts[i] > 0) {
                 address asset = assets[vars.overweightVaults[i]];
-                require(vars.balances[i] >= vars.overweightAmounts[i], 'Under Overweight Amount');
+                require(scaleUp(vars.balances[i], 18) >= vars.overweightAmounts[i], 'Under Overweight Amount');
 
                 // check aallowance
                 uint256 allowance = IERC20(asset).allowance(sender, address(this));
@@ -130,7 +130,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
                         asset,
                         baseAsset,
                         vars.overweightAmounts[i],
-                        address(this)
+                        vars.underweightVaults.length == 0 ? receiver : address(this)
                     );
                 } else {
                     vars.amountOut += IBaluniV1Swapper(baluniSwapper).multiHopSwap(
@@ -138,7 +138,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
                         address(WNATIVE),
                         baseAsset,
                         vars.overweightAmounts[i],
-                        address(this)
+                        vars.underweightVaults.length == 0 ? receiver : address(this)
                     );
                 }
             }
@@ -147,23 +147,23 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         uint256 usdBalance = IERC20(USDC).balanceOf(address(this));
         require(usdBalance >= vars.amountOut, 'Insufficient USDC Balance');
 
-        address _receiver = receiver;
-
         address[] memory _assets = assets;
+        uint256 BPS_BASE = registry.getBPS_BASE();
 
         for (uint256 i = 0; i < vars.underweightVaults.length; i++) {
             if (vars.underweightAmounts[i] > 0) {
                 address asset = _assets[vars.underweightVaults[i]];
-                uint256 rebaseActiveWgt = (vars.underweightAmounts[i] * 10000) / vars.totalActiveWeight;
-                uint256 rebBuyQty = (rebaseActiveWgt * usdBalance * 1e12) / 10000;
+                uint256 rebaseActiveWgt = (vars.underweightAmounts[i] * BPS_BASE) / vars.totalActiveWeight;
+                uint256 rebBuyQty = (rebaseActiveWgt * scaleUp(usdBalance, 6)) / BPS_BASE;
+                address _receiver = receiver;
 
                 if (asset == baseAsset) {
-                    IERC20(USDC).transfer(_receiver, rebBuyQty / 1e12);
+                    IERC20(USDC).transfer(_receiver, scaleDown(rebBuyQty, 6));
                     continue;
                 }
 
-                if (rebBuyQty > 0 && rebBuyQty <= usdBalance * 1e12) {
-                    require(usdBalance >= rebBuyQty / 1e12, 'Balance under RebuyQty');
+                if (rebBuyQty > 0 && rebBuyQty <= scaleUp(usdBalance, 6)) {
+                    require(usdBalance >= scaleDown(rebBuyQty, 6), 'Balance under RebuyQty');
 
                     address baluniSwapper = registry.getBaluniSwapper();
                     IERC20(baseAsset).approve(baluniSwapper, rebBuyQty / 1e12);
@@ -173,7 +173,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
                         amountOut = IBaluniV1Swapper(baluniSwapper).singleSwap(
                             baseAsset,
                             asset,
-                            rebBuyQty / 1e12,
+                            scaleDown(rebBuyQty, 6),
                             address(this)
                         );
                     } else {
@@ -181,7 +181,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
                             baseAsset,
                             address(WNATIVE),
                             asset,
-                            rebBuyQty / 1e12,
+                            scaleDown(rebBuyQty, 6),
                             address(this)
                         );
                     }
@@ -252,7 +252,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         uint256 limit,
         address baseAsset
     ) internal view returns (RebalanceVars memory) {
-        uint256 totalValue = calculateTotalValue(balances, assets, baseAsset);
+        uint256 totalValue = calculateTotalValueScaled(balances, assets, baseAsset);
 
         RebalanceVars memory vars = RebalanceVars(
             assets.length,
@@ -283,31 +283,30 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         for (uint256 i = 0; i < _assets.length; i++) {
             uint256 decimals = IERC20Metadata(_assets[i]).decimals();
             uint256 tokensTotalValue;
-
             uint256 baseAssetDecimals = IERC20Metadata(_baseAsset).decimals();
-            uint256 factor = 10 ** (18 - baseAssetDecimals);
 
             IBaluniV1Oracle baluniOracle = IBaluniV1Oracle(registry.getBaluniOracle());
-
-            uint256 priceScaled = baluniOracle.convertScaled(_assets[i], _baseAsset, 1 * 10 ** decimals);
+            uint256 unit = 1 * 10 ** decimals;
+            uint256 priceScaled = baluniOracle.convertScaled(_assets[i], _baseAsset, unit);
 
             if (_assets[i] == address(_baseAsset)) {
-                tokensTotalValue = _vars.balances[i] * factor;
+                tokensTotalValue = scaleUp(_vars.balances[i], baseAssetDecimals);
             } else {
-                tokensTotalValue = baluniOracle.convertScaled(_assets[i], _baseAsset, _vars.balances[i]);
+                tokensTotalValue = scaleUp(baluniOracle.convert(_assets[i], _baseAsset, _vars.balances[i]), decimals);
             }
 
+            uint256 BSP_BASE = registry.getBPS_BASE();
+
             uint256 targetWeight = _weights[i];
-            uint256 currentWeight = (tokensTotalValue * 10000) / _totalValue;
+            uint256 currentWeight = (tokensTotalValue * BSP_BASE) / _totalValue;
             bool overweight = currentWeight > targetWeight;
             uint256 overweightPercent = overweight ? currentWeight - targetWeight : targetWeight - currentWeight;
 
             if (overweight && overweightPercent > _limit) {
-                uint256 overweightAmount = (overweightPercent * _totalValue) / 10000;
+                uint256 overweightAmount = (overweightPercent * _totalValue) / BSP_BASE;
                 _vars.finalUsdBalance += overweightAmount;
-
                 overweightAmount = (overweightAmount * 1e18) / priceScaled;
-                overweightAmount = overweightAmount / (10 ** (18 - decimals));
+                overweightAmount = scaleDown(overweightAmount, decimals);
                 _vars.overweightVaults[_vars.overweightVaultsLength] = i;
                 _vars.overweightAmounts[_vars.overweightVaultsLength] = overweightAmount;
                 _vars.overweightVaultsLength++;
@@ -364,25 +363,46 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
      * @param assets An array of asset addresses.
      * @return The total value of the assets held by the caller.
      */
-    function calculateTotalValue(
+    function calculateTotalValueScaled(
         uint256[] memory balances,
         address[] memory assets,
         address baseAsset
     ) private view returns (uint256) {
-        address USDC = registry.getUSDC();
         uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
-        uint256 factor = 10 ** (18 - baseDecimal);
         IBaluniV1Oracle baluniOracle = IBaluniV1Oracle(registry.getBaluniOracle());
-
         uint256 _tokenValue = 0;
+
         for (uint256 i = 0; i < assets.length; i++) {
-            if (assets[i] == address(USDC)) {
-                _tokenValue += balances[i];
+            if (assets[i] == baseAsset) {
+                _tokenValue += scaleUp(balances[i], baseDecimal);
+                continue;
             } else {
-                _tokenValue += baluniOracle.convertScaled(assets[i], baseAsset, balances[i]);
+                uint8 assetDecimal = IERC20Metadata(assets[i]).decimals();
+                uint256 valuation = baluniOracle.convert(assets[i], baseAsset, balances[i]);
+                _tokenValue += scaleUp(valuation, assetDecimal);
             }
         }
 
         return _tokenValue;
+    }
+
+    /**
+     * @dev Scales up the given amount by subtracting the decimals.
+     * @param amount The amount to be scaled up.
+     * @param decimals The number of decimals to be subtracted.
+     * @return The scaled up amount.
+     */
+    function scaleUp(uint256 amount, uint256 decimals) internal pure returns (uint256) {
+        return amount * (10 ** 18 - decimals);
+    }
+
+    /**
+     * @dev Scales down the given amount by dividing it by the difference between 10^18 and the decimals.
+     * @param amount The amount to be scaled down.
+     * @param decimals The number of decimals to be subtracted.
+     * @return The scaled down amount.
+     */
+    function scaleDown(uint256 amount, uint256 decimals) internal pure returns (uint256) {
+        return amount / (10 ** 18 - decimals);
     }
 }
