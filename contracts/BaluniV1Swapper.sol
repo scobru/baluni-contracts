@@ -144,6 +144,8 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address baluniPeriphery = registry.getBaluniPoolPeriphery();
         address uniswapRouter = registry.getUniswapRouter();
 
+        require(baluniPeriphery != address(0) && uniswapRouter != address(0), 'BaluniSwapper: Address not set');
+
         IBaluniV1PoolPeriphery periphery = IBaluniV1PoolPeriphery(baluniPeriphery);
 
         _secureApproval(token0, baluniPeriphery, amount);
@@ -165,8 +167,9 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                 amountOutMinimum: 0,
                 sqrtPriceLimitX96: 0
             });
-
-            return ISwapRouter(uniswapRouter).exactInputSingle(params);
+            uint256 amountReceived = ISwapRouter(uniswapRouter).exactInputSingle(params);
+            require(amountReceived > 0, 'BaluniSwapper: Amount Received is 0');
+            return amountReceived;
         }
     }
 
@@ -229,7 +232,9 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             amountIn: tokenBalance,
             amountOutMinimum: 0
         });
-        return ISwapRouter(uniswapRouter).exactInput(params);
+        uint256 amountReceived = ISwapRouter(uniswapRouter).exactInput(params);
+        require(amountReceived > 0, 'BaluniSwapper: Amount Received is 0');
+        return amountReceived;
     }
 
     /**

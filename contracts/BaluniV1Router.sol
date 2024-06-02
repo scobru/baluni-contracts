@@ -192,35 +192,28 @@ contract BaluniV1Router is
      * @notice If the swap fails, the `burn` function should be called to handle the failed swap.
      */
     function liquidate(address token) public {
-        address USDC = registry.getUSDC();
         address WNATIVE = registry.getWNATIVE();
-        address uniswapFactory = registry.getUniswapFactory();
         address baluniSwapper = registry.getBaluniSwapper();
 
         uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
-        address pool = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 3000);
         bool haveBalance = totalERC20Balance > 0;
+        IERC20(token).approve(baluniSwapper, totalERC20Balance);
 
-        if (pool != address(0) && haveBalance) {
-            IERC20(token).approve(baluniSwapper, totalERC20Balance);
-            uint256 singleSwapResult = IBaluniV1Swapper(baluniSwapper).singleSwap(
-                token,
-                address(USDC),
-                totalERC20Balance,
-                address(this)
-            );
-            require(singleSwapResult > 0, 'Swap Failed, Try Burn()');
-        } else if (pool == address(0) && haveBalance) {
-            IERC20(token).approve(baluniSwapper, totalERC20Balance);
+        if (!haveBalance) return;
+
+        try IBaluniV1Swapper(baluniSwapper).singleSwap(token, baseAsset, totalERC20Balance, address(this)) {
+            return;
+        } catch {
             uint256 multiHopSwapResult = IBaluniV1Swapper(baluniSwapper).multiHopSwap(
                 token,
                 address(WNATIVE),
-                address(USDC),
+                baseAsset,
                 totalERC20Balance,
                 address(this)
             );
 
-            require(multiHopSwapResult > 0, 'Swap Failed, Try Burn()');
+            require(multiHopSwapResult > 0, 'Muti Hop Swap Failed, Try Burn()');
+            return;
         }
     }
 
@@ -233,6 +226,7 @@ contract BaluniV1Router is
         uint256 length = tokens.length();
         for (uint256 i = 0; i < length; i++) {
             address token = tokens.at(i);
+            if (token == baseAsset) continue;
             liquidate(token);
         }
     }
@@ -250,16 +244,12 @@ contract BaluniV1Router is
         address treasury = registry.getTreasury();
         require(balanceOf(msg.sender) >= burnAmount, 'Insufficient BAL');
         uint256 burnAmountAfterFee = _calculateNetAmountAfterFee(burnAmount);
-
         for (uint256 i; i < tokens.length(); i++) {
             address token = tokens.at(i);
             uint256 totalBaluni = totalSupply();
             uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
-
             if (totalERC20Balance == 0 || token == address(this)) continue;
-
             uint256 decimals = IERC20Metadata(token).decimals();
-
             transfer(treasury, burnAmount - burnAmountAfterFee);
 
             uint256 share = _calculateERC20Share(totalBaluni, totalERC20Balance, burnAmountAfterFee, decimals);
@@ -302,37 +292,31 @@ contract BaluniV1Router is
                 decimals
             );
 
-            if (token == address(USDC)) {
+            if (token == baseAsset) {
                 IERC20(USDC).transfer(msg.sender, burnAmountToken);
                 continue;
             }
 
-            address pool = IUniswapV3Factory(uniswapFactory).getPool(token, address(USDC), 3000);
             address baluniSwapper = registry.getBaluniSwapper();
+            IERC20(token).approve(baluniSwapper, burnAmountToken);
 
-            if (pool != address(0)) {
-                IERC20(token).approve(baluniSwapper, burnAmountToken);
-                uint256 amountOut = IBaluniV1Swapper(baluniSwapper).singleSwap(
-                    token,
-                    address(USDC),
-                    burnAmountToken,
-                    msg.sender
-                );
-                IERC20(address(USDC)).transfer(msg.sender, amountOut);
-                require(amountOut > 0, 'Swap Failed, Try Burn()');
-            } else {
-                IERC20(token).approve(baluniSwapper, burnAmountToken);
+            try IBaluniV1Swapper(baluniSwapper).singleSwap(token, baseAsset, burnAmountToken, msg.sender) returns (
+                uint256 amountOut
+            ) {
+                IERC20(baseAsset).transfer(msg.sender, amountOut);
+            } catch {
                 uint256 amountOutHop = IBaluniV1Swapper(baluniSwapper).multiHopSwap(
                     token,
                     address(WNATIVE),
-                    address(USDC),
+                    baseAsset,
                     burnAmountToken,
                     msg.sender
                 );
-                IERC20(address(USDC)).transfer(msg.sender, amountOutHop);
+                IERC20(baseAsset).transfer(msg.sender, amountOutHop);
                 require(amountOutHop > 0, 'Swap Failed, Try Burn()');
             }
         }
+
         _burn(msg.sender, burnAmountAfterFee);
         emit Burn(msg.sender, burnAmountAfterFee);
     }
@@ -572,5 +556,9 @@ contract BaluniV1Router is
      */
     function getTokens() external view returns (address[] memory) {
         return tokens.values();
+    }
+
+    function addToken(address _token) external onlyOwner {
+        EnumerableSetUpgradeable.add(tokens, _token);
     }
 }
