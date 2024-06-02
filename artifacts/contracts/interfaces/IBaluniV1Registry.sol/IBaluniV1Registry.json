@@ -161,6 +161,19 @@
     },
     {
       "inputs": [],
+      "name": "getStaticOracle",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getTreasury",
       "outputs": [
         {
@@ -350,6 +363,19 @@
         }
       ],
       "name": "setBaluniSwapper",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_staticOracle",
+          "type": "address"
+        }
+      ],
+      "name": "setStaticOracle",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

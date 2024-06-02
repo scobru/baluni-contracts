@@ -69,4 +69,8 @@ interface IBaluniV1Registry {
     function getBPS_BASE() external view returns (uint256);
 
     function getTreasury() external view returns (address);
+
+    function setStaticOracle(address _staticOracle) external;
+
+    function getStaticOracle() external view returns (address);
 }

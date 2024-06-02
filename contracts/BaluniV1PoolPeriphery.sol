@@ -92,12 +92,23 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
 
+        uint256 toTokenReserveB4 = poolsReserves[poolAddress][toToken];
+
+        uint256 allowance = IERC20(fromToken).allowance(msg.sender, address(this));
+        require(allowance >= amount, 'BaluniPeriphery: Insufficient allowance');
         IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
         poolsReserves[poolAddress][fromToken] += amount;
 
         uint256 amountOut = pool.swap(fromToken, toToken, amount, receiver);
 
         poolsReserves[poolAddress][toToken] -= amountOut;
+
+        uint256 toTokenReserveAfter = poolsReserves[poolAddress][toToken];
+
+        require(
+            toTokenReserveAfter >= (toTokenReserveB4 * 5000) / 10000,
+            'Pool Reserve is under 5% of initial reserve'
+        );
 
         IERC20(toToken).transfer(receiver, amountOut);
 
@@ -230,9 +241,21 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
     function performRebalanceIfNeeded(address poolAddress) external override {
         uint256 _BPS_BASE = registry.getBPS_BASE();
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+
+        address rebalancer = registry.getBaluniRebalancer();
+
         uint256 balance = IERC20(poolAddress).balanceOf(msg.sender);
         uint256 totalSupply = IERC20(poolAddress).totalSupply();
+
         require((balance * _BPS_BASE) / totalSupply >= 100, 'Insufficient balance');
+
+        for (uint256 i = 0; i < pool.getAssets().length; i++) {
+            uint256 allowance = IERC20(pool.getAssets()[i]).allowance(address(this), rebalancer);
+            if (allowance < type(uint256).max) {
+                IERC20(pool.getAssets()[i]).approve(rebalancer, type(uint256).max);
+            }
+        }
+
         (uint256[] memory amountsToAdd, uint256[] memory amountsToRemove) = pool.performRebalanceIfNeeded();
 
         // update Pool reserves

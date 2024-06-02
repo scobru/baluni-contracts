@@ -200,4 +200,15 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
     function getTreasury() external view override returns (address) {
         return treasury;
     }
+
+    // Upgrade 1
+    address public staticOracle;
+
+    function setStaticOracle(address _staticOracle) external override onlyOwner {
+        staticOracle = _staticOracle;
+    }
+
+    function getStaticOracle() external view override returns (address) {
+        return staticOracle;
+    }
 }

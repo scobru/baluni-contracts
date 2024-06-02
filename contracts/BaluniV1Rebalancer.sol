@@ -111,6 +111,11 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
             if (vars.overweightAmounts[i] > 0) {
                 address asset = assets[vars.overweightVaults[i]];
                 require(vars.balances[i] >= vars.overweightAmounts[i], 'Under Overweight Amount');
+
+                // check aallowance
+                uint256 allowance = IERC20(asset).allowance(sender, address(this));
+                require(allowance >= vars.overweightAmounts[i], 'Allowance under Overweight Amount');
+
                 IERC20(asset).transferFrom(sender, address(this), vars.overweightAmounts[i]);
 
                 if (asset == baseAsset) {
@@ -220,12 +225,15 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         address sender,
         address baseAsset
     ) public view returns (RebalanceVars memory) {
+        uint256[] memory _balances = new uint256[](assets.length);
         if (balances.length == 0) {
             for (uint256 i = 0; i < assets.length; i++) {
-                balances[i] = IERC20(assets[i]).balanceOf(sender);
+                _balances[i] = IERC20(assets[i]).balanceOf(sender);
             }
+        } else {
+            _balances = balances;
         }
-        return _checkRebalance(balances, assets, weights, limit, baseAsset);
+        return _checkRebalance(_balances, assets, weights, limit, baseAsset);
     }
 
     /**
@@ -265,25 +273,28 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         address[] memory _assets = assets;
         uint256[] memory _weights = weights;
         uint256 _limit = limit;
-        address base = baseAsset;
+        address _baseAsset = baseAsset;
         uint256 _totalValue = totalValue;
+
         RebalanceVars memory _vars = vars;
+
+        _vars.balances = balances;
 
         for (uint256 i = 0; i < _assets.length; i++) {
             uint256 decimals = IERC20Metadata(_assets[i]).decimals();
             uint256 tokensTotalValue;
 
-            uint256 baseAssetDecimals = IERC20Metadata(base).decimals();
+            uint256 baseAssetDecimals = IERC20Metadata(_baseAsset).decimals();
             uint256 factor = 10 ** (18 - baseAssetDecimals);
 
             IBaluniV1Oracle baluniOracle = IBaluniV1Oracle(registry.getBaluniOracle());
 
-            uint256 price = baluniOracle.convertScaled(_assets[i], base, 1 * 10 ** decimals);
+            uint256 priceScaled = baluniOracle.convertScaled(_assets[i], _baseAsset, 1 * 10 ** decimals);
 
-            if (_assets[i] == address(base)) {
+            if (_assets[i] == address(_baseAsset)) {
                 tokensTotalValue = _vars.balances[i] * factor;
             } else {
-                tokensTotalValue = baluniOracle.convertScaled(_assets[i], base, _vars.balances[i]);
+                tokensTotalValue = baluniOracle.convertScaled(_assets[i], _baseAsset, _vars.balances[i]);
             }
 
             uint256 targetWeight = _weights[i];
@@ -295,7 +306,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
                 uint256 overweightAmount = (overweightPercent * _totalValue) / 10000;
                 _vars.finalUsdBalance += overweightAmount;
 
-                overweightAmount = (overweightAmount * 1e18) / price;
+                overweightAmount = (overweightAmount * 1e18) / priceScaled;
                 overweightAmount = overweightAmount / (10 ** (18 - decimals));
                 _vars.overweightVaults[_vars.overweightVaultsLength] = i;
                 _vars.overweightAmounts[_vars.overweightVaultsLength] = overweightAmount;
@@ -366,7 +377,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         uint256 _tokenValue = 0;
         for (uint256 i = 0; i < assets.length; i++) {
             if (assets[i] == address(USDC)) {
-                _tokenValue += balances[i] * factor;
+                _tokenValue += balances[i];
             } else {
                 _tokenValue += baluniOracle.convertScaled(assets[i], baseAsset, balances[i]);
             }

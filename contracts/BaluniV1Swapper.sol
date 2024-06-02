@@ -90,6 +90,8 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         require(msg.sender != address(this), 'Wrong sender');
         require(amount > 0, 'Amount is 0');
         require(IERC20(token0).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
+        uint256 allowance = IERC20(token0).allowance(msg.sender, address(this));
+        require(allowance >= amount, 'BaluniSwapper: Insufficient Allowance');
         IERC20(token0).transferFrom(msg.sender, address(this), amount);
         return _singleSwap(token0, token1, amount, receiver);
     }
@@ -119,6 +121,8 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         require(msg.sender != address(this), 'Wrong sender');
         require(amount > 0, 'Amount is 0');
         require(IERC20(token0).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
+        uint256 allowance = IERC20(token0).allowance(msg.sender, address(this));
+        require(allowance >= amount, 'BaluniSwapper: Insufficient Allowance');
         IERC20(token0).transferFrom(msg.sender, address(this), amount);
         return _multiHopSwap(token0, token1, token2, amount, receiver);
     }
@@ -127,14 +131,14 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
      * @dev Executes a single swap on Uniswap.
      * @param token0 The address of the input token.
      * @param token1 The address of the output token.
-     * @param tokenBalance The amount of input token to be swapped.
+     * @param amount The amount of input token to be swapped.
      * @param receiver The address that will receive the swapped tokens.
      * @return amountOut The amount of output tokens received.
      */
     function _singleSwap(
         address token0,
         address token1,
-        uint256 tokenBalance,
+        uint256 amount,
         address receiver
     ) internal returns (uint256 amountOut) {
         address baluniPeriphery = registry.getBaluniPoolPeriphery();
@@ -142,14 +146,14 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
         IBaluniV1PoolPeriphery periphery = IBaluniV1PoolPeriphery(baluniPeriphery);
 
-        _secureApproval(token0, baluniPeriphery, tokenBalance);
+        _secureApproval(token0, baluniPeriphery, amount);
 
-        try periphery.swap(token0, token1, tokenBalance, receiver) returns (uint256 amountReceived) {
+        try periphery.swap(token0, token1, amount, receiver) returns (uint256 amountReceived) {
             if (amountReceived > 0) {
                 return amountReceived;
             }
         } catch {
-            _secureApproval(token0, uniswapRouter, tokenBalance);
+            _secureApproval(token0, uniswapRouter, amount);
 
             ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
                 tokenIn: token0,
@@ -157,7 +161,7 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                 fee: 3000,
                 recipient: address(receiver),
                 deadline: block.timestamp,
-                amountIn: tokenBalance,
+                amountIn: amount,
                 amountOutMinimum: 0,
                 sqrtPriceLimitX96: 0
             });

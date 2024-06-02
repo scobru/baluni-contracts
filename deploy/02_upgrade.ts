@@ -23,6 +23,8 @@ const _1INCHSPOTAGG = '0x0AdDd25a91563696D8567Df78D5A01C9a991F9B8' // 1inch Spot
 const uniswapRouter = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
 const uniswapFactory = '0x1F98431c8aD98523631AE4a59f267346ea31F984'
 
+const staticOracle = '0xB210CE856631EeEB767eFa666EC7C1C57738d438'
+
 const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   /// Deployment ---------------------------------------------------------------------
   ///---------------------------------------------------------------------------------
@@ -31,9 +33,10 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   const accounts = await hre.getUnnamedAccounts()
   const signer = await ethers.getSigner(deployer)
 
-  const periperhyAddress = '0x592f40E06355D2dad63Bf6087c8B51F312Cb9460'
-  const factoryAddress = '0xB49C3CeeE91eE9c806d3d96e10cDf4d09aa7045c'
-
+  const periperhyAddress = ''
+  const factoryAddress = ''
+  const oracleAddress = '0x3Ad437171b054FD16c013ec7f62254C052A0DCE7'
+  const registry = '0xCF4d4CCfE28Ef12d4aCEf2c9F5ebE6BE72Abe182'
   // const BaluniV1AgentFactory = await ethers.getContractFactory("BaluniV1AgentFactory");
   // const agentFactory = await upgrades.upgradeProxy("0x48c3C00d1E181326da2AA4ea372882dB012F2DA0", BaluniV1AgentFactory);
   // const instanceAgentFactory = await agentFactory?.waitForDeployment();
@@ -52,29 +55,67 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   // const instanceRouter = await router?.waitForDeployment();
   // console.log("BaluniV1Router upgraded to:", instanceRouter.target);
 
-  /* const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
-  await upgrades.prepareUpgrade('0x3F02380f201898D3c1fb965fDE73a8A7c3d139e6', BaluniV1Rebalancer)
-  const rebalancer = await upgrades.upgradeProxy('0x3F02380f201898D3c1fb965fDE73a8A7c3d139e6', BaluniV1Rebalancer, {
+  /*  const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
+  await upgrades.prepareUpgrade(registry, BaluniV1Registry)
+  const _registry = await upgrades.upgradeProxy(registry, BaluniV1Registry, {
+    kind: 'uups',
+  })
+  const instanceRegistry = await _registry?.waitForDeployment()
+  console.log('BaluniV1Registry upgraded to:', await _registry.getAddress())
+
+  await instanceRegistry.setStaticOracle('0xB210CE856631EeEB767eFa666EC7C1C57738d438') */
+
+  const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
+  await upgrades.prepareUpgrade('0x9273120cd27226B55b2438CeC06E624163AeeFb1', BaluniV1Rebalancer)
+  const rebalancer = await upgrades.upgradeProxy('0x9273120cd27226B55b2438CeC06E624163AeeFb1', BaluniV1Rebalancer, {
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: ['0xe4b9f8d8e52164f34450f1dfac9b9b1b3c9fc448', 10],
+      args: [registry, 11],
     },
   })
   const instanceRebalancer = await rebalancer?.waitForDeployment()
-  console.log('BaluniV1Rebalancer upgraded to:', instanceRebalancer.target) */
+  console.log('BaluniV1Rebalancer upgraded to:', instanceRebalancer.target)
 
-  const BaluniV1PoolPeriphery = await ethers.getContractFactory("BaluniV1PoolPeriphery");
-  await upgrades.prepareUpgrade(periperhyAddress, BaluniV1PoolPeriphery);
-  const baluniPeriphery = await upgrades.upgradeProxy(periperhyAddress, BaluniV1PoolPeriphery, {
-    kind: "uups",
+  /* const BaluniV1Swapper = await ethers.getContractFactory('BaluniV1Swapper')
+  await upgrades.prepareUpgrade('0xfd308a0bE8c5a682F61aA0f01Cbb704a7A33AB7c', BaluniV1Swapper)
+  const swapper = await upgrades.upgradeProxy('0xfd308a0bE8c5a682F61aA0f01Cbb704a7A33AB7c', BaluniV1Swapper, {
+    kind: 'uups',
     call: {
-      fn: "reinitialize",
-      args: [factoryAddress, 2],
+      fn: 'reinitialize',
+      args: [registry, 9],
     },
-  });
-  const instancePeriphery = await baluniPeriphery?.waitForDeployment();
-  console.log("BaluniV1Periphery upgraded to:", instancePeriphery.target);
+  })
+  await swapper?.waitForDeployment()
+  console.log('BaluniV1Swapper upgraded to:', swapper.target) */
+
+  /* const BaluniV1PoolPeriphery = await ethers.getContractFactory('BaluniV1PoolPeriphery')
+  await upgrades.prepareUpgrade('0xBE099A2a4240b95042c7aAaF8A52a2780f68a2E6', BaluniV1PoolPeriphery)
+  const baluniPeriphery = await upgrades.upgradeProxy(
+    '0xBE099A2a4240b95042c7aAaF8A52a2780f68a2E6',
+    BaluniV1PoolPeriphery,
+    {
+      kind: 'uups',
+      call: {
+        fn: 'reinitialize',
+        args: [registry, 6],
+      },
+    }
+  )
+  const instancePeriphery = await baluniPeriphery?.waitForDeployment()
+  console.log('BaluniV1Periphery upgraded to:', instancePeriphery.target) */
+
+  /* const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
+  await upgrades.prepareUpgrade(oracleAddress, BaluniV1Oracle)
+  const baluniOracle = await upgrades.upgradeProxy(oracleAddress, BaluniV1Oracle, {
+    kind: 'uups',
+    call: {
+      fn: 'reinitialize',
+      args: [registry, 11],
+    },
+  })
+  await baluniOracle?.waitForDeployment()
+  console.log('BaluniV1Oracle upgraded to:', baluniOracle.target) */
 
   // const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
   // await upgrades.prepareUpgrade(factoryAddress, BaluniV1PoolFactory);
