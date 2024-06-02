@@ -40,7 +40,6 @@ pragma solidity 0.8.25;
 import './interfaces/IBaluniV1PoolFactory.sol';
 import './interfaces/IBaluniV1Pool.sol';
 import './interfaces/IBaluniV1PoolPeriphery.sol';
-
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
@@ -154,6 +153,11 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         return amountsOut;
     }
 
+    /**
+     * @dev Rebalances the weights of the assets in the pool and transfers the assets from the receiver to this contract.
+     * @param poolAddress The address of the BaluniV1Pool contract.
+     * @param receiver The address from which the assets will be transferred.
+     */
     function rebalanceWeights(address poolAddress, address receiver) external override {
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
 
@@ -166,6 +170,13 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         }
     }
 
+    /**
+     * @dev Adds liquidity to the pool by transferring assets from the sender to this contract.
+     * @param amounts The amounts of assets to be transferred.
+     * @param poolAddress The address of the BaluniV1Pool contract.
+     * @param receiver The address that will receive the minted LP tokens.
+     * @return The amount of LP tokens minted.
+     */
     function addLiquidity(
         uint256[] memory amounts,
         address poolAddress,
@@ -182,6 +193,12 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         return pool.mint(receiver, amounts);
     }
 
+    /**
+     * @dev Removes liquidity from a Baluni V1 pool.
+     * @param share The amount of liquidity to remove.
+     * @param poolAddress The address of the Baluni V1 pool.
+     * @param receiver The address that will receive the removed liquidity.
+     */
     function removeLiquidity(uint256 share, address poolAddress, address receiver) external override {
         address treasury = registry.getTreasury();
         uint256 _BPS_FEE = registry.getBPS_FEE();

@@ -1,6 +1,6 @@
 {
   "name": "baluni-contracts",
-  "version": "2.6.3",
+  "version": "2.6.4",
   "description": "Smart Contracts for Baluni",
   "types": "typechain-types/index.ts",
   "scripts": {
@@ -19,7 +19,6 @@
     "start": "ponder start",
     "codegen": "ponder codegen",
     "serve": "ponder serve",
-    "lint": "eslint .",
     "typecheck": "tsc"
   },
   "devDependencies": {

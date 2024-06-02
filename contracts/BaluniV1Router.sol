@@ -354,7 +354,7 @@ contract BaluniV1Router is
         address USDC = registry.getUSDC();
         uint256 _BPS_FEE = registry.getBPS_FEE();
         uint256 _BPS_BASE = registry.getBPS_BASE();
-        uint256 totalUSDValuation = _totalValuation();
+        uint256 totalUSDValuation = _totalValuationScaled();
         uint256 totalBalSupply = totalSupply();
         uint256 usdcRequired = (balAmountToMint * totalUSDValuation) / totalBalSupply;
         IERC20(USDC).transferFrom(msg.sender, address(this), usdcRequired / 1e12);
@@ -400,7 +400,7 @@ contract BaluniV1Router is
      * @return The amount of USDC required to mint the specified amount of BAL tokens.
      */
     function requiredUSDCtoMint(uint256 balAmountToMint) public view returns (uint256) {
-        uint256 totalUSDValuation = _totalValuation();
+        uint256 totalUSDValuation = _totalValuationScaled();
         uint256 totalBalSupply = totalSupply();
         uint256 usdcRequired = (balAmountToMint * totalUSDValuation) / totalBalSupply;
         return usdcRequired / 1e12;
@@ -439,7 +439,7 @@ contract BaluniV1Router is
      * @return The total valuation of the Baluni ecosystem.
      */
     function totalValuation() external view returns (uint256) {
-        return _totalValuation();
+        return _totalValuationScaled();
     }
 
     /**
@@ -471,10 +471,12 @@ contract BaluniV1Router is
      * - The total supply of Baluni tokens must be greater than zero.
      */
     function _calculateBaluniToUSDC(uint256 amount) internal view returns (uint256 shareUSDC) {
+        uint256 baseDecimal = IERC20Metadata(baseAsset).decimals();
         uint256 totalBaluni = totalSupply();
         require(totalBaluni > 0, 'Total supply cannot be zero');
-        uint256 totalUSDC = _totalValuation();
+        uint256 totalUSDC = _totalValuationScaled();
         shareUSDC = (amount * totalUSDC) / totalBaluni;
+        shareUSDC /= 10 ** (18 - baseDecimal); // down scale to USDC
     }
 
     /**
@@ -515,7 +517,7 @@ contract BaluniV1Router is
      * @dev Calculates the total valuation of the contract by summing up the valuation of each token held.
      * @return The total valuation of the contract.
      */
-    function _totalValuation() internal view returns (uint256) {
+    function _totalValuationScaled() internal view returns (uint256) {
         uint256 _totalV;
         for (uint256 i; i < tokens.length(); i++) {
             address token = tokens.at(i);
@@ -538,20 +540,6 @@ contract BaluniV1Router is
         uint256 _BPS_BASE = registry.getBPS_BASE();
         uint256 amountInWithFee = (_amount * (_BPS_BASE - (_BPS_FEE))) / _BPS_BASE;
         return amountInWithFee;
-    }
-
-    /**
-     * @dev Resizes an array to the specified size.
-     * @param arr The array to be resized.
-     * @param size The new size of the array.
-     * @return The resized array.
-     */
-    function _resize(uint256[] memory arr, uint256 size) internal pure returns (uint256[] memory) {
-        uint256[] memory ret = new uint256[](size);
-        for (uint256 i; i < size; i++) {
-            ret[i] = arr[i];
-        }
-        return ret;
     }
 
     /**

@@ -1,7 +1,7 @@
 import { createConfig } from '@ponder/core'
 import { http } from 'viem'
 
-import { BaluniV1RouterABI } from './BaluniV1RouterAbi'
+import { BaluniV1RouterABI } from './abis/BaluniV1RouterAbi'
 
 export default createConfig({
   networks: {
