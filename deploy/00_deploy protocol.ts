@@ -24,7 +24,7 @@ const WETH = '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'
 const TREASURY = '0x0C01CDE1cCAcD1e47740F3728872Aeb7C69703C2'
 
 const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
+  /*  const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
   const baluniV1Registry = await upgrades.deployProxy(BaluniV1Registry, [], { kind: 'uups' })
   const registry = await baluniV1Registry?.waitForDeployment()
   console.log('BaluniV1Registry deployed to:', registry.target)
@@ -63,12 +63,12 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const instanceRebalance = await baluniRebalancer?.waitForDeployment()
   console.log('BaluniV1Rebalance deployed to:', instanceRebalance.target)
 
-  await registry.setBaluniRebalancer(await instanceRebalance.target)
+  await registry.setBaluniRebalancer(await instanceRebalance.target) */
 
   const BaluniV1AgentFactory = await ethers.getContractFactory('BaluniV1AgentFactory')
   const agentFactory = await upgrades.deployProxy(
     BaluniV1AgentFactory,
-    ['0xe4B9f8d8E52164F34450f1dFaC9B9b1B3c9FC448'],
+    ['0xCF4d4CCfE28Ef12d4aCEf2c9F5ebE6BE72Abe182'],
     {
       kind: 'uups',
     }
@@ -76,7 +76,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const instanceAgentFactory = await agentFactory?.waitForDeployment()
   console.log('BaluniV1AgentFactory deployed to:', instanceAgentFactory.target)
 
-  await registry.setBaluniAgentFactory(await instanceAgentFactory.target)
+  /* await registry.setBaluniAgentFactory(await instanceAgentFactory.target)
 
   const BaluniV1Router = await ethers.getContractFactory('BaluniV1Router')
   const baluniRouter = await upgrades.deployProxy(BaluniV1Router, [await registry.getAddress()], {
@@ -112,7 +112,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   await instancePoolFactory.createPool([USDT, USDC], [5000, 5000], 500)
   await instancePoolFactory.createPool([WBTC, USDC, WETH], [5000, 3000, 2000], 500)
   await instancePoolFactory.createPool([WETH, USDC], [8000, 2000], 500)
-  await instancePoolFactory.createPool([WNATIVE, USDC], [8000, 2000], 500)
+  await instancePoolFactory.createPool([WNATIVE, USDC], [8000, 2000], 500) */
 }
 
 export default deployProtocol

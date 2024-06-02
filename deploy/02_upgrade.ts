@@ -65,7 +65,7 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
 
   await instanceRegistry.setStaticOracle('0xB210CE856631EeEB767eFa666EC7C1C57738d438') */
 
-  const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
+  /* const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
   await upgrades.prepareUpgrade('0x9273120cd27226B55b2438CeC06E624163AeeFb1', BaluniV1Rebalancer)
   const rebalancer = await upgrades.upgradeProxy('0x9273120cd27226B55b2438CeC06E624163AeeFb1', BaluniV1Rebalancer, {
     kind: 'uups',
@@ -75,7 +75,7 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
     },
   })
   const instanceRebalancer = await rebalancer?.waitForDeployment()
-  console.log('BaluniV1Rebalancer upgraded to:', instanceRebalancer.target)
+  console.log('BaluniV1Rebalancer upgraded to:', instanceRebalancer.target) */
 
   /* const BaluniV1Swapper = await ethers.getContractFactory('BaluniV1Swapper')
   await upgrades.prepareUpgrade('0xfd308a0bE8c5a682F61aA0f01Cbb704a7A33AB7c', BaluniV1Swapper)
@@ -105,17 +105,17 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   const instancePeriphery = await baluniPeriphery?.waitForDeployment()
   console.log('BaluniV1Periphery upgraded to:', instancePeriphery.target) */
 
-  /* const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
+  const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
   await upgrades.prepareUpgrade(oracleAddress, BaluniV1Oracle)
   const baluniOracle = await upgrades.upgradeProxy(oracleAddress, BaluniV1Oracle, {
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: [registry, 11],
+      args: [registry, 12],
     },
   })
   await baluniOracle?.waitForDeployment()
-  console.log('BaluniV1Oracle upgraded to:', baluniOracle.target) */
+  console.log('BaluniV1Oracle upgraded to:', baluniOracle.target)
 
   // const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
   // await upgrades.prepareUpgrade(factoryAddress, BaluniV1PoolFactory);
