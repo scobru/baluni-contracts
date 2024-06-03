@@ -219,7 +219,12 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
             address asset = assetInfos[i].asset;
-            uint256 valuation = _convertTokenToBase(asset, amounts[i]);
+            uint256 valuation;
+            if (asset == baseAsset) {
+                valuation = amounts[i];
+                continue;
+            }
+            valuation = _convertTokenToBase(asset, amounts[i]);
             totalValue += valuation;
         }
 
@@ -232,7 +237,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         } else {
             (uint256 totalLiquidity, ) = _computeTotalValuation();
             require(totalLiquidity > 0, 'Total liquidity must be greater than 0');
-            toMint = (((totalValue) * totalSupply) / totalLiquidity) * scalingFactor;
+            toMint = ((totalValue * scalingFactor) * totalSupply) / (totalLiquidity * scalingFactor);
         }
         require(toMint != 0, 'Mint qty is 0');
 

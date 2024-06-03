@@ -90,24 +90,15 @@ contract MockOracle is IBaluniV1Oracle {
         uint256 denominator = 10 ** toDecimal;
 
         rate = rates[address(fromToken)][address(toToken)];
-        rate = (rate * numerator) / denominator; // scaled to 18 decimal
+       rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
 
         uint256 factor;
-        uint256 tokenAmount;
-
-        if (fromDecimal == toDecimal) {
-            valuation = (amount * rate) / 1e18; // toDecimal
-            return valuation;
-        }
-
         if (fromDecimal >= toDecimal) {
             factor = 10 ** (fromDecimal - toDecimal);
-            tokenAmount = amount / factor; // scaled to correct decimal
-            valuation = (tokenAmount * rate) / 1e18; // 18 decimal
+            valuation = ((amount / factor) * rate) / 1e18;
         } else {
             factor = 10 ** (toDecimal - fromDecimal);
-            tokenAmount = amount * factor; // scaled to correct decimal
-            valuation = (tokenAmount * rate) / 1e18; // 18 decimal
+            valuation = ((amount * factor) * rate) / 1e18;
         }
 
         return valuation;
@@ -134,30 +125,27 @@ contract MockOracle is IBaluniV1Oracle {
         uint256 denominator = 10 ** toDecimal;
 
         rate = rates[address(fromToken)][address(toToken)];
-        rate = (rate * numerator) / denominator; // scaled to 18 decimal
+       
+
+         rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
 
         uint256 scalingFactor;
         uint256 tokenAmount;
-
         uint256 finalScalingFactor = 10 ** (18 - toDecimal);
 
         if (fromDecimal == toDecimal) {
-            valuation = (amount * rate) / 1e18; // toDecimal
-            valuation = valuation * finalScalingFactor;
-            return valuation;
-        }
-
-        if (fromDecimal >= toDecimal) {
+            valuation = (amount * rate) / 1e18;
+        } else if (fromDecimal > toDecimal) {
             scalingFactor = 10 ** (fromDecimal - toDecimal);
-            tokenAmount = amount / scalingFactor; // scaled to correct decimal
-            valuation = (tokenAmount * rate) / 1e18; // 18 decimal
-            valuation = valuation * finalScalingFactor;
+            tokenAmount = amount / scalingFactor;
+            valuation = (tokenAmount * rate) / 1e18;
         } else {
             scalingFactor = 10 ** (toDecimal - fromDecimal);
-            tokenAmount = amount * scalingFactor; // scaled to correct decimal
-            valuation = (tokenAmount * rate) / 1e18; // 18 decimal
-            valuation = valuation * finalScalingFactor;
+            tokenAmount = amount * scalingFactor;
+            valuation = (tokenAmount * rate) / 1e18;
         }
+
+        valuation = valuation * finalScalingFactor;
 
         return valuation;
     }
