@@ -201,7 +201,6 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 _BPS_FEE = registry.getBPS_FEE();
         require(fromToken != toToken, 'Cannot swap the same token');
         require(amount > 0, 'Amount must be greater than zero');
-        updateSlippage();
         uint256 receivedAmount = getAmountOutWithSlippage(fromToken, toToken, amount);
         require(getAssetReserve(toToken) >= receivedAmount, 'Insufficient Liquidity');
 
@@ -230,24 +229,36 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 amount
     ) public view returns (uint256) {
         uint256 amountOut = getAmountOut(fromToken, toToken, amount);
-        // scale amount to ToToken decimal
 
         uint256 slippageFrom = getSlippage(fromToken);
         uint256 slippageTo = getSlippage(toToken);
 
-        /* slippageFrom = slippageFrom * 10 ** toTokenDecimal;
-        slippageTo = slippageTo * 10 ** toTokenDecimal; */
+        uint256 fromTokenWeight = getTokenWeight(fromToken);
+        uint256 toTokenWeight = getTokenWeight(toToken);
 
-        // Applica lo slippage
-        if (slippageFrom > 0) {
-            amountOut = amountOut - (amountOut * slippageFrom) / 1000000;
+        // Calcola slippage
+        uint256 slippageFromAmount = ((amountOut * slippageFrom)) / 10000;
+        uint256 slippageToAmount = (amountOut * slippageTo) / 10000;
+
+        // Se fromToken è sovrappeso, sottrai slippageFromAmount da amountOut
+        if (fromTokenWeight > getDeviationForToken(fromToken)) {
+            amountOut = amountOut - slippageFromAmount;
+        } else {
+            // Altrimenti, aggiungi slippageFromAmount ad amountOut
+            amountOut = amountOut + slippageFromAmount;
         }
-        if (slippageTo > 0) {
-            amountOut = amountOut - (amountOut * slippageTo) / 1000000;
+
+        // Se toToken è sottopeso, aggiungi slippageToAmount ad amountOut
+        if (toTokenWeight < getDeviationForToken(toToken)) {
+            amountOut = amountOut + slippageToAmount;
+        } else {
+            // Altrimenti, sottrai slippageToAmount da amountOut
+            amountOut = amountOut - slippageToAmount;
         }
 
         return amountOut;
     }
+
     /**
      * @dev Restituisce lo slippage attuale per un dato token.
      * @param token The address of the token.
@@ -267,26 +278,57 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
      */
     function updateSlippage() internal {
         (bool[] memory directions, uint256[] memory deviations) = getDeviation();
+        uint256 _BPS_FEE = registry.getBPS_FEE();
+
+        uint256 sdf = 100; // scale down factor applied to the deviation
+        uint256 slippageLimit = 300;
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
             uint256 previousSlippage = assetInfos[i].slippage;
-
+            if (deviations[i] <= sdf) {
+                // 1%
+                assetInfos[i].slippage = sdf;
+                continue;
+            }
             if (directions[i]) {
-                // Aumenta lo slippage se il peso dell'asset è aumentato
-                assetInfos[i].slippage += deviations[i];
-                // Verifica che non ci sia overflow
+                assetInfos[i].slippage += deviations[i] / sdf;
+
                 require(assetInfos[i].slippage >= previousSlippage, 'Overflow incrementing slippage');
             } else {
-                // Diminuisce lo slippage se il peso dell'asset è diminuito
                 if (assetInfos[i].slippage > deviations[i]) {
-                    assetInfos[i].slippage -= deviations[i];
-                    // Verifica che non ci sia underflow
+                    assetInfos[i].slippage -= deviations[i] / sdf;
+
                     require(assetInfos[i].slippage <= previousSlippage, 'Underflow decrementing slippage');
                 } else {
-                    assetInfos[i].slippage = 0; // Evita lo slippage negativo
+                    //assetInfos[i].slippage = 0;
+                    assetInfos[i].slippage += deviations[i] / sdf;
                 }
             }
+
+            if (assetInfos[i].slippage > slippageLimit) {
+                // 5.3%
+                assetInfos[i].slippage = slippageLimit;
+            }
         }
+    }
+
+    function getTokenWeight(address token) public view returns (uint256) {
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            if (assetInfos[i].asset == token) {
+                return assetInfos[i].weight;
+            }
+        }
+        return 0; // Default weight se non trovato
+    }
+
+    function getDeviationForToken(address token) public view returns (uint256) {
+        (, uint256[] memory deviations) = getDeviation();
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            if (assetInfos[i].asset == token) {
+                return deviations[i];
+            }
+        }
+        return 0;
     }
 
     function getSlippages() external view returns (uint256[] memory) {

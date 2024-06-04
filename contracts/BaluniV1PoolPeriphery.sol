@@ -104,10 +104,10 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
 
         uint256 toTokenReserveAfter = poolsReserves[poolAddress][toToken];
 
-        require(
+        /* require(
             toTokenReserveAfter >= (toTokenReserveB4 * 5000) / 10000,
             'Pool Reserve is under 5% of initial reserve'
-        );
+        ); */
 
         IERC20(toToken).transfer(receiver, amountOut);
 

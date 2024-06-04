@@ -370,7 +370,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       console.log('Performing Batch Swap 1')
       let fromTokens = [await weth.getAddress(), await wbtc.getAddress()]
       let amounts = [ethers.parseUnits('0.01', 18), ethers.parseUnits('0.005', 8)]
-      let toTokens = [await usdt.getAddress(), await usdc.getAddress()]
+      let toTokens = [await usdt.getAddress(), await weth.getAddress()]
       let receivers = [await addr1.getAddress(), await addr1.getAddress()]
 
       await periphery.connect(addr1).batchSwap(fromTokens, toTokens, amounts, receivers)
@@ -414,9 +414,6 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       receivers = [await addr1.getAddress(), await addr1.getAddress()]
 
       await periphery.connect(addr1).batchSwap(fromTokens, toTokens, amounts, receivers)
-
-      // Verifiche per Batch Swap 2
-      reservesAfter = await pool.getReserves()
 
       totvals = await pool.computeTotalValuation()
       console.log('Total Valuation After Batch Swap 2:', formatUnits(totvals[0], baseDecimals))
@@ -465,6 +462,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       const lpBalance = await pool.balanceOf(await owner.getAddress())
       console.log('LP Balance : ', ethers.formatUnits(lpBalance.toString(), 18))
       let balanceWbtcB4 = await wbtc.balanceOf(await owner.getAddress())
+      let balanceUsdcB4 = await usdc.balanceOf(await owner.getAddress())
 
       let reservesB4Swap = await pool.getReserves()
       console.log(
@@ -481,23 +479,21 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       let slippages = await pool.getSlippages()
       console.log('Slippages After Rebalance 1:', slippages.toString())
 
-      await periphery
-        .connect(owner)
-        .swap(await usdc.getAddress(), await wbtc.getAddress(), ethers.parseUnits('100', 6), await owner.getAddress())
+      const fromTokens = [await usdc.getAddress()]
+      const amounts = [ethers.parseUnits('300', 6)]
+      const toTokens = [await wbtc.getAddress()]
+      const receivers = [await addr1.getAddress()]
+
+      await periphery.connect(owner).batchSwap(fromTokens, toTokens, amounts, receivers)
 
       let balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
-      console.log('BTC Balance : ', ethers.formatUnits(balanceWbtc - balanceWbtcB4, 8))
-      balanceWbtcB4 = await wbtc.balanceOf(await owner.getAddress())
-      await periphery
-        .connect(owner)
-        .swap(await usdc.getAddress(), await wbtc.getAddress(), ethers.parseUnits('100', 6), await owner.getAddress())
-      await periphery
-        .connect(owner)
-        .swap(await wbtc.getAddress(), await usdc.getAddress(), ethers.parseUnits('0.001', 8), await owner.getAddress())
+      let balanceUsdc = await usdc.balanceOf(await owner.getAddress())
 
-      balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
       console.log('BTC Balance : ', ethers.formatUnits(balanceWbtc - balanceWbtcB4, 8))
+      console.log('USD Balance : ', ethers.formatUnits(balanceUsdc - balanceUsdcB4, 6))
+
       balanceWbtcB4 = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdcB4 = await usdc.balanceOf(await owner.getAddress())
 
       reservesB4Swap = await pool.getReserves()
       console.log(
@@ -512,16 +508,22 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
 
       slippages = await pool.getSlippages()
       console.log('Slippages After Rebalance 1:', slippages.toString())
+      balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdc = await usdc.balanceOf(await owner.getAddress())
+
       await periphery
         .connect(owner)
-        .swap(await usdc.getAddress(), await wbtc.getAddress(), ethers.parseUnits('100', 6), await owner.getAddress())
-      await periphery
-        .connect(owner)
-        .swap(await wbtc.getAddress(), await usdc.getAddress(), ethers.parseUnits('0.001', 8), await owner.getAddress())
+        .swap(
+          await wbtc.getAddress(),
+          await usdc.getAddress(),
+          ethers.parseUnits('0.00291707', 8),
+          await owner.getAddress()
+        )
 
       balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdc = await usdc.balanceOf(await owner.getAddress())
       console.log('BTC Balance : ', ethers.formatUnits(balanceWbtc - balanceWbtcB4, 8))
-      balanceWbtcB4 = await wbtc.balanceOf(await owner.getAddress())
+      console.log('USD Balance : ', ethers.formatUnits(balanceUsdc - balanceUsdcB4, 6))
 
       reservesB4Swap = await pool.getReserves()
       console.log(
@@ -536,15 +538,165 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
 
       slippages = await pool.getSlippages()
       console.log('Slippages After Rebalance 1:', slippages.toString())
+      balanceWbtcB4 = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdcB4 = await usdc.balanceOf(await owner.getAddress())
       await periphery
         .connect(owner)
-        .swap(await usdc.getAddress(), await wbtc.getAddress(), ethers.parseUnits('100', 6), await owner.getAddress())
-      await periphery
-        .connect(owner)
-        .swap(await wbtc.getAddress(), await usdc.getAddress(), ethers.parseUnits('0.001', 8), await owner.getAddress())
+        .swap(await usdc.getAddress(), await wbtc.getAddress(), ethers.parseUnits('300', 6), await owner.getAddress())
 
       balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdc = await usdc.balanceOf(await owner.getAddress())
       console.log('BTC Balance : ', ethers.formatUnits(balanceWbtc - balanceWbtcB4, 8))
+      console.log('USD Balance : ', ethers.formatUnits(balanceUsdc - balanceUsdcB4, 6))
+
+      reservesB4Swap = await pool.getReserves()
+      console.log(
+        'Reserves Before Swap:',
+        formatUnits(reservesB4Swap[0], 6),
+        formatUnits(reservesB4Swap[1], 6),
+        formatUnits(reservesB4Swap[2], 18),
+        formatUnits(reservesB4Swap[3], 8)
+      )
+      deviation = await pool.getDeviation()
+      console.log('Deviation After Rebalance 1:', deviation.toString())
+
+      slippages = await pool.getSlippages()
+      console.log('Slippages After Rebalance 1:', slippages.toString())
+      balanceWbtcB4 = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdcB4 = await usdc.balanceOf(await owner.getAddress())
+      await periphery
+        .connect(owner)
+        .swap(await usdc.getAddress(), await wbtc.getAddress(), ethers.parseUnits('300', 6), await owner.getAddress())
+
+      balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdc = await usdc.balanceOf(await owner.getAddress())
+      console.log('BTC Balance : ', ethers.formatUnits(balanceWbtc - balanceWbtcB4, 8))
+      console.log('USD Balance : ', ethers.formatUnits(balanceUsdc - balanceUsdcB4, 6))
+
+      balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdc = await usdc.balanceOf(await owner.getAddress())
+
+      console.log('BTC Balance : ', ethers.formatUnits(balanceWbtc - balanceWbtcB4, 8))
+      console.log('USD Balance : ', ethers.formatUnits(balanceUsdc - balanceUsdcB4, 6))
+
+      balanceWbtcB4 = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdcB4 = await usdc.balanceOf(await owner.getAddress())
+
+      reservesB4Swap = await pool.getReserves()
+      console.log(
+        'Reserves Before Swap:',
+        formatUnits(reservesB4Swap[0], 6),
+        formatUnits(reservesB4Swap[1], 6),
+        formatUnits(reservesB4Swap[2], 18),
+        formatUnits(reservesB4Swap[3], 8)
+      )
+      deviation = await pool.getDeviation()
+      console.log('Deviation After Rebalance 1:', deviation.toString())
+
+      slippages = await pool.getSlippages()
+      console.log('Slippages After Rebalance 1:', slippages.toString())
+      balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdc = await usdc.balanceOf(await owner.getAddress())
+
+      await periphery
+        .connect(owner)
+        .swap(
+          await wbtc.getAddress(),
+          await usdc.getAddress(),
+          ethers.parseUnits('0.00341031', 8),
+          await owner.getAddress()
+        )
+
+      balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdc = await usdc.balanceOf(await owner.getAddress())
+      console.log('BTC Balance : ', ethers.formatUnits(balanceWbtc - balanceWbtcB4, 8))
+      console.log('USD Balance : ', ethers.formatUnits(balanceUsdc - balanceUsdcB4, 6))
+
+      reservesB4Swap = await pool.getReserves()
+      console.log(
+        'Reserves Before Swap:',
+        formatUnits(reservesB4Swap[0], 6),
+        formatUnits(reservesB4Swap[1], 6),
+        formatUnits(reservesB4Swap[2], 18),
+        formatUnits(reservesB4Swap[3], 8)
+      )
+      deviation = await pool.getDeviation()
+      console.log('Deviation After Rebalance 1:', deviation.toString())
+
+      slippages = await pool.getSlippages()
+      console.log('Slippages After Rebalance 1:', slippages.toString())
+      balanceWbtcB4 = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdcB4 = await usdc.balanceOf(await owner.getAddress())
+      await periphery
+        .connect(owner)
+        .swap(
+          await wbtc.getAddress(),
+          await usdc.getAddress(),
+          ethers.parseUnits('0.00341031', 8),
+          await owner.getAddress()
+        )
+
+      balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdc = await usdc.balanceOf(await owner.getAddress())
+      console.log('BTC Balance : ', ethers.formatUnits(balanceWbtc - balanceWbtcB4, 8))
+      console.log('USD Balance : ', ethers.formatUnits(balanceUsdc - balanceUsdcB4, 6))
+
+      reservesB4Swap = await pool.getReserves()
+      console.log(
+        'Reserves Before Swap:',
+        formatUnits(reservesB4Swap[0], 6),
+        formatUnits(reservesB4Swap[1], 6),
+        formatUnits(reservesB4Swap[2], 18),
+        formatUnits(reservesB4Swap[3], 8)
+      )
+      deviation = await pool.getDeviation()
+      console.log('Deviation After Rebalance 1:', deviation.toString())
+
+      slippages = await pool.getSlippages()
+      console.log('Slippages After Rebalance 1:', slippages.toString())
+      balanceWbtcB4 = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdcB4 = await usdc.balanceOf(await owner.getAddress())
+      await periphery
+        .connect(owner)
+        .swap(
+          await wbtc.getAddress(),
+          await usdc.getAddress(),
+          ethers.parseUnits('0.00341031', 8),
+          await owner.getAddress()
+        )
+
+      balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdc = await usdc.balanceOf(await owner.getAddress())
+      console.log('BTC Balance : ', ethers.formatUnits(balanceWbtc - balanceWbtcB4, 8))
+      console.log('USD Balance : ', ethers.formatUnits(balanceUsdc - balanceUsdcB4, 6))
+      reservesB4Swap = await pool.getReserves()
+      console.log(
+        'Reserves Before Swap:',
+        formatUnits(reservesB4Swap[0], 6),
+        formatUnits(reservesB4Swap[1], 6),
+        formatUnits(reservesB4Swap[2], 18),
+        formatUnits(reservesB4Swap[3], 8)
+      )
+      deviation = await pool.getDeviation()
+      console.log('Deviation After Rebalance 1:', deviation.toString())
+
+      slippages = await pool.getSlippages()
+      console.log('Slippages After Rebalance 1:', slippages.toString())
+      balanceWbtcB4 = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdcB4 = await usdc.balanceOf(await owner.getAddress())
+      await periphery
+        .connect(owner)
+        .swap(
+          await usdc.getAddress(),
+          await wbtc.getAddress(),
+          ethers.parseUnits('216.879881', 6),
+          await owner.getAddress()
+        )
+
+      balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
+      balanceUsdc = await usdc.balanceOf(await owner.getAddress())
+      console.log('BTC Balance : ', ethers.formatUnits(balanceWbtc - balanceWbtcB4, 8))
+      console.log('USD Balance : ', ethers.formatUnits(balanceUsdc - balanceUsdcB4, 6))
     })
   })
 })

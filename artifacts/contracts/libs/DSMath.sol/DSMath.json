@@ -1,0 +1,37 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "DSMath",
+  "sourceName": "contracts/libs/DSMath.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "RAY",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "WAD",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x60a86032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe7300000000000000000000000000000000000000003014608060405260043610603c575f3560e01c8063552033c41460405780636a146024146064575b5f80fd5b60526b033b2e3c9fd0803ce800000081565b60405190815260200160405180910390f35b6052670de0b6b3a76400008156fea26469706673582212202fda6cb9fce9e465fc2a86db5e53e6197def5a27618a2f28b4fa596bb96cad6e64736f6c63430008190033",
+  "deployedBytecode": "0x7300000000000000000000000000000000000000003014608060405260043610603c575f3560e01c8063552033c41460405780636a146024146064575b5f80fd5b60526b033b2e3c9fd0803ce800000081565b60405190815260200160405180910390f35b6052670de0b6b3a76400008156fea26469706673582212202fda6cb9fce9e465fc2a86db5e53e6197def5a27618a2f28b4fa596bb96cad6e64736f6c63430008190033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
