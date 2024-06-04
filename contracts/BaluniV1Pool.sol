@@ -59,6 +59,7 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     struct AssetInfo {
         address asset;
         uint256 weight;
+        uint256 slippage; // Nuovo parametro per lo slippage
     }
 
     event RebalancePerformed(address indexed by, address[] assets);
@@ -124,7 +125,13 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
             require(_assets[i] != address(0), 'Invalid asset address');
             require(_weights[i] > 0, 'Invalid weight');
 
-            assetInfos.push(AssetInfo({asset: _assets[i], weight: _weights[i]}));
+            assetInfos.push(
+                AssetInfo({
+                    asset: _assets[i],
+                    weight: _weights[i],
+                    slippage: 0 // Imposta slippage iniziale a 1%
+                })
+            );
 
             IERC20 asset = IERC20(_assets[i]);
             if (asset.allowance(address(this), address(rebalancer)) == 0) {
@@ -159,6 +166,9 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
         _mint(receiver, totalAddedLiquidity);
 
+        // Aggiorna lo slippage in base ai nuovi pesi
+        updateSlippage();
+
         emit WeightsRebalanced(msg.sender, amountsToAdd);
 
         return amounts;
@@ -191,8 +201,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 _BPS_FEE = registry.getBPS_FEE();
         require(fromToken != toToken, 'Cannot swap the same token');
         require(amount > 0, 'Amount must be greater than zero');
-
-        uint256 receivedAmount = getAmountOut(fromToken, toToken, amount);
+        updateSlippage();
+        uint256 receivedAmount = getAmountOutWithSlippage(fromToken, toToken, amount);
         require(getAssetReserve(toToken) >= receivedAmount, 'Insufficient Liquidity');
 
         uint256 fee = (receivedAmount * _BPS_FEE) / 10000;
@@ -200,9 +210,91 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
         require(amountOut > 0, 'Amount to send must be greater than 0');
 
+        // Aggiorna lo slippage in base ai pesi degli asset coinvolti nello swap
+        updateSlippage();
+
         emit Swap(receiver, fromToken, toToken, amount, amountOut);
 
         return amountOut;
+    }
+    /**
+     * @dev Calcola l'importo effettivo di `toToken` ricevuto tenendo conto dello slippage.
+     * @param fromToken The address of the token being swapped from.
+     * @param toToken The address of the token being swapped to.
+     * @param amount The amount of `fromToken` being swapped.
+     * @return The amount of `toToken` received after applying slippage.
+     */
+    function getAmountOutWithSlippage(
+        address fromToken,
+        address toToken,
+        uint256 amount
+    ) public view returns (uint256) {
+        uint256 amountOut = getAmountOut(fromToken, toToken, amount);
+        // scale amount to ToToken decimal
+
+        uint256 slippageFrom = getSlippage(fromToken);
+        uint256 slippageTo = getSlippage(toToken);
+
+        /* slippageFrom = slippageFrom * 10 ** toTokenDecimal;
+        slippageTo = slippageTo * 10 ** toTokenDecimal; */
+
+        // Applica lo slippage
+        if (slippageFrom > 0) {
+            amountOut = amountOut - (amountOut * slippageFrom) / 1000000;
+        }
+        if (slippageTo > 0) {
+            amountOut = amountOut - (amountOut * slippageTo) / 1000000;
+        }
+
+        return amountOut;
+    }
+    /**
+     * @dev Restituisce lo slippage attuale per un dato token.
+     * @param token The address of the token.
+     * @return Lo slippage attuale per il token.
+     */
+    function getSlippage(address token) public view returns (uint256) {
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            if (assetInfos[i].asset == token) {
+                return assetInfos[i].slippage;
+            }
+        }
+        return 0; // Default slippage se non trovato
+    }
+
+    /**
+     * @dev Funzione per aggiornare lo slippage in base ai pesi degli asset.
+     */
+    function updateSlippage() internal {
+        (bool[] memory directions, uint256[] memory deviations) = getDeviation();
+
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            uint256 previousSlippage = assetInfos[i].slippage;
+
+            if (directions[i]) {
+                // Aumenta lo slippage se il peso dell'asset è aumentato
+                assetInfos[i].slippage += deviations[i];
+                // Verifica che non ci sia overflow
+                require(assetInfos[i].slippage >= previousSlippage, 'Overflow incrementing slippage');
+            } else {
+                // Diminuisce lo slippage se il peso dell'asset è diminuito
+                if (assetInfos[i].slippage > deviations[i]) {
+                    assetInfos[i].slippage -= deviations[i];
+                    // Verifica che non ci sia underflow
+                    require(assetInfos[i].slippage <= previousSlippage, 'Underflow decrementing slippage');
+                } else {
+                    assetInfos[i].slippage = 0; // Evita lo slippage negativo
+                }
+            }
+        }
+    }
+
+    function getSlippages() external view returns (uint256[] memory) {
+        uint256[] memory slippages = new uint256[](assetInfos.length);
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            slippages[i] = assetInfos[i].slippage;
+        }
+        return slippages;
     }
 
     /**
@@ -242,6 +334,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         require(toMint != 0, 'Mint qty is 0');
 
         _mint(to, toMint);
+
+        updateSlippage();
 
         emit Mint(to, toMint);
 
@@ -290,6 +384,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         require(feeTransferSuccess, 'Fee transfer failed');
 
         _burn(address(this), shareAfterFee);
+
+        updateSlippage();
 
         emit Burn(to, shareAfterFee);
 
