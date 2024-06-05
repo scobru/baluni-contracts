@@ -37,7 +37,7 @@ pragma solidity 0.8.25;
  *                           _.-' :      ``.
  *                           \ r=._\        `.
  */
-import './interfaces/IBaluniV1PoolFactory.sol';
+import './interfaces/IBaluniV1PoolRegistry.sol';
 import './interfaces/IBaluniV1Pool.sol';
 import './interfaces/IBaluniV1PoolPeriphery.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -85,7 +85,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
         uint256 amount,
         address receiver
     ) public override returns (uint256) {
-        IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
+        IBaluniV1PoolRegistry poolFactory = IBaluniV1PoolRegistry(registry.getBaluniPoolFactory());
         require(amount > 0, 'Amount must be greater than zero');
 
         address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
@@ -245,7 +245,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @return The amount of tokens received after the swap.
      */
     function getAmountOut(address fromToken, address toToken, uint256 amount) external view override returns (uint256) {
-        IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
+        IBaluniV1PoolRegistry poolFactory = IBaluniV1PoolRegistry(registry.getBaluniPoolFactory());
         address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
         IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
         return pool.getAmountOut(fromToken, toToken, amount);
@@ -289,7 +289,7 @@ contract BaluniV1PoolPeriphery is Initializable, OwnableUpgradeable, UUPSUpgrade
      * @return An array of pool addresses.
      */
     function getPoolsContainingToken(address token) external view override returns (address[] memory) {
-        IBaluniV1PoolFactory poolFactory = IBaluniV1PoolFactory(registry.getBaluniPoolFactory());
+        IBaluniV1PoolRegistry poolFactory = IBaluniV1PoolRegistry(registry.getBaluniPoolFactory());
         return poolFactory.getPoolsByAsset(token);
     }
 
