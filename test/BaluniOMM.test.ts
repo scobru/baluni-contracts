@@ -542,7 +542,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       balanceUsdcB4 = await usdc.balanceOf(await owner.getAddress())
       await periphery
         .connect(owner)
-        .swap(await usdc.getAddress(), await wbtc.getAddress(), ethers.parseUnits('300', 6), await owner.getAddress())
+        .swap(await usdc.getAddress(), await wbtc.getAddress(), ethers.parseUnits('800', 6), await owner.getAddress())
 
       balanceWbtc = await wbtc.balanceOf(await owner.getAddress())
       balanceUsdc = await usdc.balanceOf(await owner.getAddress())

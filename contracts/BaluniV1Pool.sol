@@ -38,15 +38,24 @@ pragma solidity 0.8.25;
  *                           \ r=._\        `.
  */
 
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
 import './interfaces/IBaluniV1PoolPeriphery.sol';
 import './interfaces/IBaluniV1Registry.sol';
 import './interfaces/IBaluniV1Rebalancer.sol';
 import './interfaces/IBaluniV1Oracle.sol';
 
-contract BaluniV1Pool is ERC20, ReentrancyGuard {
+contract BaluniV1Pool is
+    Initializable,
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    ERC20Upgradeable,
+    ReentrancyGuardUpgradeable
+{
     AssetInfo[] public assetInfos;
 
     uint256 public trigger;
@@ -55,6 +64,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
     uint256 private scalingFactor;
 
     IBaluniV1Registry public registry;
+
+    mapping(address => uint256) public reserves;
 
     struct AssetInfo {
         address asset;
@@ -74,25 +85,22 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 amountOut
     );
 
-    constructor(
+    function initialize(
         address[] memory _assets,
         uint256[] memory _weights,
         uint256 _trigger,
         address _registry
-    ) ERC20('Baluni LP', 'BALUNI-LP') {
+    ) external initializer {
+        __Ownable_init(msg.sender);
+        __ERC20_init('Baluni LP', 'BALUNI-LP');
         registry = IBaluniV1Registry(_registry);
-
         ONE = 1e18;
-
         bool result = initializeAssets(_assets, _weights);
         require(result, 'Initialization failed');
 
         trigger = _trigger;
-
         baseAsset = registry.getUSDC();
-
         scalingFactor = 10 ** (18 - 6);
-
         require(baseAsset != address(0), 'Invalid base asset address');
 
         uint256 totalWeight = 0;
@@ -103,6 +111,8 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
 
         require(totalWeight == 10000, 'Invalid weights');
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     modifier onlyPeriphery() {
         address periphery = registry.getBaluniPoolPeriphery();
@@ -201,15 +211,16 @@ contract BaluniV1Pool is ERC20, ReentrancyGuard {
         uint256 _BPS_FEE = registry.getBPS_FEE();
         require(fromToken != toToken, 'Cannot swap the same token');
         require(amount > 0, 'Amount must be greater than zero');
+
+        reserves[fromToken] += amount;
         uint256 receivedAmount = getAmountOutWithSlippage(fromToken, toToken, amount);
         require(getAssetReserve(toToken) >= receivedAmount, 'Insufficient Liquidity');
 
+        reserves[toToken] += receivedAmount;
         uint256 fee = (receivedAmount * _BPS_FEE) / 10000;
         amountOut = receivedAmount - fee;
-
         require(amountOut > 0, 'Amount to send must be greater than 0');
 
-        // Aggiorna lo slippage in base ai pesi degli asset coinvolti nello swap
         updateSlippage();
 
         emit Swap(receiver, fromToken, toToken, amount, amountOut);
