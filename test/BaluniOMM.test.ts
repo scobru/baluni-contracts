@@ -130,8 +130,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
     ])) as unknown as BaluniV1Pool
     await pool.waitForDeployment()
 
-    console.log(await pool.name())
-    console.log(await pool.symbol())
+    console.log(`Deployed Pool with Name: ${await pool.name()} and Symbol: ${await pool.symbol()}`)
 
     await poolRegistry.addPool(await pool.getAddress())
     baseAddress = await pool.baseAsset()
@@ -220,13 +219,14 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       )
 
       await pool.connect(owner).approve(pool.target, lpBalance)
-      console.log(await pool.calculateAssetShare(lpBalance))
-      console.log(lpBalance)
-      console.log(await pool.totalSupply())
+      console.log('Calculated Asset Share: ', await pool.calculateAssetShare(lpBalance).toString())
+      console.log('LP Balance: ', lpBalance.toString())
+      console.log('Total Supply: ', (await pool.totalSupply()).toString())
+
       await pool.connect(owner).withdraw(lpBalance, await owner.getAddress(), deadline)
 
-      const pooFee = await registry.getBPS_FEE()
-      const fee = (lpBalance * BigInt(pooFee) * 1n) / 10000n
+      const poolFee = await registry.getBPS_FEE()
+      const fee = (lpBalance * BigInt(poolFee) * 1n) / 10000n
 
       expect(await pool.totalSupply()).to.equal(BigInt(fee))
       console.log('LP Tokens Minted and Burned Successfully')
@@ -235,7 +235,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
 
   describe('Token Swapping', function () {
     it('should swap tokens correctly', async function () {
-      console.log('Swapping')
+      console.log('Swapping Tokens')
       await usdt.connect(owner).approve(await pool.getAddress(), ethers.MaxUint256)
       await usdc.connect(owner).approve(await pool.getAddress(), ethers.MaxUint256)
       await weth.connect(owner).approve(await pool.getAddress(), ethers.MaxUint256)
@@ -274,7 +274,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
         )
 
       let usdtBalance = await usdt.balanceOf(await owner.getAddress())
-      console.log(usdtBalance - usdtBalanceB4)
+      console.log('USDT Balance after swap: ', ethers.formatUnits(usdtBalance - usdtBalanceB4, 6))
       expect(usdtBalance - usdtBalanceB4).to.be.gt(ethers.parseUnits('47', 6))
 
       reservesB4Swap = await pool.getReserves()
@@ -303,7 +303,7 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
         )
 
       usdtBalance = await usdt.balanceOf(await owner.getAddress())
-      console.log(usdtBalance - usdtBalanceB4)
+      console.log('USDT Balance after periphery swap: ', ethers.formatUnits(usdtBalance - usdtBalanceB4, 6))
       expect(usdtBalance - usdtBalanceB4).to.be.gt(ethers.parseUnits('47', 6))
 
       reservesB4Swap = await pool.getReserves()
