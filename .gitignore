@@ -1,6 +1,7 @@
 node_modules
 .env
-/.ponder
+.ponder
+
 coverage
 coverage.json
 typechain
@@ -9,6 +10,7 @@ temp
 
 #Hardhat files
 cache
+bin
 # artifacts
 
 #zkSync files
