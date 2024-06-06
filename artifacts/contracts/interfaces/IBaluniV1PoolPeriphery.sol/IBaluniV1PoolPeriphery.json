@@ -6,35 +6,6 @@
     {
       "inputs": [
         {
-          "internalType": "uint256[]",
-          "name": "amounts",
-          "type": "uint256[]"
-        },
-        {
-          "internalType": "address",
-          "name": "poolAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "receiver",
-          "type": "address"
-        }
-      ],
-      "name": "addLiquidity",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address[]",
           "name": "fromTokens",
           "type": "address[]"
@@ -99,30 +70,6 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "pool",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "asset",
-          "type": "address"
-        }
-      ],
-      "name": "getAssetReserve",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
           "name": "token",
           "type": "address"
         }
@@ -133,25 +80,6 @@
           "internalType": "address[]",
           "name": "",
           "type": "address[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "pool",
-          "type": "address"
-        }
-      ],
-      "name": "getReserves",
-      "outputs": [
-        {
-          "internalType": "uint256[]",
-          "name": "",
-          "type": "uint256[]"
         }
       ],
       "stateMutability": "view",
@@ -174,11 +102,11 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "poolAddress",
+          "name": "_registry",
           "type": "address"
         }
       ],
-      "name": "performRebalanceIfNeeded",
+      "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -187,39 +115,16 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "poolAddress",
+          "name": "_registry",
           "type": "address"
         },
         {
-          "internalType": "address",
-          "name": "receiver",
-          "type": "address"
+          "internalType": "uint64",
+          "name": "version",
+          "type": "uint64"
         }
       ],
-      "name": "rebalanceWeights",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "share",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "poolAddress",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "receiver",
-          "type": "address"
-        }
-      ],
-      "name": "removeLiquidity",
+      "name": "reinitialize",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -238,20 +143,89 @@
         },
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "fromAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "minAmount",
           "type": "uint256"
         },
         {
           "internalType": "address",
-          "name": "receiver",
+          "name": "from",
           "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "deadline",
+          "type": "uint256"
         }
       ],
-      "name": "swap",
+      "name": "swapTokenForToken",
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "",
+          "name": "amountOut",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "haircut",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "tokenPath",
+          "type": "address[]"
+        },
+        {
+          "internalType": "address[]",
+          "name": "poolPath",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "fromAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "minimumToAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "deadline",
+          "type": "uint256"
+        }
+      ],
+      "name": "swapTokensForTokens",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "amountOut",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "haircut",
           "type": "uint256"
         }
       ],

@@ -47,7 +47,7 @@ import '@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 import '../interfaces/IBaluniV1PoolRegistry.sol';
 import '../interfaces/IBaluniV1PoolPeriphery.sol';
 import '../interfaces/IBaluniV1Registry.sol';
-import '../interfaces/IBaluniV1PoolMono.sol';
+import '../interfaces/IBaluniV1Pool.sol';
 
 /**
  * @title BaluniV1PoolPeriphery
@@ -87,26 +87,20 @@ contract BaluniV1PoolPeriphery is
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    /**
-     * @dev Swaps tokens in a BaluniV1Pool.
-     * @param fromToken The address of the token to swap from.
-     * @param toToken The address of the token to swap to.
-     * @param fromAmount The amount of tokens to swap.
-     * @return The amount of tokens received after the swap.
-     */
     function swapTokenForToken(
         address fromToken,
         address toToken,
         uint256 fromAmount,
         uint256 minAmount,
+        address from,
         address to,
-        uint256 deadline
+        uint deadline
     ) public override ensure(deadline) nonReentrant returns (uint256 amountOut, uint256 haircut) {
-        IBaluniV1PoolRegistry poolFactory = IBaluniV1PoolRegistry(registry.getBaluniPoolFactory());
+        IBaluniV1PoolRegistry poolRegistry = IBaluniV1PoolRegistry(registry.getBaluniPoolRegistry());
         require(fromAmount > 0, 'Amount must be greater than zero');
-        address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
-        IBaluniV1PoolMono pool = IBaluniV1PoolMono(poolAddress);
-        uint256 allowance = IERC20(fromToken).allowance(msg.sender, address(this));
+        address poolAddress = poolRegistry.getPoolByAssets(fromToken, toToken);
+        require(poolAddress != address(0), 'BaluniV1PoolPeriphery: Pool not found');
+        IERC20(fromToken).transferFrom(from, address(this), fromAmount);
 
         address[] memory tokenPath = new address[](2);
         tokenPath[0] = fromToken;
@@ -122,8 +116,8 @@ contract BaluniV1PoolPeriphery is
     }
 
     function swapTokensForTokens(
-        address[] calldata tokenPath,
-        address[] calldata poolPath,
+        address[] memory tokenPath,
+        address[] memory poolPath,
         uint256 fromAmount,
         uint256 minimumToAmount,
         address to,
@@ -135,7 +129,7 @@ contract BaluniV1PoolPeriphery is
         require(to != address(0), 'zero address');
 
         // get from token from users
-        IERC20(tokenPath[0]).safeTransferFrom(address(msg.sender), address(this), fromAmount);
+        IERC20(tokenPath[0]).transferFrom(address(msg.sender), address(this), fromAmount);
 
         (amountOut, haircut) = _swap(tokenPath, poolPath, fromAmount, to);
         require(amountOut >= minimumToAmount, 'amountOut too low');
@@ -151,8 +145,8 @@ contract BaluniV1PoolPeriphery is
     /// @return amountOut received by user
     /// @return haircut total fee charged by pool
     function _swap(
-        address[] calldata tokenPath,
-        address[] calldata poolPath,
+        address[] memory tokenPath,
+        address[] memory poolPath,
         uint256 fromAmount,
         address to
     ) internal returns (uint256 amountOut, uint256 haircut) {
@@ -181,8 +175,14 @@ contract BaluniV1PoolPeriphery is
                 nextFromAmount = amountOut;
             }
 
+            uint256 allowance = IERC20(tokenPath[i]).allowance(address(this), poolPath[i]);
+
+            if (nextFromAmount >= allowance) {
+                IERC20(tokenPath[i]).approve(poolPath[i], nextFromAmount);
+            }
+
             // make the swap with the correct arguments
-            (amountOut, localHaircut) = IBaluniV1PoolMono(poolPath[i]).swap(
+            (amountOut, localHaircut) = IBaluniV1Pool(poolPath[i]).swap(
                 tokenPath[i],
                 tokenPath[i + 1],
                 nextFromAmount,
@@ -206,8 +206,8 @@ contract BaluniV1PoolPeriphery is
      * @return haircut The total haircut that would be applied
      */
     function quotePotentialSwaps(
-        address[] calldata tokenPath,
-        address[] calldata poolPath,
+        address[] memory tokenPath,
+        address[] memory poolPath,
         uint256 fromAmount
     ) external view returns (uint256 potentialOutcome, uint256 haircut) {
         require(fromAmount > 0, 'invalid from amount');
@@ -227,7 +227,7 @@ contract BaluniV1PoolPeriphery is
             }
 
             // make the swap with the correct arguments
-            (potentialOutcome, localHaircut) = IBaluniV1PoolMono(poolPath[i]).quotePotentialSwap(
+            (potentialOutcome) = IBaluniV1Pool(poolPath[i]).quotePotentialSwap(
                 tokenPath[i],
                 tokenPath[i + 1],
                 nextFromAmount
@@ -236,6 +236,8 @@ contract BaluniV1PoolPeriphery is
             // increment total haircut - convert to 18 d.p decimals
             haircut += localHaircut * 10 ** (18 - IERC20Metadata(tokenPath[i + 1]).decimals());
         }
+
+        return (potentialOutcome, haircut);
     }
 
     /**
@@ -271,7 +273,15 @@ contract BaluniV1PoolPeriphery is
             address receiver = receivers[i];
 
             require(IERC20(fromToken).balanceOf(msg.sender) >= amount, 'Insufficient Balance');
-            amountsOut[i] = swapTokenForToken(fromToken, toToken, amount, receiver);
+            (amountsOut[i], ) = swapTokenForToken(
+                fromToken,
+                toToken,
+                amount,
+                0,
+                msg.sender,
+                receiver,
+                block.timestamp + 300
+            );
         }
 
         return amountsOut;
@@ -285,10 +295,11 @@ contract BaluniV1PoolPeriphery is
      * @return The amount of tokens received after the swap.
      */
     function getAmountOut(address fromToken, address toToken, uint256 amount) external view override returns (uint256) {
-        IBaluniV1PoolRegistry poolFactory = IBaluniV1PoolRegistry(registry.getBaluniPoolFactory());
-        address poolAddress = poolFactory.getPoolByAssets(fromToken, toToken);
-        IBaluniV1PoolMono pool = IBaluniV1PoolMono(poolAddress);
-        return pool.quotePotentialSwap(fromToken, toToken, amount);
+        IBaluniV1PoolRegistry poolRegistry = IBaluniV1PoolRegistry(registry.getBaluniPoolRegistry());
+        address poolAddress = poolRegistry.getPoolByAssets(fromToken, toToken);
+        IBaluniV1Pool pool = IBaluniV1Pool(poolAddress);
+        uint256 amountOut = pool.quotePotentialSwap(fromToken, toToken, amount);
+        return amountOut;
     }
 
     /**
@@ -297,8 +308,8 @@ contract BaluniV1PoolPeriphery is
      * @return An array of pool addresses.
      */
     function getPoolsContainingToken(address token) external view override returns (address[] memory) {
-        IBaluniV1PoolRegistry poolFactory = IBaluniV1PoolRegistry(registry.getBaluniPoolFactory());
-        return poolFactory.getPoolsByAsset(token);
+        IBaluniV1PoolRegistry poolRegistry = IBaluniV1PoolRegistry(registry.getBaluniPoolRegistry());
+        return poolRegistry.getPoolsByAsset(token);
     }
 
     /**

@@ -13,10 +13,11 @@ interface IBaluniV1PoolPeriphery {
     function swapTokenForToken(
         address fromToken,
         address toToken,
-        uint256 amount,
+        uint256 fromAmount,
         uint256 minAmount,
-        address receiver,
-        uint256 deadline
+        address from,
+        address to,
+        uint deadline
     ) external returns (uint256 amountOut, uint256 haircut);
 
     function swapTokensForTokens(

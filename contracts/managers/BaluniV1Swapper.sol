@@ -150,7 +150,9 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
         _secureApproval(token0, baluniPeriphery, amount);
 
-        try periphery.swap(token0, token1, amount, receiver) returns (uint256 amountReceived) {
+        try
+            periphery.swapTokenForToken(token0, token1, amount, 0, address(this), receiver, block.timestamp + 300)
+        returns (uint256 amountReceived, uint256 haircut) {
             if (amountReceived > 0) {
                 return amountReceived;
             }
@@ -194,7 +196,17 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         uint256 intermediateBalance;
         _secureApproval(token0, baluniPeriphery, tokenBalance);
 
-        try periphery.swap(token0, token1, tokenBalance, address(this)) returns (uint256 amountReceived) {
+        try
+            periphery.swapTokenForToken(
+                token0,
+                token1,
+                tokenBalance,
+                0,
+                address(this),
+                address(this),
+                block.timestamp + 300
+            )
+        returns (uint256 amountReceived, uint256 haircut) {
             if (amountReceived > 0) {
                 intermediateBalance = amountReceived;
             } else {
@@ -204,7 +216,17 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             return _multiHopSwapFallback(token0, token1, token2, tokenBalance, receiver);
         }
 
-        try periphery.swap(token1, token2, intermediateBalance, receiver) returns (uint256 amountReceived) {
+        try
+            periphery.swapTokenForToken(
+                token1,
+                token2,
+                intermediateBalance,
+                0,
+                address(this),
+                receiver,
+                block.timestamp + 300
+            )
+        returns (uint256 amountReceived, uint256 haircut) {
             if (amountReceived > 0) {
                 return amountReceived;
             } else {

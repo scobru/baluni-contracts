@@ -46,14 +46,14 @@ import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-import './interfaces/IBaluniV1Agent.sol';
-import './interfaces/IBaluniV1AgentFactory.sol';
-import './interfaces/IBaluniV1Rebalancer.sol';
-import './interfaces/I1inchSpotAgg.sol';
-import './interfaces/IBaluniV1Oracle.sol';
-import './libs/EnumerableSetUpgradeable.sol';
-import './interfaces/IBaluniV1Swapper.sol';
-import './interfaces/IBaluniV1Registry.sol';
+import '../interfaces/IBaluniV1Agent.sol';
+import '../interfaces/IBaluniV1AgentFactory.sol';
+import '../interfaces/IBaluniV1Rebalancer.sol';
+import '../interfaces/I1inchSpotAgg.sol';
+import '../interfaces/IBaluniV1Oracle.sol';
+import '../libs/EnumerableSetUpgradeable.sol';
+import '../interfaces/IBaluniV1Swapper.sol';
+import '../interfaces/IBaluniV1Registry.sol';
 
 contract BaluniV1Router is
     Initializable,

@@ -86,11 +86,8 @@ contract MockOracle is IBaluniV1Oracle {
         uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
         uint8 toDecimal = IERC20Metadata(toToken).decimals();
 
-        uint256 numerator = 10 ** fromDecimal;
-        uint256 denominator = 10 ** toDecimal;
-
         rate = rates[address(fromToken)][address(toToken)];
-       rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
+        rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
 
         uint256 factor;
         if (fromDecimal >= toDecimal) {
@@ -121,13 +118,9 @@ contract MockOracle is IBaluniV1Oracle {
         uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
         uint8 toDecimal = IERC20Metadata(toToken).decimals();
 
-        uint256 numerator = 10 ** fromDecimal;
-        uint256 denominator = 10 ** toDecimal;
-
         rate = rates[address(fromToken)][address(toToken)];
-       
 
-         rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
+        rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
 
         uint256 scalingFactor;
         uint256 tokenAmount;

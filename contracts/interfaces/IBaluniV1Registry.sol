@@ -18,7 +18,7 @@ interface IBaluniV1Registry {
 
     function setBaluniOracle(address _baluniOracle) external;
 
-    function setBaluniPoolFactory(address _baluniPoolFactory) external;
+    function setBaluniPoolRegistry(address _baluniPoolRegistry) external;
 
     function setBaluniRebalancer(address _baluniRebalancer) external;
 
@@ -48,7 +48,7 @@ interface IBaluniV1Registry {
 
     function getBaluniPoolPeriphery() external view returns (address);
 
-    function getBaluniPoolFactory() external view returns (address);
+    function getBaluniPoolRegistry() external view returns (address);
 
     function getBaluniRebalancer() external view returns (address);
 

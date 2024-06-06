@@ -153,7 +153,8 @@ contract BaluniV1Pool is
                 AssetInfo({
                     asset: _assets[i],
                     weight: _weights[i],
-                    slippage: 0 // Imposta slippage iniziale a 1%
+                    slippage: 0, // Imposta slippage iniziale a 1%
+                    reserve: 0
                 })
             );
 
@@ -223,24 +224,38 @@ contract BaluniV1Pool is
         address receiver,
         uint256 deadline
     ) external override ensure(deadline) nonReentrant returns (uint256 amountOut, uint256 fee) {
-        uint256 _BPS_FEE = registry.getBPS_FEE();
-        uint256 _BPS_BASE = registry.getBPS_BASE();
+        require(fromToken != address(0) && toToken != address(0), 'Invalid token address');
         require(fromToken != toToken, 'Cannot swap the same token');
         require(amount > 0, 'Amount must be greater than zero');
+        require(receiver != address(0), 'Invalid receiver address');
 
-        IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
-        reserves[fromToken] += amount;
+        bool transferInSuccess = IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
+        require(transferInSuccess, 'Token transfer failed');
+
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            if (assetInfos[i].asset == fromToken) {
+                assetInfos[i].reserve += amount;
+            }
+        }
+
         uint256 receivedAmount = quotePotentialSwap(fromToken, toToken, amount);
         require(getAssetReserve(toToken) >= receivedAmount, 'Insufficient Liquidity');
 
-        reserves[toToken] += receivedAmount;
-        fee = (receivedAmount * _BPS_FEE) / _BPS_BASE;
+        fee = _haircut(receivedAmount);
         amountOut = receivedAmount - fee;
         require(amountOut > 0, 'Amount to send must be greater than 0');
         require(amountOut >= minAmount, 'Amount out must be greater than min amount');
 
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            if (assetInfos[i].asset == toToken) {
+                assetInfos[i].reserve -= amountOut;
+            }
+        }
+
         updateSlippage();
-        IERC20(toToken).transfer(receiver, amountOut);
+        bool transferOutSuccess = IERC20(toToken).transfer(receiver, amountOut);
+        require(transferOutSuccess, 'Token transfer failed');
+
         emit Swap(receiver, fromToken, toToken, amount, amountOut);
 
         return (amountOut, fee);
@@ -394,13 +409,17 @@ contract BaluniV1Pool is
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
             address asset = assetInfos[i].asset;
-            IERC20(asset).transferFrom(msg.sender, address(this), amounts[i]);
-            reserves[asset] += amounts[i];
+            bool success = IERC20(asset).transferFrom(msg.sender, address(this), amounts[i]);
+            require(success, 'BaluniV1Pool: Transfer from failed');
+            assetInfos[i].reserve += amounts[i];
+
             uint256 valuation;
+
             if (asset == baseAsset) {
                 valuation = amounts[i];
                 continue;
             }
+
             valuation = _convertTokenToBase(asset, amounts[i]);
             totalValue += valuation;
         }
@@ -423,7 +442,7 @@ contract BaluniV1Pool is
 
         updateSlippage();
 
-        emit Withdraw(to, toMint);
+        emit Deposit(to, toMint);
 
         return toMint;
     }
@@ -445,28 +464,36 @@ contract BaluniV1Pool is
         uint256 share,
         address to,
         uint256 deadline
-    ) external override ensure(deadline) nonReentrant whenNotPaused returns (uint256[] memory) {
-        uint256 _BPS_FEE = registry.getBPS_FEE();
-
+    ) external override ensure(deadline) nonReentrant whenNotPaused returns (uint256) {
+        require(to != address(0), 'Invalid address');
         require(share > 0, 'Share must be greater than 0');
-        transferFrom(msg.sender, address(this), share);
+        uint256 allowance = IERC20(address(this)).allowance(msg.sender, address(this));
+        require(allowance >= share, 'BaluniV1Pool: Insufficient Allowance');
+
+        bool transferResult = IERC20(address(this)).transferFrom(msg.sender, address(this), share);
+        require(transferResult, 'Transfer From Failed');
 
         uint256 totalSupply = totalSupply();
         require(totalSupply > 0, 'No liquidity');
-
-        uint256[] memory amounts = new uint256[](assetInfos.length);
-        uint256 fee = (share * _BPS_FEE) / 10000;
+        uint256 fee = _haircut(share);
         uint256 shareAfterFee = share - fee;
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
-            uint256 assetBalance = getAssetReserve(assetInfos[i].asset);
-            amounts[i] = (assetBalance * shareAfterFee) / totalSupply;
-            IERC20(assetInfos[i].asset).transfer(to, amounts[i]);
+            require(
+                IERC20(assetInfos[i].asset).balanceOf(address(this)) >= calculateAssetShare(shareAfterFee)[i],
+                'BaluniV1Pool: Insufficient Asset Balance'
+            );
+            bool transferSuccess = IERC20(assetInfos[i].asset).transfer(to, calculateAssetShare(shareAfterFee)[i]);
+            require(transferSuccess, 'Asset transfer failed');
+            assetInfos[i].reserve -= calculateAssetShare(shareAfterFee)[i];
         }
 
         require(balanceOf(address(this)) >= shareAfterFee, 'Insufficient BALUNI liquidity');
-
         address treasury = registry.getTreasury();
+        require(treasury != address(0), 'Invalid treasury address');
+
+        require(balanceOf(address(this)) >= fee, 'Insufficient BALUNI for fee');
+
         bool feeTransferSuccess = IERC20(address(this)).transfer(treasury, fee);
         require(feeTransferSuccess, 'Fee transfer failed');
 
@@ -474,9 +501,26 @@ contract BaluniV1Pool is
 
         updateSlippage();
 
-        emit Deposit(to, shareAfterFee);
+        emit Withdraw(to, shareAfterFee);
 
-        return amounts;
+        return shareAfterFee;
+    }
+
+    function calculateAssetShare(uint256 share) public view returns (uint256[] memory) {
+        uint256 fee = _haircut(share);
+        uint256 shareAfterFee = share - fee;
+        uint256[] memory assetShares = new uint256[](assetInfos.length);
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            uint256 assetBalance = assetInfos[i].reserve;
+            assetShares[i] = (assetBalance * shareAfterFee) / totalSupply();
+        }
+        return assetShares;
+    }
+
+    function _haircut(uint256 amount) internal view returns (uint256) {
+        uint256 _BPS_FEE = registry.getBPS_FEE();
+        uint256 _BPS_BASE = registry.getBPS_BASE();
+        return (amount * _BPS_FEE) / _BPS_BASE;
     }
 
     /**
@@ -581,8 +625,7 @@ contract BaluniV1Pool is
         uint256[] memory _reserves = new uint256[](assetInfos.length);
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
-            address asset = assetInfos[i].asset;
-            _reserves[i] = reserves[asset];
+            _reserves[i] = assetInfos[i].reserve;
         }
 
         return _reserves;
@@ -594,7 +637,9 @@ contract BaluniV1Pool is
      * @return The reserve amount of the asset.
      */
     function getAssetReserve(address asset) public view override returns (uint256) {
-        return reserves[asset];
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            if (asset == assetInfos[i].asset) return assetInfos[i].reserve;
+        }
     }
 
     /**
@@ -795,5 +840,19 @@ contract BaluniV1Pool is
             symbol = string(abi.encodePacked(symbol, IERC20Metadata(_assets[i]).symbol(), '-'));
         }
         return symbol;
+    }
+
+    /**
+     * @dev pause pool, restricting certain operations
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev unpause pool, enabling certain operations
+     */
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }

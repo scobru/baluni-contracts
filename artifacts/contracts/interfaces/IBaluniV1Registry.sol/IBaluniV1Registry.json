@@ -70,7 +70,7 @@
     },
     {
       "inputs": [],
-      "name": "getBaluniPoolFactory",
+      "name": "getBaluniPoolPeriphery",
       "outputs": [
         {
           "internalType": "address",
@@ -83,7 +83,7 @@
     },
     {
       "inputs": [],
-      "name": "getBaluniPoolPeriphery",
+      "name": "getBaluniPoolRegistry",
       "outputs": [
         {
           "internalType": "address",
@@ -293,11 +293,11 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_baluniPoolFactory",
+          "name": "_baluniPoolPeriphery",
           "type": "address"
         }
       ],
-      "name": "setBaluniPoolFactory",
+      "name": "setBaluniPoolPeriphery",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -306,11 +306,11 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_baluniPoolPeriphery",
+          "name": "_baluniPoolRegistry",
           "type": "address"
         }
       ],
-      "name": "setBaluniPoolPeriphery",
+      "name": "setBaluniPoolRegistry",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

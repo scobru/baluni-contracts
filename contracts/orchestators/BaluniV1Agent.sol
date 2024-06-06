@@ -40,8 +40,8 @@ pragma solidity 0.8.25;
  */
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
-import './libs/AddressUpgradeable.sol';
-import './interfaces/IBaluniV1Registry.sol';
+import '../libs/AddressUpgradeable.sol';
+import '../interfaces/IBaluniV1Registry.sol';
 
 /**
  * @title BaluniV1Agent

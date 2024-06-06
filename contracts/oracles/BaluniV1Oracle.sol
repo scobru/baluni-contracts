@@ -43,10 +43,10 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
-import './interfaces/I1inchSpotAgg.sol';
-import './interfaces/IBaluniV1Registry.sol';
-import './interfaces/IBaluniV1Oracle.sol';
-import './interfaces/IStaticOracle.sol';
+import '../interfaces/I1inchSpotAgg.sol';
+import '../interfaces/IBaluniV1Registry.sol';
+import '../interfaces/IBaluniV1Oracle.sol';
+import '../interfaces/IStaticOracle.sol';
 
 contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, IBaluniV1Oracle {
     IBaluniV1Registry public registry;

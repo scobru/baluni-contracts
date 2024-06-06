@@ -49,7 +49,7 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
     address public uniswapRouter;
     address public baluniAgentFactory;
     address public baluniPoolPeriphery;
-    address public baluniPoolFactory;
+    address public baluniPoolRegistry;
     address public baluniRebalancer;
     address public baluniRouter;
     address public baluniRegistry;
@@ -101,8 +101,8 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         baluniPoolPeriphery = _baluniPoolPeriphery;
     }
 
-    function setBaluniPoolFactory(address _baluniPoolFactory) external override onlyOwner {
-        baluniPoolFactory = _baluniPoolFactory;
+    function setBaluniPoolRegistry(address _baluniPoolRegistry) external override onlyOwner {
+        baluniPoolRegistry = _baluniPoolRegistry;
     }
 
     function setBaluniRebalancer(address _baluniRebalancer) external override onlyOwner {
@@ -157,8 +157,8 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         return baluniPoolPeriphery;
     }
 
-    function getBaluniPoolFactory() external view override returns (address) {
-        return baluniPoolFactory;
+    function getBaluniPoolRegistry() external view override returns (address) {
+        return baluniPoolRegistry;
     }
 
     function getBaluniRebalancer() external view override returns (address) {

@@ -40,8 +40,8 @@ pragma solidity 0.8.25;
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import './interfaces/IBaluniV1Registry.sol';
-import './interfaces/IBaluniV1Pool.sol';
+import '../interfaces/IBaluniV1Registry.sol';
+import '../interfaces/IBaluniV1Pool.sol';
 
 contract BaluniV1PoolRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     address[] public allPools;
@@ -67,6 +67,13 @@ contract BaluniV1PoolRegistry is Initializable, UUPSUpgradeable, OwnableUpgradea
     function addPool(address poolAddress) external onlyOwner {
         require(poolAddress != address(0), 'BaluniV1PoolFactory: INVALID_POOL_ADDRESS');
         allPools.push(poolAddress);
+        address[] memory assets = IBaluniV1Pool(poolAddress).getAssets();
+        for (uint256 i = 0; i < assets.length; i++) {
+            for (uint256 j = i + 1; j < assets.length; j++) {
+                getPool[assets[i]][assets[j]] = poolAddress;
+                getPool[assets[j]][assets[i]] = poolAddress;
+            }
+        }
     }
 
     /**

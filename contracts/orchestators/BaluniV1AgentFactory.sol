@@ -38,12 +38,12 @@ pragma solidity 0.8.25;
  *                           \ r=._\        `.
  */
 
-import './libs/ClonesUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import './BaluniV1Agent.sol';
-import './interfaces/IBaluniV1Registry.sol';
+import '../interfaces/IBaluniV1Registry.sol';
+import '../libs/ClonesUpgradeable.sol';
 
 contract BaluniV1AgentFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     // L'indirizzo del contratto logico che sarà utilizzato come implementazione per i proxy

@@ -42,10 +42,10 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import './interfaces/IBaluniV1Router.sol';
-import './interfaces/IBaluniV1Swapper.sol';
-import './interfaces/IBaluniV1Registry.sol';
-import './interfaces/IBaluniV1Oracle.sol';
+import '../interfaces/IBaluniV1Router.sol';
+import '../interfaces/IBaluniV1Swapper.sol';
+import '../interfaces/IBaluniV1Registry.sol';
+import '../interfaces/IBaluniV1Oracle.sol';
 
 contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     IBaluniV1Registry public registry;

@@ -10,6 +10,7 @@ interface IBaluniV1Pool {
         address asset;
         uint256 weight;
         uint256 slippage;
+        uint256 reserve;
     }
 
     event WeightsRebalanced(address indexed user, uint256[] amountsToAdd);
@@ -48,7 +49,7 @@ interface IBaluniV1Pool {
 
     function deposit(address to, uint256[] memory amounts, uint256 deadline) external returns (uint256);
 
-    function withdraw(uint256 share, address to, uint256 deadline) external returns (uint256[] memory);
+    function withdraw(uint256 share, address to, uint256 deadline) external returns (uint256);
 
     function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256);
 
