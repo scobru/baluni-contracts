@@ -362,22 +362,6 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
       console.log('Valuation WETH:', formatUnits(totvals[1][2], baseDecimals))
       console.log('Valuation WBTC:', formatUnits(totvals[1][3], baseDecimals))
 
-      deviation = await pool.getDeviations()
-      console.log('Deviation Before Rebalance:', deviation.toString())
-
-      console.log('Performing Rebalance 1')
-      await pool.rebalanceAndDeposit(await owner.getAddress())
-
-      totvals = await pool.totalValuation()
-      console.log('Total Valuation After Rebalance 1:', formatUnits(totvals[0], baseDecimals))
-      console.log('Valuation USDC:', formatUnits(totvals[1][0], baseDecimals))
-      console.log('Valuation USDT:', formatUnits(totvals[1][1], baseDecimals))
-      console.log('Valuation WETH:', formatUnits(totvals[1][2], baseDecimals))
-      console.log('Valuation WBTC:', formatUnits(totvals[1][3], baseDecimals))
-
-      deviation = await pool.getDeviations()
-      console.log('Deviation After Rebalance 1:', deviation.toString())
-
       console.log('Performing Batch Swap 2')
       fromTokens = [await wbtc.getAddress(), await weth.getAddress()]
       toTokens = [await weth.getAddress(), await usdc.getAddress()]
@@ -386,8 +370,17 @@ describe('BaluniV1Pool, BaluniV1PoolFactory and BaluniV1PoolPeriphery', function
 
       await periphery.connect(owner).batchSwap(fromTokens, toTokens, amounts, receivers)
 
+      deviation = await pool.getDeviations()
+      console.log('Deviation Before Rebalance:', deviation.toString())
+
+      console.log('Performing Rebalance 1')
+      await pool.rebalanceAndDeposit(await owner.getAddress())
+
+      deviation = await pool.getDeviations()
+      console.log('Deviation After Rebalance 1:', deviation.toString())
+
       totvals = await pool.totalValuation()
-      console.log('Total Valuation After Batch Swap 2:', formatUnits(totvals[0], baseDecimals))
+      console.log('Total Valuation After Rebalance 1:', formatUnits(totvals[0], baseDecimals))
       console.log('Valuation USDC:', formatUnits(totvals[1][0], baseDecimals))
       console.log('Valuation USDT:', formatUnits(totvals[1][1], baseDecimals))
       console.log('Valuation WETH:', formatUnits(totvals[1][2], baseDecimals))

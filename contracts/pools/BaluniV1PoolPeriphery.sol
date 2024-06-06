@@ -52,7 +52,6 @@ import '../interfaces/IBaluniV1Pool.sol';
 /**
  * @title BaluniV1PoolPeriphery
  * @dev This contract serves as the periphery contract for interacting with BaluniV1Pool contracts.
- * It provides functions for swapping tokens, adding liquidity, removing liquidity, and getting the amount out for a given swap.
  */
 contract BaluniV1PoolPeriphery is
     Initializable,
@@ -87,6 +86,18 @@ contract BaluniV1PoolPeriphery is
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
+    /**
+     * @dev Swaps tokens using a Baluni V1 pool.
+     * @param fromToken The address of the token to swap from.
+     * @param toToken The address of the token to swap to.
+     * @param fromAmount The amount of tokens to swap from.
+     * @param minAmount The minimum amount of tokens to receive in the swap.
+     * @param from The address from which the tokens are being swapped.
+     * @param to The address to which the tokens are being swapped.
+     * @param deadline The deadline by which the swap must be executed.
+     * @return amountOut The amount of tokens received in the swap.
+     * @return haircut The haircut applied to the swap.
+     */
     function swapTokenForToken(
         address fromToken,
         address toToken,
@@ -115,6 +126,17 @@ contract BaluniV1PoolPeriphery is
         return (amountOut, haircut);
     }
 
+    /**
+     * @dev Swaps tokens for tokens using a specified token path and pool path.
+     * @param tokenPath The array of token addresses representing the path of tokens to swap.
+     * @param poolPath The array of pool addresses representing the path of pools to use for swapping.
+     * @param fromAmount The amount of tokens to swap from.
+     * @param minimumToAmount The minimum amount of tokens to receive after swapping.
+     * @param to The address to receive the swapped tokens.
+     * @param deadline The deadline for the swap to occur.
+     * @return amountOut The amount of tokens received after swapping.
+     * @return haircut The amount of tokens deducted as a fee during the swap.
+     */
     function swapTokensForTokens(
         address[] memory tokenPath,
         address[] memory poolPath,

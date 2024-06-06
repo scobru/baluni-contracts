@@ -78,6 +78,9 @@ contract BaluniV1Pool is
     // The registry contract used in the BaluniV1 system
     IBaluniV1Registry public registry;
 
+    uint256 public constant k = 0.00002e18; // Example value, set according to your research
+    uint256 public constant n = 7;
+
     /**
      * @dev A mapping that stores the reserves for each address.
      */
@@ -321,21 +324,18 @@ contract BaluniV1Pool is
     /**
      * @dev Funzione per aggiornare lo slippage in base ai pesi degli asset.
      */
-    /**
-     * @dev Funzione per aggiornare lo slippage in base ai pesi degli asset.
-     */
     function updateSlippage() internal {
         (bool[] memory directions, uint256[] memory deviations) = getDeviations();
 
         uint256 sdf = 100; // Fattore di riduzione applicato alla deviazione
-        uint256 slippageLimit = 300; // Limite massimo per lo slippage (3%)
+        uint256 slippageLimit = 10; // Limite massimo per lo slippage (3%)
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
             uint256 previousSlippage = assetInfos[i].slippage;
 
             // Se la deviazione è inferiore al fattore di scala, imposta lo slippage a sdf (1%)
             if (deviations[i] <= sdf) {
-                assetInfos[i].slippage = sdf;
+                assetInfos[i].slippage = slippageLimit;
                 continue;
             }
 
@@ -353,7 +353,7 @@ contract BaluniV1Pool is
                     require(assetInfos[i].slippage <= previousSlippage, 'Underflow decrementing slippage');
                 } else {
                     // Se lo slippage è troppo basso per essere ridotto, imposta lo slippage a sdf (1%)
-                    assetInfos[i].slippage = sdf;
+                    assetInfos[i].slippage += deviations[i] / sdf;
                 }
             }
 
@@ -364,15 +364,25 @@ contract BaluniV1Pool is
         }
     }
 
+    /**
+     * @dev Returns the weight of a token in the pool.
+     * @param token The address of the token.
+     * @return The weight of the token.
+     */
     function getTokenWeight(address token) public view override returns (uint256) {
         for (uint256 i = 0; i < assetInfos.length; i++) {
             if (assetInfos[i].asset == token) {
                 return assetInfos[i].weight;
             }
         }
-        return 0; // Default weight se non trovato
+        return 0; // Default weight if not found
     }
 
+    /**
+     * @dev Returns the deviation for a token in the pool.
+     * @param token The address of the token.
+     * @return The deviation for the token.
+     */
     function getDeviationForToken(address token) public view override returns (uint256) {
         (, uint256[] memory deviations) = getDeviations();
         for (uint256 i = 0; i < assetInfos.length; i++) {
@@ -383,6 +393,10 @@ contract BaluniV1Pool is
         return 0;
     }
 
+    /**
+     * @dev Returns an array of slippage parameters for each token in the pool.
+     * @return An array of slippage parameters.
+     */
     function getSlippageParams() external view override returns (uint256[] memory) {
         uint256[] memory slippages = new uint256[](assetInfos.length);
         for (uint256 i = 0; i < assetInfos.length; i++) {
@@ -506,6 +520,11 @@ contract BaluniV1Pool is
         return shareAfterFee;
     }
 
+    /**
+     * @dev Calculates the asset shares based on the provided share amount.
+     * @param share The share amount to calculate the asset shares for.
+     * @return An array of asset shares corresponding to each asset in the pool.
+     */
     function calculateAssetShare(uint256 share) public view returns (uint256[] memory) {
         uint256 fee = _haircut(share);
         uint256 shareAfterFee = share - fee;
@@ -517,6 +536,11 @@ contract BaluniV1Pool is
         return assetShares;
     }
 
+    /**
+     * @dev Calculates the fee amount based on the provided amount using the haircut formula.
+     * @param amount The amount to calculate the fee for.
+     * @return The fee amount.
+     */
     function _haircut(uint256 amount) internal view returns (uint256) {
         uint256 _BPS_FEE = registry.getBPS_FEE();
         uint256 _BPS_BASE = registry.getBPS_BASE();
@@ -745,6 +769,8 @@ contract BaluniV1Pool is
                 reserves[assetInfos[i].asset] -= assetBalance - balances[i];
             }
         }
+
+        updateSlippage();
 
         emit RebalancePerformed(msg.sender, assets);
     }
