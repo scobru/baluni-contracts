@@ -57,6 +57,19 @@
     },
     {
       "inputs": [],
+      "name": "getBaluniOracle",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getBaluniPoolFactory",
       "outputs": [
         {
@@ -122,12 +135,38 @@
     },
     {
       "inputs": [],
+      "name": "getBaluniSwapper",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getMAX_BPS_FEE",
       "outputs": [
         {
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getStaticOracle",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -241,6 +280,19 @@
       "inputs": [
         {
           "internalType": "address",
+          "name": "_baluniOracle",
+          "type": "address"
+        }
+      ],
+      "name": "setBaluniOracle",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
           "name": "_baluniPoolFactory",
           "type": "address"
         }
@@ -298,6 +350,32 @@
         }
       ],
       "name": "setBaluniRouter",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_baluniSwapper",
+          "type": "address"
+        }
+      ],
+      "name": "setBaluniSwapper",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_staticOracle",
+          "type": "address"
+        }
+      ],
+      "name": "setStaticOracle",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

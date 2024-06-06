@@ -1,83 +1,76 @@
 // SPDX-License-Identifier: GNU AGPLv3
 pragma solidity 0.8.25;
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
+/**
+ * @title IBaluniV1Pool
+ * @dev Interface for the BaluniV1Pool contract
+ */
 interface IBaluniV1Pool {
-    // Views
-    function rebalancer() external view returns (address);
+    struct AssetInfo {
+        address asset;
+        uint256 weight;
+        uint256 slippage;
+    }
 
-    function assets(uint256 index) external view returns (address);
+    event WeightsRebalanced(address indexed user, uint256[] amountsToAdd);
+    event Swap(address indexed user, address fromToken, address toToken, uint256 amountIn, uint256 amountOut);
+    event Withdraw(address indexed user, uint256 amount);
+    event Deposit(address indexed user, uint256 amount);
+    event RebalancePerformed(address indexed user, address[] assets);
 
-    function weights(uint256 index) external view returns (uint256);
+    function initialize(
+        address[] memory _assets,
+        uint256[] memory _weights,
+        uint256 _trigger,
+        address _registry
+    ) external;
 
-    function trigger() external view returns (uint256);
-
-    function ONE() external view returns (uint256);
-
-    function router() external view returns (address);
-
-    function SWAP_FEE_BPS() external view returns (uint256);
-
-    function getReserves() external view returns (uint256[] memory);
-
-    function getAssets() external view returns (address[] memory);
-
-    function getAssetReserve(address asset) external view returns (uint256);
-
-    function getWeights() external view returns (uint256[] memory);
-
-    function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256);
-
-    function performRebalanceIfNeeded()
-        external
-        returns (uint256[] memory amountsToAdd, uint256[] memory amountsToRemove);
-
-    function getDeviation() external view returns (bool[] memory directions, uint256[] memory deviations);
-
-    function assetLiquidity(uint256 assetIndex) external view returns (uint256);
-
-    function liquidity() external view returns (uint256);
-
-    function unitPrice() external view returns (uint256);
+    function rebalanceAndDeposit(address receiver) external returns (uint256[] memory);
 
     function swap(
         address fromToken,
         address toToken,
         uint256 amount,
-        address receiver
-    ) external returns (uint256 toSend);
+        uint256 minAmount,
+        address receiver,
+        uint256 deadline
+    ) external returns (uint256 amountOut, uint256 fee);
 
-    function mint(address to, uint256[] memory amounts) external returns (uint256);
+    function quotePotentialSwap(address fromToken, address toToken, uint256 amount) external view returns (uint256);
 
-    function burn(address to) external returns (uint256[] memory);
+    function getSlippage(address token) external view returns (uint256);
 
-    function changeRebalancer(address _newRebalancer) external;
+    function getTokenWeight(address token) external view returns (uint256);
 
-    function changeRouter(address _newRouter) external;
+    function getDeviationForToken(address token) external view returns (uint256);
 
-    function computeTotalValuation() external view returns (uint256 totalVal, uint256[] memory valuations);
+    function getSlippageParams() external view returns (uint256[] memory);
 
-    function updateReserves(uint256[] memory amounts, bool increase) external;
+    function deposit(address to, uint256[] memory amounts, uint256 deadline) external returns (uint256);
 
-    function rebalanceWeights(address receiver) external returns (uint256[] memory);
+    function withdraw(uint256 share, address to, uint256 deadline) external returns (uint256[] memory);
 
-    struct AssetInfo {
-        address asset;
-        uint256 weight;
-    }
+    function getAmountOut(address fromToken, address toToken, uint256 amount) external view returns (uint256);
 
-    function assetInfos(uint _index) external view returns (AssetInfo memory);
+    function rebalance() external;
 
-    // Events
-    event RebalancePerformed(address indexed by, address[] assets);
-    event WeightsRebalanced(address indexed user, uint256[] amountsAdded);
-    event Burn(address indexed user, uint256 sharesBurned);
-    event Mint(address indexed to, uint256 sharesMinted);
-    event Swap(
-        address indexed user,
-        address indexed fromToken,
-        address indexed toToken,
-        uint256 amountIn,
-        uint256 amountOut
-    );
+    function getDeviations() external view returns (bool[] memory directions, uint256[] memory deviations);
+
+    function assetLiquidity(uint256 assetIndex) external view returns (uint256);
+
+    function totalValuation() external view returns (uint256 totalVal, uint256[] memory valuations);
+
+    function liquidity() external view returns (uint256);
+
+    function unitPrice() external view returns (uint256);
+
+    function getReserves() external view returns (uint256[] memory);
+
+    function getAssetReserve(address asset) external view returns (uint256);
+
+    function getAssets() external view returns (address[] memory);
+
+    function getWeights() external view returns (uint256[] memory);
+
+    function isRebalanceNeeded() external view returns (bool);
 }

@@ -24,11 +24,12 @@ const WETH = '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'
 const TREASURY = '0x0C01CDE1cCAcD1e47740F3728872Aeb7C69703C2'
 
 const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
+  /*  const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
   const baluniV1Registry = await upgrades.deployProxy(BaluniV1Registry, [], { kind: 'uups' })
   const registry = await baluniV1Registry?.waitForDeployment()
   console.log('BaluniV1Registry deployed to:', registry.target)
 
+  // set constnt
   await registry.setWNATIVE(WNATIVE)
   await registry.setUSDC(USDC)
   await registry.set1inchSpotAgg(_1INCHSPOTAGG)
@@ -37,6 +38,24 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   await registry.setUniswapRouter(uniswapRouter)
   await registry.setBaluniRegistry(await registry.getAddress())
 
+  const BaluniV1Swapper = await ethers.getContractFactory('BaluniV1Swapper')
+  const baluniSwapper = await upgrades.deployProxy(BaluniV1Swapper, [await registry.getAddress()], {
+    kind: 'uups',
+  })
+  const instanceSwapper = await baluniSwapper?.waitForDeployment()
+  console.log('BaluniV1Swapper deployed to:', instanceSwapper.target)
+
+  await registry.setBaluniSwapper(await instanceSwapper.target)
+
+  const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
+  const baluniOracle = await upgrades.deployProxy(BaluniV1Oracle, [await registry.getAddress()], {
+    kind: 'uups',
+  })
+  const instanceOracle = await baluniOracle?.waitForDeployment()
+  console.log('BaluniV1Oracle deployed to:', instanceOracle.target)
+
+  await registry.setBaluniOracle(await instanceOracle.target)
+
   const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
   const baluniRebalancer = await upgrades.deployProxy(BaluniV1Rebalancer, [await registry.getAddress()], {
     kind: 'uups',
@@ -44,16 +63,20 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const instanceRebalance = await baluniRebalancer?.waitForDeployment()
   console.log('BaluniV1Rebalance deployed to:', instanceRebalance.target)
 
-  await registry.setBaluniRebalancer(await instanceRebalance.target)
+  await registry.setBaluniRebalancer(await instanceRebalance.target) */
 
   const BaluniV1AgentFactory = await ethers.getContractFactory('BaluniV1AgentFactory')
-  const agentFactory = await upgrades.deployProxy(BaluniV1AgentFactory, [await registry.getAddress()], {
-    kind: 'uups',
-  })
+  const agentFactory = await upgrades.deployProxy(
+    BaluniV1AgentFactory,
+    ['0xCF4d4CCfE28Ef12d4aCEf2c9F5ebE6BE72Abe182'],
+    {
+      kind: 'uups',
+    }
+  )
   const instanceAgentFactory = await agentFactory?.waitForDeployment()
   console.log('BaluniV1AgentFactory deployed to:', instanceAgentFactory.target)
 
-  await registry.setBaluniAgentFactory(await instanceAgentFactory.target)
+  /* await registry.setBaluniAgentFactory(await instanceAgentFactory.target)
 
   const BaluniV1Router = await ethers.getContractFactory('BaluniV1Router')
   const baluniRouter = await upgrades.deployProxy(BaluniV1Router, [await registry.getAddress()], {
@@ -89,7 +112,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   await instancePoolFactory.createPool([USDT, USDC], [5000, 5000], 500)
   await instancePoolFactory.createPool([WBTC, USDC, WETH], [5000, 3000, 2000], 500)
   await instancePoolFactory.createPool([WETH, USDC], [8000, 2000], 500)
-  await instancePoolFactory.createPool([WNATIVE, USDC], [8000, 2000], 500)
+  await instancePoolFactory.createPool([WNATIVE, USDC], [8000, 2000], 500) */
 }
 
 export default deployProtocol
