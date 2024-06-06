@@ -439,7 +439,6 @@ contract BaluniV1Pool is
         uint256 deadline
     ) external override ensure(deadline) nonReentrant whenNotPaused returns (uint256[] memory) {
         uint256 _BPS_FEE = registry.getBPS_FEE();
-        address periphery = registry.getBaluniPoolPeriphery();
 
         require(share > 0, 'Share must be greater than 0');
         transferFrom(msg.sender, address(this), share);
@@ -452,9 +451,7 @@ contract BaluniV1Pool is
         uint256 shareAfterFee = share - fee;
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
-            uint256 assetBalance = getAssetReserve(
-                assetInfos[i].asset
-            );
+            uint256 assetBalance = getAssetReserve(assetInfos[i].asset);
             amounts[i] = (assetBalance * shareAfterFee) / totalSupply;
             IERC20(assetInfos[i].asset).transfer(to, amounts[i]);
         }
@@ -573,8 +570,14 @@ contract BaluniV1Pool is
      * @return An array of reserves.
      */
     function getReserves() public view override returns (uint256[] memory) {
-        address periphery = registry.getBaluniPoolPeriphery();
-        return IBaluniV1PoolPeriphery(periphery).getReserves(address(this));
+        uint256[] memory _reserves = new uint256[](assetInfos.length);
+
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            address asset = assetInfos[i].asset;
+            _reserves[i] = reserves[asset];
+        }
+
+        return _reserves;
     }
 
     /**
@@ -583,8 +586,7 @@ contract BaluniV1Pool is
      * @return The reserve amount of the asset.
      */
     function getAssetReserve(address asset) public view override returns (uint256) {
-        address periphery = registry.getBaluniPoolPeriphery();
-        return IBaluniV1PoolPeriphery(periphery).getAssetReserve(address(this), asset);
+        return reserves[asset];
     }
 
     /**
