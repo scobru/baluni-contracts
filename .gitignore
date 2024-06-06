@@ -11,6 +11,7 @@ temp
 #Hardhat files
 cache
 bin
+bin/contracts
 # artifacts
 
 #zkSync files
