@@ -306,36 +306,44 @@ contract BaluniV1Pool is
     /**
      * @dev Funzione per aggiornare lo slippage in base ai pesi degli asset.
      */
+    /**
+     * @dev Funzione per aggiornare lo slippage in base ai pesi degli asset.
+     */
     function updateSlippage() internal {
         (bool[] memory directions, uint256[] memory deviations) = getDeviations();
 
-        uint256 sdf = 100; // scale down factor applied to the deviation
-        uint256 slippageLimit = 300;
+        uint256 sdf = 100; // Fattore di riduzione applicato alla deviazione
+        uint256 slippageLimit = 300; // Limite massimo per lo slippage (3%)
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
             uint256 previousSlippage = assetInfos[i].slippage;
+
+            // Se la deviazione è inferiore al fattore di scala, imposta lo slippage a sdf (1%)
             if (deviations[i] <= sdf) {
-                // 1%
                 assetInfos[i].slippage = sdf;
                 continue;
             }
-            if (directions[i]) {
-                assetInfos[i].slippage += deviations[i] / sdf;
 
+            // Aggiorna lo slippage in base alla direzione della deviazione
+            if (directions[i]) {
+                // Se l'asset è sovrappesato, aumenta lo slippage
+                assetInfos[i].slippage += deviations[i] / sdf;
+                // Verifica per prevenire overflow
                 require(assetInfos[i].slippage >= previousSlippage, 'Overflow incrementing slippage');
             } else {
-                if (assetInfos[i].slippage > deviations[i]) {
+                // Se l'asset è sottopesato, riduci lo slippage
+                if (assetInfos[i].slippage > deviations[i] / sdf) {
                     assetInfos[i].slippage -= deviations[i] / sdf;
-
+                    // Verifica per prevenire underflow
                     require(assetInfos[i].slippage <= previousSlippage, 'Underflow decrementing slippage');
                 } else {
-                    //assetInfos[i].slippage = 0;
-                    assetInfos[i].slippage += deviations[i] / sdf;
+                    // Se lo slippage è troppo basso per essere ridotto, imposta lo slippage a sdf (1%)
+                    assetInfos[i].slippage = sdf;
                 }
             }
 
+            // Limita lo slippage al massimo consentito
             if (assetInfos[i].slippage > slippageLimit) {
-                // 5.3%
                 assetInfos[i].slippage = slippageLimit;
             }
         }
