@@ -265,11 +265,14 @@ contract BaluniV1Pool is
     }
 
     /**
-     * @dev Calcola l'importo effettivo di `toToken` ricevuto tenendo conto dello slippage.
+     * @dev Calculates the potential amount of `toToken` that can be obtained by swapping `amount` of `fromToken`.
+     * This function takes into account the slippage and token weights to provide an accurate estimation.
+     *
      * @param fromToken The address of the token being swapped from.
      * @param toToken The address of the token being swapped to.
      * @param amount The amount of `fromToken` being swapped.
-     * @return The amount of `toToken` received after applying slippage.
+     *
+     * @return The potential amount of `toToken` that can be obtained.
      */
     function quotePotentialSwap(
         address fromToken,
@@ -284,23 +287,18 @@ contract BaluniV1Pool is
         uint256 fromTokenWeight = getTokenWeight(fromToken);
         uint256 toTokenWeight = getTokenWeight(toToken);
 
-        // Calcola slippage
         uint256 slippageFromAmount = ((amountOut * slippageFrom)) / 10000;
         uint256 slippageToAmount = (amountOut * slippageTo) / 10000;
 
-        // Se fromToken è sovrappeso, sottrai slippageFromAmount da amountOut
         if (fromTokenWeight > getDeviationForToken(fromToken)) {
             amountOut = amountOut - slippageFromAmount;
         } else {
-            // Altrimenti, aggiungi slippageFromAmount ad amountOut
             amountOut = amountOut + slippageFromAmount;
         }
 
-        // Se toToken è sottopeso, aggiungi slippageToAmount ad amountOut
         if (toTokenWeight < getDeviationForToken(toToken)) {
             amountOut = amountOut + slippageToAmount;
         } else {
-            // Altrimenti, sottrai slippageToAmount da amountOut
             amountOut = amountOut - slippageToAmount;
         }
 
@@ -322,37 +320,31 @@ contract BaluniV1Pool is
     }
 
     /**
-     * @dev Funzione per aggiornare lo slippage in base ai pesi degli asset.
+     * @dev Updates the slippage for each asset in the pool based on the deviations.
+     * @notice This function is internal and should only be called within the contract.
      */
     function updateSlippage() internal {
         (bool[] memory directions, uint256[] memory deviations) = getDeviations();
 
-        uint256 sdf = 100; // Fattore di riduzione applicato alla deviazione
-        uint256 slippageLimit = 10; // Limite massimo per lo slippage (3%)
+        uint256 sdf = 100;
+        uint256 slippageLimit = 10;
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
             uint256 previousSlippage = assetInfos[i].slippage;
 
-            // Se la deviazione è inferiore al fattore di scala, imposta lo slippage a sdf (1%)
             if (deviations[i] <= sdf) {
                 assetInfos[i].slippage = slippageLimit;
                 continue;
             }
 
-            // Aggiorna lo slippage in base alla direzione della deviazione
             if (directions[i]) {
-                // Se l'asset è sovrappesato, aumenta lo slippage
                 assetInfos[i].slippage += deviations[i] / sdf;
-                // Verifica per prevenire overflow
                 require(assetInfos[i].slippage >= previousSlippage, 'Overflow incrementing slippage');
             } else {
-                // Se l'asset è sottopesato, riduci lo slippage
                 if (assetInfos[i].slippage > deviations[i] / sdf) {
                     assetInfos[i].slippage -= deviations[i] / sdf;
-                    // Verifica per prevenire underflow
                     require(assetInfos[i].slippage <= previousSlippage, 'Underflow decrementing slippage');
                 } else {
-                    // Se lo slippage è troppo basso per essere ridotto, imposta lo slippage a sdf (1%)
                     assetInfos[i].slippage += deviations[i] / sdf;
                 }
             }

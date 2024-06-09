@@ -102,8 +102,9 @@ contract BaluniV1AgentFactory is Initializable, OwnableUpgradeable, UUPSUpgradea
      * @return The address of the newly created BaluniV1Agent contract instance.
      */
     function _createAgent(bytes32 salt, address user) internal returns (BaluniV1Agent) {
+        require(address(registry) != address(0), 'registry not set');
         address clone = ClonesUpgradeable.cloneDeterministic(implementation, salt);
-        BaluniV1Agent(clone).initialize(user, address(registry));
+        BaluniV1Agent(clone).initialize(user);
         return BaluniV1Agent(clone);
     }
 
@@ -144,5 +145,13 @@ contract BaluniV1AgentFactory is Initializable, OwnableUpgradeable, UUPSUpgradea
             size := extcodesize(_addr)
         }
         return size > 0;
+    }
+
+    function changeRegistry(address _newRegistry) external onlyOwner {
+        registry = IBaluniV1Registry(_newRegistry);
+    }
+
+    function getRegistry() external view returns (address) {
+        return address(registry);
     }
 }

@@ -42,6 +42,7 @@ pragma solidity 0.8.25;
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import '../libs/AddressUpgradeable.sol';
 import '../interfaces/IBaluniV1Registry.sol';
+import '../interfaces/IBaluniV1AgentFactory.sol';
 
 /**
  * @title BaluniV1Agent
@@ -70,13 +71,12 @@ contract BaluniV1Agent {
     /**
      * @dev Initializes the contract with the specified owner and router addresses.
      * @param _owner The address of the contract owner.
-     * @param _registry The address of the registry contract.
      */
-    function initialize(address _owner, address _registry) external {
+    function initialize(address _owner) external {
         require(owner == address(0), 'Already initialized');
         owner = _owner;
         factory = msg.sender;
-        registry = IBaluniV1Registry(_registry);
+        registry = IBaluniV1Registry(IBaluniV1AgentFactory(msg.sender).getRegistry());
     }
 
     /**
