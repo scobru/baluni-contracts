@@ -36,20 +36,20 @@ const saveDeploymentInfo = (chainId: number, deploymentInfo: any) => {
   }
 
   const filePath = path.join(dir, 'deployedContracts.json')
-  let data = {}
+  let data: { [key: string]: any } = {}
 
   if (fs.existsSync(filePath)) {
     data = JSON.parse(fs.readFileSync(filePath, 'utf8'))
   }
 
-  data[chainId] = deploymentInfo
+  data[String(chainId)] = deploymentInfo
 
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
 }
 
 const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { network } = hre
-  const chainId = network.config.chainId!
+  const chainId = Number(network.config.chainId)
   const deploymentInfo: any = {}
 
   const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')

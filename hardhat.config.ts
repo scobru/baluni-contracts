@@ -80,6 +80,7 @@ const config: HardhatUserConfig = {
     polygon: {
       url: `https://polygon-mainnet.g.alchemy.com/v2/${providerApiKey}`,
       accounts: [deployerPrivateKey],
+      chainId: 137,
     },
     polygonMumbai: {
       url: `https://polygon-mumbai.g.alchemy.com/v2/${providerApiKey}`,
