@@ -37,4 +37,3 @@ BaluniV1AgentFactory deployed to: 0xC061Af133128b673e89630f13801F7B004186c4a
 BaluniV1Router deployed to: 0xFd0cee270a2DC3EF70282781Ee68C383E9D1e9aB
 BaluniV1PoolPeriphery deployed to: 0x422A0825C7bbB46BD4f202555acD10B3d4E43397
 BaluniV1PoolRegistry deployed to: 0xf5761352588946eDc23bF81b60F258B14Bb0c9C9
-gi
