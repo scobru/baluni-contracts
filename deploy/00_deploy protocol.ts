@@ -4,7 +4,6 @@ import { DeployFunction } from 'hardhat-deploy/types'
 import { ethers, upgrades } from 'hardhat'
 import fs from 'fs'
 import path from 'path'
-import erc20ABI from '../abis/common/ERC20.json'
 import {
   BaluniV1Pool,
   BaluniV1PoolPeriphery,
@@ -30,17 +29,27 @@ const USDC_E = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'
 
 const TREASURY = '0x0C01CDE1cCAcD1e47740F3728872Aeb7C69703C2'
 
-const saveDeploymentInfo = (deploymentInfo: any) => {
+const saveDeploymentInfo = (chainId: number, deploymentInfo: any) => {
   const dir = path.resolve(__dirname, '../deployments')
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir)
   }
 
   const filePath = path.join(dir, 'deployedContracts.json')
-  fs.writeFileSync(filePath, JSON.stringify(deploymentInfo, null, 2))
+  let data = {}
+
+  if (fs.existsSync(filePath)) {
+    data = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+  }
+
+  data[chainId] = deploymentInfo
+
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
 }
 
 const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  const { network } = hre
+  const chainId = network.config.chainId!
   const deploymentInfo: any = {}
 
   const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
@@ -173,7 +182,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   await baluniV1PoolRegistry.addPool(baluniV1Pool2.target)
 
   // Save the deployment information to the deployment folder
-  saveDeploymentInfo(deploymentInfo)
+  saveDeploymentInfo(chainId, deploymentInfo)
 }
 
 export default deployProtocol
