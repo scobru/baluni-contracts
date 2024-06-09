@@ -154,4 +154,8 @@ contract BaluniV1AgentFactory is Initializable, OwnableUpgradeable, UUPSUpgradea
     function getRegistry() external view returns (address) {
         return address(registry);
     }
+
+    function changeRegistryAddress(address _newAddress) external onlyOwner {
+        registry = IBaluniV1Registry(_newAddress);
+    }
 }

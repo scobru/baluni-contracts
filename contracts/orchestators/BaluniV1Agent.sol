@@ -56,8 +56,6 @@ contract BaluniV1Agent {
     address internal constant _NATIVE = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     uint256 internal constant _DUST = 10;
 
-    IBaluniV1Registry public registry;
-
     struct Call {
         address to;
         uint256 value;
@@ -76,7 +74,6 @@ contract BaluniV1Agent {
         require(owner == address(0), 'Already initialized');
         owner = _owner;
         factory = msg.sender;
-        registry = IBaluniV1Registry(IBaluniV1AgentFactory(msg.sender).getRegistry());
     }
 
     /**
@@ -85,8 +82,7 @@ contract BaluniV1Agent {
      * @notice If the caller is not the router, the function call will revert.
      */
     modifier onlyRouter() {
-        address router = registry.getBaluniRouter();
-        require(msg.sender == router, 'Callable only by the router');
+        require(msg.sender == getRouter(), 'Callable only by the router');
         _;
     }
 
@@ -110,7 +106,7 @@ contract BaluniV1Agent {
      * @return The address of the router contract.
      */
     function getRouter() public view returns (address) {
-        return registry.getBaluniRouter();
+        return IBaluniV1Registry(IBaluniV1AgentFactory(factory).getRegistry()).getBaluniRouter();
     }
 
     /**
@@ -126,6 +122,7 @@ contract BaluniV1Agent {
      * @param tokensReturn The array of tokens to charge fees for.
      */
     function _chargeFees(address[] memory tokensReturn) internal {
+        IBaluniV1Registry registry = IBaluniV1Registry(IBaluniV1AgentFactory(factory).getRegistry());
         address router = registry.getBaluniRouter();
         uint256 amount;
         uint256 bpsFee = registry.getBPS_FEE();

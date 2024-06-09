@@ -6,5 +6,5 @@ interface IBaluniV1AgentFactory {
 
     function getOrCreateAgent(address user) external returns (address);
 
-    function getRegistry() external returns (address);
+    function getRegistry() external view returns (address);
 }

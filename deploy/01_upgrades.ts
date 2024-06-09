@@ -90,6 +90,21 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   const instancePeriphery = await baluniPeriphery?.waitForDeployment()
   console.log('BaluniV1Periphery upgraded to:', instancePeriphery.target) */
 
+  const BaluniV1AgentFactory = await ethers.getContractFactory('BaluniV1AgentFactory')
+  await upgrades.prepareUpgrade('0xCa1C2a003e33223cF5356E8ecA99561DC40904f9', BaluniV1AgentFactory)
+  const baluniAgentFactory = await upgrades.upgradeProxy(
+    '0xCa1C2a003e33223cF5356E8ecA99561DC40904f9',
+    BaluniV1AgentFactory,
+    {
+      kind: 'uups',
+      call: {
+        fn: 'reinitialize',
+        args: ['0x9eD5C2c3a0d1B68c659e053Bd5B47829C1BaE60F', 3],
+      },
+    }
+  )
+  await baluniAgentFactory?.waitForDeployment()
+  console.log('BaluniV1AgentFactory upgraded to:', baluniAgentFactory.target)
   /* const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
   await upgrades.prepareUpgrade('0x3Ad437171b054FD16c013ec7f62254C052A0DCE7', BaluniV1Oracle)
   const baluniOracle = await upgrades.upgradeProxy('0x3Ad437171b054FD16c013ec7f62254C052A0DCE7', BaluniV1Oracle, {

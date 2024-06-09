@@ -99,7 +99,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const BaluniV1AgentFactory = await ethers.getContractFactory('BaluniV1AgentFactory')
   const agentFactory = (await upgrades.deployProxy(
     BaluniV1AgentFactory,
-    ['0xCF4d4CCfE28Ef12d4aCEf2c9F5ebE6BE72Abe182'],
+    [registry.target],
     {
       kind: 'uups',
     }
