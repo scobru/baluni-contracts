@@ -194,7 +194,8 @@ contract BaluniV1Pool is
 
         _mint(receiver, totalAddedLiquidity);
 
-        updateSlippage();
+        _updateSlippage();
+        _update();
 
         emit WeightsRebalanced(msg.sender, amountsToAdd);
 
@@ -235,12 +236,6 @@ contract BaluniV1Pool is
         bool transferInSuccess = IERC20(fromToken).transferFrom(msg.sender, address(this), amount);
         require(transferInSuccess, 'Token transfer failed');
 
-        for (uint256 i = 0; i < assetInfos.length; i++) {
-            if (assetInfos[i].asset == fromToken) {
-                assetInfos[i].reserve += amount;
-            }
-        }
-
         uint256 receivedAmount = quotePotentialSwap(fromToken, toToken, amount);
         require(getAssetReserve(toToken) >= receivedAmount, 'Insufficient Liquidity');
 
@@ -249,15 +244,11 @@ contract BaluniV1Pool is
         require(amountOut > 0, 'Amount to send must be greater than 0');
         require(amountOut >= minAmount, 'Amount out must be greater than min amount');
 
-        for (uint256 i = 0; i < assetInfos.length; i++) {
-            if (assetInfos[i].asset == toToken) {
-                assetInfos[i].reserve -= amountOut;
-            }
-        }
-
-        updateSlippage();
         bool transferOutSuccess = IERC20(toToken).transfer(receiver, amountOut);
         require(transferOutSuccess, 'Token transfer failed');
+
+        _updateSlippage();
+        _update();
 
         emit Swap(receiver, fromToken, toToken, amount, amountOut);
 
@@ -323,7 +314,7 @@ contract BaluniV1Pool is
      * @dev Updates the slippage for each asset in the pool based on the deviations.
      * @notice This function is internal and should only be called within the contract.
      */
-    function updateSlippage() internal {
+    function _updateSlippage() internal {
         (bool[] memory directions, uint256[] memory deviations) = getDeviations();
 
         uint256 sdf = 100;
@@ -417,7 +408,6 @@ contract BaluniV1Pool is
             address asset = assetInfos[i].asset;
             bool success = IERC20(asset).transferFrom(msg.sender, address(this), amounts[i]);
             require(success, 'BaluniV1Pool: Transfer from failed');
-            assetInfos[i].reserve += amounts[i];
 
             uint256 valuation;
 
@@ -446,7 +436,8 @@ contract BaluniV1Pool is
 
         _mint(to, toMint);
 
-        updateSlippage();
+        _updateSlippage();
+        _update();
 
         emit Deposit(to, toMint);
 
@@ -491,7 +482,6 @@ contract BaluniV1Pool is
             );
             bool transferSuccess = IERC20(assetInfos[i].asset).transfer(to, calculateAssetShare(shareAfterFee)[i]);
             require(transferSuccess, 'Asset transfer failed');
-            assetInfos[i].reserve -= calculateAssetShare(shareAfterFee)[i];
         }
 
         require(balanceOf(address(this)) >= shareAfterFee, 'Insufficient BALUNI liquidity');
@@ -505,7 +495,8 @@ contract BaluniV1Pool is
 
         _burn(address(this), shareAfterFee);
 
-        updateSlippage();
+        _updateSlippage();
+        _update();
 
         emit Withdraw(to, shareAfterFee);
 
@@ -728,17 +719,12 @@ contract BaluniV1Pool is
      * @notice This function should only be called internally.
      */
     function _performRebalanceIfNeeded() internal {
-        address periphery = registry.getBaluniPoolPeriphery();
         address rebalancer = registry.getBaluniRebalancer();
-
         address[] memory assets = getAssets();
         uint256[] memory weights = getWeights();
-
         uint256 _BPS_BASE = registry.getBPS_BASE();
-
         uint256 balance = balanceOf(msg.sender);
         uint256 totalSupply = totalSupply();
-
         require((balance * _BPS_BASE) / totalSupply >= 100, 'Insufficient balance');
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
@@ -749,20 +735,18 @@ contract BaluniV1Pool is
         }
 
         uint256[] memory balances = getReserves();
+        IBaluniV1Rebalancer(rebalancer).rebalance(
+            balances,
+            assets,
+            weights,
+            trigger,
+            address(this),
+            address(this),
+            baseAsset
+        );
 
-        IBaluniV1Rebalancer(rebalancer).rebalance(balances, assets, weights, trigger, periphery, periphery, baseAsset);
-
-        for (uint256 i = 0; i < assetInfos.length; i++) {
-            uint256 assetBalance = IERC20(assetInfos[i].asset).balanceOf(address(this));
-
-            if (assetBalance > balances[i]) {
-                reserves[assetInfos[i].asset] += balances[i] - assetBalance;
-            } else {
-                reserves[assetInfos[i].asset] -= assetBalance - balances[i];
-            }
-        }
-
-        updateSlippage();
+        _updateSlippage();
+        _update();
 
         emit RebalancePerformed(msg.sender, assets);
     }
@@ -872,5 +856,11 @@ contract BaluniV1Pool is
      */
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    function _update() internal {
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            assetInfos[i].reserve = IERC20(assetInfos[i].asset).balanceOf(address(this));
+        }
     }
 }

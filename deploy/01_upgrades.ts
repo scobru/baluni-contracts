@@ -50,25 +50,25 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
 
   await instanceRegistry.setStaticOracle('0xB210CE856631EeEB767eFa666EC7C1C57738d438') */
 
-  /* const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
-  await upgrades.prepareUpgrade('0x9273120cd27226B55b2438CeC06E624163AeeFb1', BaluniV1Rebalancer)
-  const rebalancer = await upgrades.upgradeProxy('0x9273120cd27226B55b2438CeC06E624163AeeFb1', BaluniV1Rebalancer, {
+  /*  const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
+  await upgrades.prepareUpgrade('0x8c4eDC7a07B372606009E345017C2cB74d043578', BaluniV1Rebalancer)
+  const rebalancer = await upgrades.upgradeProxy('0x8c4eDC7a07B372606009E345017C2cB74d043578', BaluniV1Rebalancer, {
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: ['0xCF4d4CCfE28Ef12d4aCEf2c9F5ebE6BE72Abe182', 21],
+      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 30],
     },
   })
   const instanceRebalancer = await rebalancer?.waitForDeployment()
   console.log('BaluniV1Rebalancer upgraded to:', instanceRebalancer.target) */
 
-  /* const BaluniV1Swapper = await ethers.getContractFactory('BaluniV1Swapper')
-  await upgrades.prepareUpgrade('0xfd308a0bE8c5a682F61aA0f01Cbb704a7A33AB7c', BaluniV1Swapper)
-  const swapper = await upgrades.upgradeProxy('0xfd308a0bE8c5a682F61aA0f01Cbb704a7A33AB7c', BaluniV1Swapper, {
+  /*  const BaluniV1Swapper = await ethers.getContractFactory('BaluniV1Swapper')
+  await upgrades.prepareUpgrade('0x1d70473cF880341198C1909E236d29Afe2F220f8', BaluniV1Swapper)
+  const swapper = await upgrades.upgradeProxy('0x1d70473cF880341198C1909E236d29Afe2F220f8', BaluniV1Swapper, {
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: ['0xCF4d4CCfE28Ef12d4aCEf2c9F5ebE6BE72Abe182', 10],
+      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 2],
     },
   })
   await swapper?.waitForDeployment()
@@ -90,7 +90,7 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   const instancePeriphery = await baluniPeriphery?.waitForDeployment()
   console.log('BaluniV1Periphery upgraded to:', instancePeriphery.target) */
 
-  const BaluniV1AgentFactory = await ethers.getContractFactory('BaluniV1AgentFactory')
+  /*  const BaluniV1AgentFactory = await ethers.getContractFactory('BaluniV1AgentFactory')
   await upgrades.prepareUpgrade('0xCa1C2a003e33223cF5356E8ecA99561DC40904f9', BaluniV1AgentFactory)
   const baluniAgentFactory = await upgrades.upgradeProxy(
     '0xCa1C2a003e33223cF5356E8ecA99561DC40904f9',
@@ -104,14 +104,15 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
     }
   )
   await baluniAgentFactory?.waitForDeployment()
-  console.log('BaluniV1AgentFactory upgraded to:', baluniAgentFactory.target)
-  /* const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
-  await upgrades.prepareUpgrade('0x3Ad437171b054FD16c013ec7f62254C052A0DCE7', BaluniV1Oracle)
-  const baluniOracle = await upgrades.upgradeProxy('0x3Ad437171b054FD16c013ec7f62254C052A0DCE7', BaluniV1Oracle, {
+  console.log('BaluniV1AgentFactory upgraded to:', baluniAgentFactory.target) */
+
+  /*  const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
+  await upgrades.prepareUpgrade('0xD8dDca643684e67c17087B7cF6CeE08C91F12511', BaluniV1Oracle)
+  const baluniOracle = await upgrades.upgradeProxy('0xD8dDca643684e67c17087B7cF6CeE08C91F12511', BaluniV1Oracle, {
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: ['0xCF4d4CCfE28Ef12d4aCEf2c9F5ebE6BE72Abe182', 14],
+      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 7],
     },
   })
   await baluniOracle?.waitForDeployment()
@@ -128,6 +129,14 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   })
   await baluniRouter?.waitForDeployment()
   console.log('BaluniV1Router upgraded to:', baluniRouter.target) */
+
+  const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
+  await upgrades.prepareUpgrade('0xabEEAbbEaf1D160031e4BB2AC2918C8EeE73E9aa', BaluniV1Pool)
+  const baluniPool = await upgrades.upgradeProxy('0xabEEAbbEaf1D160031e4BB2AC2918C8EeE73E9aa', BaluniV1Pool, {
+    kind: 'uups',
+  })
+  await baluniPool?.waitForDeployment()
+  console.log('BaluniV1Pool upgraded to:', baluniPool.target)
 
   // const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
   // await upgrades.prepareUpgrade(factoryAddress, BaluniV1PoolFactory);

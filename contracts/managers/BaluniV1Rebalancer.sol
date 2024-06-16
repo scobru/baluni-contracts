@@ -53,6 +53,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
     struct RebalanceVars {
         uint256 length;
         uint256 totalValue;
+        uint256[] valuations;
         uint256 finalUsdBalance;
         uint256 overweightVaultsLength;
         uint256 underweightVaultsLength;
@@ -96,8 +97,11 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         address receiver,
         address baseAsset
     ) external {
-        address USDC = registry.getUSDC();
         address WNATIVE = registry.getWNATIVE();
+
+        require(assets.length > 0, 'No assets provided');
+        require(balances.length == assets.length, 'Mismatched balances and assets length');
+        require(weights.length == assets.length, 'Mismatched weights and assets length');
 
         if (balances.length == 0) {
             for (uint256 i = 0; i < assets.length; i++) {
@@ -110,17 +114,21 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         for (uint256 i = 0; i < vars.overweightVaults.length; i++) {
             if (vars.overweightAmounts[i] > 0) {
                 address asset = assets[vars.overweightVaults[i]];
-                require(scaleUp(vars.balances[i], 18) >= vars.overweightAmounts[i], 'Under Overweight Amount');
-
-                // check aallowance
-                uint256 allowance = IERC20(asset).allowance(sender, address(this));
-                require(allowance >= vars.overweightAmounts[i], 'Allowance under Overweight Amount');
-
-                IERC20(asset).transferFrom(sender, address(this), vars.overweightAmounts[i]);
-
                 if (asset == baseAsset) {
                     continue;
                 }
+                require(
+                    vars.balances[vars.overweightVaults[i]] >= vars.overweightAmounts[i],
+                    'BaluniV1Rebalancer: Under Overweight Amount!!'
+                );
+
+                uint256 allowance = IERC20(asset).allowance(sender, address(this));
+                require(
+                    allowance >= vars.overweightAmounts[i],
+                    'BaluniV1Rebalancer: Allowance under Overweight Amount'
+                );
+
+                IERC20(asset).transferFrom(sender, address(this), vars.overweightAmounts[i]);
 
                 address baluniSwapper = registry.getBaluniSwapper();
                 IERC20(asset).approve(baluniSwapper, vars.overweightAmounts[i]);
@@ -144,8 +152,8 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
             }
         }
 
-        uint256 usdBalance = IERC20(USDC).balanceOf(address(this));
-        require(usdBalance >= vars.amountOut, 'Insufficient USDC Balance');
+        uint256 baseAssetBalance = IERC20(baseAsset).balanceOf(address(this));
+        require(baseAssetBalance >= vars.amountOut, 'Insufficient base asset balance');
 
         address[] memory _assets = assets;
         uint256 BPS_BASE = registry.getBPS_BASE();
@@ -153,56 +161,48 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         for (uint256 i = 0; i < vars.underweightVaults.length; i++) {
             if (vars.underweightAmounts[i] > 0) {
                 address asset = _assets[vars.underweightVaults[i]];
+
                 uint256 rebaseActiveWgt = (vars.underweightAmounts[i] * BPS_BASE) / vars.totalActiveWeight;
-                uint256 rebBuyQty = (rebaseActiveWgt * scaleUp(usdBalance, 6)) / BPS_BASE;
+                uint256 rebBuyQty = (rebaseActiveWgt * vars.amountOut) / BPS_BASE;
                 address _receiver = receiver;
 
                 if (asset == baseAsset) {
-                    IERC20(USDC).transfer(_receiver, scaleDown(rebBuyQty, 6));
+                    IERC20(baseAsset).transfer(_receiver, rebBuyQty);
                     continue;
                 }
 
-                if (rebBuyQty > 0 && rebBuyQty <= scaleUp(usdBalance, 6)) {
-                    require(usdBalance >= scaleDown(rebBuyQty, 6), 'Balance under RebuyQty');
+                require(rebBuyQty > 0, 'Rebalance buy quantity is zero');
+                require(rebBuyQty <= baseAssetBalance, 'Rebalance buy quantity exceeds base asset balance');
 
-                    address baluniSwapper = registry.getBaluniSwapper();
-                    IERC20(baseAsset).approve(baluniSwapper, rebBuyQty / 1e12);
+                address baluniSwapper = registry.getBaluniSwapper();
+                IERC20(baseAsset).approve(baluniSwapper, rebBuyQty);
 
-                    uint256 amountOut;
-                    if (asset == address(WNATIVE)) {
-                        amountOut = IBaluniV1Swapper(baluniSwapper).singleSwap(
-                            baseAsset,
-                            asset,
-                            scaleDown(rebBuyQty, 6),
-                            address(this)
-                        );
-                    } else {
-                        amountOut = IBaluniV1Swapper(baluniSwapper).multiHopSwap(
-                            baseAsset,
-                            address(WNATIVE),
-                            asset,
-                            scaleDown(rebBuyQty, 6),
-                            address(this)
-                        );
-                    }
-
-                    vars.amountOut = amountOut;
-                    uint256 amountToReceiver = calculateNetAmountAfterFee(amountOut);
-                    uint256 remainingToReceiver = amountOut - amountToReceiver;
-                    uint256 amountToRouter = calculateNetAmountAfterFee(remainingToReceiver);
-                    uint256 amountToTreasury = remainingToReceiver - amountToRouter;
-
-                    require(
-                        IERC20(asset).balanceOf(address(this)) >= amountToReceiver,
-                        'Balance under amountToTransfer'
+                uint256 amountOut;
+                if (asset == address(WNATIVE)) {
+                    amountOut = IBaluniV1Swapper(baluniSwapper).singleSwap(baseAsset, asset, rebBuyQty, address(this));
+                } else {
+                    amountOut = IBaluniV1Swapper(baluniSwapper).multiHopSwap(
+                        baseAsset,
+                        address(WNATIVE),
+                        asset,
+                        rebBuyQty,
+                        address(this)
                     );
-                    address baluniRouter = registry.getBaluniRouter();
-                    address treasury = registry.getTreasury();
-
-                    IERC20(asset).transfer(address(_receiver), amountToReceiver);
-                    IERC20(asset).transfer(address(baluniRouter), amountToRouter);
-                    IERC20(asset).transfer(address(treasury), amountToTreasury);
                 }
+
+                vars.amountOut = amountOut;
+                uint256 amountToReceiver = calculateNetAmountAfterFee(amountOut);
+                uint256 remainingToReceiver = amountOut - amountToReceiver;
+                uint256 amountToRouter = calculateNetAmountAfterFee(remainingToReceiver);
+                uint256 amountToTreasury = remainingToReceiver - amountToRouter;
+
+                require(IERC20(asset).balanceOf(address(this)) >= amountToReceiver, 'Balance under amount to transfer');
+                address baluniRouter = registry.getBaluniRouter();
+                address treasury = registry.getTreasury();
+
+                IERC20(asset).transfer(_receiver, amountToReceiver);
+                IERC20(asset).transfer(baluniRouter, amountToRouter);
+                IERC20(asset).transfer(treasury, amountToTreasury);
             }
         }
     }
@@ -226,6 +226,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         address baseAsset
     ) public view returns (RebalanceVars memory) {
         uint256[] memory _balances = new uint256[](assets.length);
+
         if (balances.length == 0) {
             for (uint256 i = 0; i < assets.length; i++) {
                 _balances[i] = IERC20(assets[i]).balanceOf(sender);
@@ -233,6 +234,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         } else {
             _balances = balances;
         }
+
         return _checkRebalance(_balances, assets, weights, limit, baseAsset);
     }
 
@@ -252,11 +254,11 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         uint256 limit,
         address baseAsset
     ) internal view returns (RebalanceVars memory) {
-        uint256 totalValue = calculateTotalValueScaled(balances, assets, baseAsset);
-
+        (uint256 totalValue, uint256[] memory valuations) = calculateTotalValueScaled(balances, assets, baseAsset);
         RebalanceVars memory vars = RebalanceVars(
             assets.length,
             totalValue,
+            valuations,
             0,
             0,
             0,
@@ -266,47 +268,38 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
             new uint256[](assets.length * 2),
             new uint256[](assets.length * 2),
             new uint256[](assets.length * 2),
-            new uint256[](assets.length)
+            balances
         );
 
-        // STACK TO DEEP reassignment
-        address[] memory _assets = assets;
-        uint256[] memory _weights = weights;
         uint256 _limit = limit;
-        address _baseAsset = baseAsset;
-        uint256 _totalValue = totalValue;
+        uint256 _totalVal = totalValue;
 
         RebalanceVars memory _vars = vars;
 
-        _vars.balances = balances;
-
-        for (uint256 i = 0; i < _assets.length; i++) {
-            uint256 decimals = IERC20Metadata(_assets[i]).decimals();
-            uint256 tokensTotalValue;
-            uint256 baseAssetDecimals = IERC20Metadata(_baseAsset).decimals();
-
+        for (uint256 i = 0; i < assets.length; i++) {
             IBaluniV1Oracle baluniOracle = IBaluniV1Oracle(registry.getBaluniOracle());
-            uint256 unit = 1 * 10 ** decimals;
-            uint256 priceScaled = baluniOracle.convertScaled(_assets[i], _baseAsset, unit);
-
-            if (_assets[i] == address(_baseAsset)) {
-                tokensTotalValue = scaleUp(_vars.balances[i], baseAssetDecimals);
-            } else {
-                tokensTotalValue = scaleUp(baluniOracle.convert(_assets[i], _baseAsset, _vars.balances[i]), decimals);
-            }
-
-            uint256 BSP_BASE = registry.getBPS_BASE();
-
-            uint256 targetWeight = _weights[i];
-            uint256 currentWeight = (tokensTotalValue * BSP_BASE) / _totalValue;
+            address asset = assets[i];
+            address _baseAsset = baseAsset;
+            uint256 targetWeight = weights[i];
+            uint256 currentWeight = (valuations[i] * registry.getBPS_BASE()) / _totalVal;
             bool overweight = currentWeight > targetWeight;
             uint256 overweightPercent = overweight ? currentWeight - targetWeight : targetWeight - currentWeight;
 
             if (overweight && overweightPercent > _limit) {
-                uint256 overweightAmount = (overweightPercent * _totalValue) / BSP_BASE;
+                uint256 overweightAmount = (overweightPercent * _totalVal) / registry.getBPS_BASE();
                 _vars.finalUsdBalance += overweightAmount;
-                overweightAmount = (overweightAmount * 1e18) / priceScaled;
-                overweightAmount = scaleDown(overweightAmount, decimals);
+
+                if (asset == _baseAsset) {
+                    overweightAmount = overweightAmount;
+                    overweightAmount = scaleDown(overweightAmount, IERC20Metadata(asset).decimals());
+                } else {
+                    overweightAmount = baluniOracle.convert(
+                        _baseAsset,
+                        asset,
+                        scaleDown(overweightAmount, IERC20Metadata(_baseAsset).decimals())
+                    );
+                }
+
                 _vars.overweightVaults[_vars.overweightVaultsLength] = i;
                 _vars.overweightAmounts[_vars.overweightVaultsLength] = overweightAmount;
                 _vars.overweightVaultsLength++;
@@ -367,23 +360,24 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         uint256[] memory balances,
         address[] memory assets,
         address baseAsset
-    ) private view returns (uint256) {
+    ) private view returns (uint256, uint256[] memory) {
         uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
+        uint256 totVal = 0;
         IBaluniV1Oracle baluniOracle = IBaluniV1Oracle(registry.getBaluniOracle());
-        uint256 _tokenValue = 0;
+        uint256[] memory valuations = new uint256[](assets.length);
 
         for (uint256 i = 0; i < assets.length; i++) {
             if (assets[i] == baseAsset) {
-                _tokenValue += scaleUp(balances[i], baseDecimal);
-                continue;
+                totVal += scaleUp(balances[i], baseDecimal);
+                valuations[i] = scaleUp(balances[i], baseDecimal);
             } else {
-                uint8 assetDecimal = IERC20Metadata(assets[i]).decimals();
-                uint256 valuation = baluniOracle.convert(assets[i], baseAsset, balances[i]);
-                _tokenValue += scaleUp(valuation, assetDecimal);
+                uint256 valuation = baluniOracle.convertScaled(assets[i], baseAsset, balances[i]);
+                totVal += valuation;
+                valuations[i] = valuation;
             }
         }
 
-        return _tokenValue;
+        return (totVal, valuations);
     }
 
     /**
@@ -393,7 +387,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
      * @return The scaled up amount.
      */
     function scaleUp(uint256 amount, uint256 decimals) internal pure returns (uint256) {
-        return amount * (10 ** 18 - decimals);
+        return amount * (10 ** (18 - decimals));
     }
 
     /**
@@ -403,6 +397,6 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
      * @return The scaled down amount.
      */
     function scaleDown(uint256 amount, uint256 decimals) internal pure returns (uint256) {
-        return amount / (10 ** 18 - decimals);
+        return amount / (10 ** (18 - decimals));
     }
 }

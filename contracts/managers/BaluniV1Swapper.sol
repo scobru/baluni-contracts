@@ -141,38 +141,23 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         uint256 amount,
         address receiver
     ) internal returns (uint256 amountOut) {
-        address baluniPeriphery = registry.getBaluniPoolPeriphery();
         address uniswapRouter = registry.getUniswapRouter();
+        require(uniswapRouter != address(0), 'BaluniSwapper: Address not set');
+        _secureApproval(token0, uniswapRouter, amount);
 
-        require(baluniPeriphery != address(0) && uniswapRouter != address(0), 'BaluniSwapper: Address not set');
-
-        IBaluniV1PoolPeriphery periphery = IBaluniV1PoolPeriphery(baluniPeriphery);
-
-        _secureApproval(token0, baluniPeriphery, amount);
-
-        try
-            periphery.swapTokenForToken(token0, token1, amount, 0, address(this), receiver, block.timestamp + 300)
-        returns (uint256 amountReceived, uint256 haircut) {
-            if (amountReceived > 0) {
-                return amountReceived;
-            }
-        } catch {
-            _secureApproval(token0, uniswapRouter, amount);
-
-            ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-                tokenIn: token0,
-                tokenOut: token1,
-                fee: 3000,
-                recipient: address(receiver),
-                deadline: block.timestamp,
-                amountIn: amount,
-                amountOutMinimum: 0,
-                sqrtPriceLimitX96: 0
-            });
-            uint256 amountReceived = ISwapRouter(uniswapRouter).exactInputSingle(params);
-            require(amountReceived > 0, 'BaluniSwapper: Amount Received is 0');
-            return amountReceived;
-        }
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+            tokenIn: token0,
+            tokenOut: token1,
+            fee: 3000,
+            recipient: address(receiver),
+            deadline: block.timestamp,
+            amountIn: amount,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        });
+        uint256 amountReceived = ISwapRouter(uniswapRouter).exactInputSingle(params);
+        require(amountReceived > 0, 'BaluniSwapper: Amount Received is 0');
+        return amountReceived;
     }
 
     /**
@@ -191,50 +176,11 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         uint256 tokenBalance,
         address receiver
     ) internal returns (uint256 amountOut) {
-        address baluniPeriphery = registry.getBaluniPoolPeriphery();
-        IBaluniV1PoolPeriphery periphery = IBaluniV1PoolPeriphery(baluniPeriphery);
-        uint256 intermediateBalance;
-        _secureApproval(token0, baluniPeriphery, tokenBalance);
+        address uniswapRouter = registry.getUniswapRouter();
 
-        try
-            periphery.swapTokenForToken(
-                token0,
-                token1,
-                tokenBalance,
-                0,
-                address(this),
-                address(this),
-                block.timestamp + 300
-            )
-        returns (uint256 amountReceived, uint256 haircut) {
-            if (amountReceived > 0) {
-                intermediateBalance = amountReceived;
-            } else {
-                return _multiHopSwapFallback(token0, token1, token2, tokenBalance, receiver);
-            }
-        } catch {
-            return _multiHopSwapFallback(token0, token1, token2, tokenBalance, receiver);
-        }
+        _secureApproval(token0, uniswapRouter, tokenBalance);
 
-        try
-            periphery.swapTokenForToken(
-                token1,
-                token2,
-                intermediateBalance,
-                0,
-                address(this),
-                receiver,
-                block.timestamp + 300
-            )
-        returns (uint256 amountReceived, uint256 haircut) {
-            if (amountReceived > 0) {
-                return amountReceived;
-            } else {
-                return _multiHopSwapFallback(token0, token1, token2, tokenBalance, receiver);
-            }
-        } catch {
-            return _multiHopSwapFallback(token0, token1, token2, tokenBalance, receiver);
-        }
+        return _multiHopSwapFallback(token0, token1, token2, tokenBalance, receiver);
     }
 
     function _multiHopSwapFallback(

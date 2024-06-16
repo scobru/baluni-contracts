@@ -76,11 +76,13 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         address toToken,
         uint256 amount
     ) public view override returns (uint256 valuation) {
-        try this.convertWithStaticOracle(fromToken, toToken, amount) returns (uint256 _valuation) {
-            return _valuation;
-        } catch {
-            return this.convertWithAgg(fromToken, toToken, amount);
-        }
+        return this.convertWithStaticOracle(fromToken, toToken, amount);
+
+        // try this.convertWithStaticOracle(fromToken, toToken, amount) returns (uint256 _valuation) {
+        //     return _valuation;
+        // } catch {
+        //     return this.convertWithAgg(fromToken, toToken, amount);
+        // }
     }
 
     /**
@@ -97,11 +99,13 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         address toToken,
         uint256 amount
     ) external view override returns (uint256 valuation) {
-        try this.convertScaledWithStaticOracle(fromToken, toToken, amount) returns (uint256 _valuation) {
-            return _valuation;
-        } catch {
-            return this.convertScaledWithAgg(fromToken, toToken, amount);
-        }
+        return this.convertScaledWithStaticOracle(fromToken, toToken, amount);
+
+        // try this.convertScaledWithStaticOracle(fromToken, toToken, amount) returns (uint256 _valuation) {
+        //     return _valuation;
+        // } catch {
+        //     return this.convertScaledWithAgg(fromToken, toToken, amount);
+        // }
     }
 
     /**
@@ -116,26 +120,21 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         address toToken,
         uint256 amount
     ) external view returns (uint256 valuation) {
-        if (fromToken == toToken) return amount;
-
-        address _1InchSpotAgg = registry.get1inchSpotAgg();
-        uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-        uint8 toDecimal = IERC20Metadata(toToken).decimals();
-
-        uint256 rate = I1inchSpotAgg(_1InchSpotAgg).getRate(IERC20(fromToken), IERC20(toToken), false);
-
-        rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
-
-        uint256 factor;
-        if (fromDecimal >= toDecimal) {
-            factor = 10 ** (fromDecimal - toDecimal);
-            valuation = ((amount / factor) * rate) / 1e18;
-        } else {
-            factor = 10 ** (toDecimal - fromDecimal);
-            valuation = ((amount * factor) * rate) / 1e18;
-        }
-
-        return valuation;
+        // if (fromToken == toToken) return amount;
+        // address _1InchSpotAgg = registry.get1inchSpotAgg();
+        // uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+        // uint8 toDecimal = IERC20Metadata(toToken).decimals();
+        // uint256 rate = I1inchSpotAgg(_1InchSpotAgg).getRate(IERC20(fromToken), IERC20(toToken), false);
+        // rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
+        // uint256 factor;
+        // if (fromDecimal >= toDecimal) {
+        //     factor = 10 ** (fromDecimal - toDecimal);
+        //     valuation = ((amount / factor) * rate) / 1e18;
+        // } else {
+        //     factor = 10 ** (toDecimal - fromDecimal);
+        //     valuation = ((amount * factor) * rate) / 1e18;
+        // }
+        // return valuation;
     }
 
     /**
@@ -150,34 +149,28 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         address toToken,
         uint256 amount
     ) external view returns (uint256 valuation) {
-        if (fromToken == toToken) return amount * 10 ** (18 - IERC20Metadata(toToken).decimals());
-
-        address _1InchSpotAgg = registry.get1inchSpotAgg();
-        uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-        uint8 toDecimal = IERC20Metadata(toToken).decimals();
-        uint256 rate = I1inchSpotAgg(_1InchSpotAgg).getRate(IERC20(fromToken), IERC20(toToken), false);
-
-        rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
-
-        uint256 scalingFactor;
-        uint256 tokenAmount;
-        uint256 finalScalingFactor = 10 ** (18 - toDecimal);
-
-        if (fromDecimal == toDecimal) {
-            valuation = (amount * rate) / 1e18;
-        } else if (fromDecimal > toDecimal) {
-            scalingFactor = 10 ** (fromDecimal - toDecimal);
-            tokenAmount = amount / scalingFactor;
-            valuation = (tokenAmount * rate) / 1e18;
-        } else {
-            scalingFactor = 10 ** (toDecimal - fromDecimal);
-            tokenAmount = amount * scalingFactor;
-            valuation = (tokenAmount * rate) / 1e18;
-        }
-
-        valuation = valuation * finalScalingFactor;
-
-        return valuation;
+        // if (fromToken == toToken) return amount * 10 ** (18 - IERC20Metadata(toToken).decimals());
+        // address _1InchSpotAgg = registry.get1inchSpotAgg();
+        // uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+        // uint8 toDecimal = IERC20Metadata(toToken).decimals();
+        // uint256 rate = I1inchSpotAgg(_1InchSpotAgg).getRate(IERC20(fromToken), IERC20(toToken), false);
+        // rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
+        // uint256 scalingFactor;
+        // uint256 tokenAmount;
+        // uint256 finalScalingFactor = 10 ** (18 - toDecimal);
+        // if (fromDecimal == toDecimal) {
+        //     valuation = (amount * rate) / 1e18;
+        // } else if (fromDecimal > toDecimal) {
+        //     scalingFactor = 10 ** (fromDecimal - toDecimal);
+        //     tokenAmount = amount / scalingFactor;
+        //     valuation = (tokenAmount * rate) / 1e18;
+        // } else {
+        //     scalingFactor = 10 ** (toDecimal - fromDecimal);
+        //     tokenAmount = amount * scalingFactor;
+        //     valuation = (tokenAmount * rate) / 1e18;
+        // }
+        // valuation = valuation * finalScalingFactor;
+        // return valuation;
     }
 
     /**
@@ -211,7 +204,7 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         uint256 amount
     ) external view returns (uint256 valuation) {
         uint256 _valuation = this.convertWithStaticOracle(fromToken, toToken, amount);
-        valuation = scaleUp(_valuation, IERC20Metadata(fromToken).decimals());
+        valuation = scaleUp(_valuation, IERC20Metadata(toToken).decimals());
         return valuation;
     }
 
@@ -222,7 +215,7 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
      * @return The scaled up amount.
      */
     function scaleUp(uint256 amount, uint256 decimals) internal pure returns (uint256) {
-        return amount * (10 ** 18 - decimals);
+        return amount * (10 ** (18 - decimals));
     }
 
     /**
@@ -232,7 +225,7 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
      * @return The scaled down amount.
      */
     function scaleDown(uint256 amount, uint256 decimals) internal pure returns (uint256) {
-        return amount / (10 ** 18 - decimals);
+        return amount / (10 ** (18 - decimals));
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
