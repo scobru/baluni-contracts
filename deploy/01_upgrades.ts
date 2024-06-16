@@ -106,17 +106,17 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   await baluniAgentFactory?.waitForDeployment()
   console.log('BaluniV1AgentFactory upgraded to:', baluniAgentFactory.target) */
 
-  /*  const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
+  const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
   await upgrades.prepareUpgrade('0xD8dDca643684e67c17087B7cF6CeE08C91F12511', BaluniV1Oracle)
   const baluniOracle = await upgrades.upgradeProxy('0xD8dDca643684e67c17087B7cF6CeE08C91F12511', BaluniV1Oracle, {
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 7],
+      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 8],
     },
   })
   await baluniOracle?.waitForDeployment()
-  console.log('BaluniV1Oracle upgraded to:', baluniOracle.target) */
+  console.log('BaluniV1Oracle upgraded to:', baluniOracle.target)
 
   /*   const BaluniV1Router = await ethers.getContractFactory('BaluniV1Router')
   await upgrades.prepareUpgrade('0xEd1B284de8D6B398B5744F5178E8BE198A4DaF5e', BaluniV1Router)
@@ -130,13 +130,13 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   await baluniRouter?.waitForDeployment()
   console.log('BaluniV1Router upgraded to:', baluniRouter.target) */
 
-  const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
+  /*  const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
   await upgrades.prepareUpgrade('0xabEEAbbEaf1D160031e4BB2AC2918C8EeE73E9aa', BaluniV1Pool)
   const baluniPool = await upgrades.upgradeProxy('0xabEEAbbEaf1D160031e4BB2AC2918C8EeE73E9aa', BaluniV1Pool, {
     kind: 'uups',
   })
   await baluniPool?.waitForDeployment()
-  console.log('BaluniV1Pool upgraded to:', baluniPool.target)
+  console.log('BaluniV1Pool upgraded to:', baluniPool.target) */
 
   // const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
   // await upgrades.prepareUpgrade(factoryAddress, BaluniV1PoolFactory);

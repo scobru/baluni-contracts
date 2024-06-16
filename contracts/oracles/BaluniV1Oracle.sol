@@ -149,28 +149,28 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         address toToken,
         uint256 amount
     ) external view returns (uint256 valuation) {
-        // if (fromToken == toToken) return amount * 10 ** (18 - IERC20Metadata(toToken).decimals());
-        // address _1InchSpotAgg = registry.get1inchSpotAgg();
-        // uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-        // uint8 toDecimal = IERC20Metadata(toToken).decimals();
-        // uint256 rate = I1inchSpotAgg(_1InchSpotAgg).getRate(IERC20(fromToken), IERC20(toToken), false);
-        // rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
-        // uint256 scalingFactor;
-        // uint256 tokenAmount;
-        // uint256 finalScalingFactor = 10 ** (18 - toDecimal);
-        // if (fromDecimal == toDecimal) {
-        //     valuation = (amount * rate) / 1e18;
-        // } else if (fromDecimal > toDecimal) {
-        //     scalingFactor = 10 ** (fromDecimal - toDecimal);
-        //     tokenAmount = amount / scalingFactor;
-        //     valuation = (tokenAmount * rate) / 1e18;
-        // } else {
-        //     scalingFactor = 10 ** (toDecimal - fromDecimal);
-        //     tokenAmount = amount * scalingFactor;
-        //     valuation = (tokenAmount * rate) / 1e18;
-        // }
-        // valuation = valuation * finalScalingFactor;
-        // return valuation;
+        if (fromToken == toToken) return amount * 10 ** (18 - IERC20Metadata(toToken).decimals());
+        address _1InchSpotAgg = registry.get1inchSpotAgg();
+        uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+        uint8 toDecimal = IERC20Metadata(toToken).decimals();
+        uint256 rate = I1inchSpotAgg(_1InchSpotAgg).getRate(IERC20(fromToken), IERC20(toToken), false);
+        rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
+        uint256 scalingFactor;
+        uint256 tokenAmount;
+        uint256 finalScalingFactor = 10 ** (18 - toDecimal);
+        if (fromDecimal == toDecimal) {
+            valuation = (amount * rate) / 1e18;
+        } else if (fromDecimal > toDecimal) {
+            scalingFactor = 10 ** (fromDecimal - toDecimal);
+            tokenAmount = amount / scalingFactor;
+            valuation = (tokenAmount * rate) / 1e18;
+        } else {
+            scalingFactor = 10 ** (toDecimal - fromDecimal);
+            tokenAmount = amount * scalingFactor;
+            valuation = (tokenAmount * rate) / 1e18;
+        }
+        valuation = valuation * finalScalingFactor;
+        return valuation;
     }
 
     /**
@@ -187,7 +187,7 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
     ) external view returns (uint256 valuation) {
         IStaticOracle staticOracle = IStaticOracle(registry.getStaticOracle());
         require(address(staticOracle) != address(0), 'StaticOracle not set');
-        (valuation, ) = staticOracle.quoteAllAvailablePoolsWithTimePeriod(uint128(amount), fromToken, toToken, 3600);
+        (valuation, ) = staticOracle.quoteAllAvailablePoolsWithTimePeriod(uint128(amount), fromToken, toToken, 60);
         return valuation;
     }
 
