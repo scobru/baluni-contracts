@@ -39,6 +39,8 @@ contract BaluniV1yVault is
 
     uint256 public lastDeposit;
 
+    event Buy(address indexed sender, uint256 amount, uint256 interest);
+
     /**
      * @dev Initializes the BaluniV1Pool contract.
      * @param _assetA The address of the accepted asset.
@@ -93,7 +95,7 @@ contract BaluniV1yVault is
         uint hairCut2 = _haircut(hairCut);
 
         IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
-        IERC20(baseAsset).transfer(baluniRouter, hairCut2);
+        IERC20(baseAsset).transfer(treasury, hairCut2);
 
         uint256 amountAfter = amount - hairCut;
 
@@ -153,6 +155,7 @@ contract BaluniV1yVault is
         IERC20(baseAsset).transfer(treasury, hairCut2);
 
         hairCut = _haircut(withdrawAmountB);
+        accumulatedAssetB -= withdrawAmountB;
         IERC20(quoteAsset).transfer(to, withdrawAmountB - hairCut);
         hairCut2 = _haircut(hairCut);
         IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
@@ -167,18 +170,20 @@ contract BaluniV1yVault is
     function _buy() internal {
         uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
         uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
-        require(interest > 0, 'No interest available');
+        require(interest > 0, 'BaluniV1yVault: No interest available');
 
-        uint256 sharesToRedeem = _yearnVault.previewWithdraw(interest);
-        _yearnVault.redeem(sharesToRedeem, address(this), address(this));
+        uint256 sharesToRedeem = _yearnVault.convertToShares(interest);
+        uint256 amountOut = _yearnVault.redeem(sharesToRedeem, address(this), address(this));
+
+        require(amountOut > 0, 'BaluniV1yVault: Redeem Failed');
 
         IBaluniV1Swapper swapper = IBaluniV1Swapper(_registry.getBaluniSwapper());
 
-        IERC20(baseAsset).approve(address(swapper), interest);
+        IERC20(baseAsset).approve(address(swapper), amountOut);
 
-        uint256 amountOut = swapper.singleSwap(baseAsset, quoteAsset, interest, address(this));
+        swapper.singleSwap(baseAsset, quoteAsset, amountOut, address(this));
 
-        accumulatedAssetB += amountOut;
+        emit Buy(msg.sender, amountOut, interest);
     }
 
     function buy() external override nonReentrant onlyOwner whenNotPaused {
@@ -191,7 +196,9 @@ contract BaluniV1yVault is
     function _processInterest() internal {
         uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
         uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
-        if (interest > 0) {
+        uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
+        uint limit = 1 * 10 ** (baseDecimal - 2);
+        if (interest > limit) {
             _buy();
         }
     }
@@ -214,14 +221,14 @@ contract BaluniV1yVault is
         IBaluniV1Oracle oracle = IBaluniV1Oracle(_registry.getBaluniOracle());
         address USDC = _registry.getUSDC();
         uint256 valuation = 0;
-        uint balanceBase = IERC20(baseAsset).balanceOf(address(this));
+
         uint yearnBalance = _yearnVault.balanceOf(address(this));
         uint yearnBalanceConvert = _yearnVault.convertToAssets(yearnBalance);
         uint balanceQuote = IERC20(quoteAsset).balanceOf(address(this));
-        valuation += oracle.convert(quoteAsset, baseAsset, yearnBalanceConvert);
+
+        if (baseAsset != USDC) valuation += oracle.convert(baseAsset, USDC, yearnBalanceConvert);
         valuation += oracle.convert(quoteAsset, baseAsset, balanceQuote);
-        if (baseAsset != USDC) valuation += oracle.convert(baseAsset, USDC, balanceBase);
-        valuation += balanceBase;
+        valuation += yearnBalanceConvert;
         return valuation;
     }
 
@@ -249,5 +256,15 @@ contract BaluniV1yVault is
         uint256 _BPS_FEE = _registry.getBPS_FEE();
         uint256 _BPS_BASE = _registry.getBPS_BASE();
         return (amount * _BPS_FEE) / _BPS_BASE;
+    }
+
+    /**
+     * @dev Returns the amount of interest earned by the vault.
+     * @return The amount of interest earned.
+     */
+    function interestEarned() external view override returns (uint256) {
+        uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
+        uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
+        return interest;
     }
 }

@@ -138,8 +138,8 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   console.log('BaluniV1Pool upgraded to:', baluniPool.target) */
 
   const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
-  await upgrades.prepareUpgrade('0x3338029b136B128D899Bd15cDBfEa1B9824CCB35', BaluniV1yVault)
-  const baluniVault = await upgrades.upgradeProxy('0x3338029b136B128D899Bd15cDBfEa1B9824CCB35', BaluniV1yVault, {
+  await upgrades.prepareUpgrade('0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5', BaluniV1yVault)
+  const baluniVault = await upgrades.upgradeProxy('0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5', BaluniV1yVault, {
     kind: 'uups',
   })
   await baluniVault?.waitForDeployment()

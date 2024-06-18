@@ -6,7 +6,6 @@ interface IBaluniV1yVault {
     function yearnVault() external view returns (address);
     function quoteAsset() external view returns (address);
     function registry() external view returns (address);
-    function accumulatedAssetB() external view returns (uint256);
     function lastDeposit() external view returns (uint256);
     function deposit(uint256 amount, address to) external;
     function withdraw(uint256 shares, address to) external;
@@ -15,4 +14,5 @@ interface IBaluniV1yVault {
     function unpause() external;
     function totalValuation() external view returns (uint256);
     function unitPrice() external view returns (uint256);
+    function interestEarned() external view returns(uint256);
 }
