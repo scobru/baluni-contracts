@@ -12,6 +12,7 @@ import '../interfaces/IBaluniV1Registry.sol';
 import '../interfaces/IYearnVault.sol';
 import '../interfaces/IBaluniV1Swapper.sol';
 import '../interfaces/IBaluniV1Oracle.sol';
+import '../interfaces/IBaluniV1yVault.sol';
 
 contract BaluniV1yVault is
     Initializable,
@@ -19,19 +20,20 @@ contract BaluniV1yVault is
     OwnableUpgradeable,
     ERC20Upgradeable,
     ReentrancyGuardUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    IBaluniV1yVault
 {
     // The address of the asset accepted by the pool
     address public baseAsset;
 
     // The address of the Yearn Vault for assetA
-    IYearnVault public yearnVault;
+    IYearnVault private _yearnVault;
 
     // The address of the asset to be purchased with interest
     address public quoteAsset;
 
     // The registry contract used in the BaluniV1 system
-    IBaluniV1Registry public registry;
+    IBaluniV1Registry private _registry;
 
     uint256 public totalDeposits;
 
@@ -40,28 +42,28 @@ contract BaluniV1yVault is
     /**
      * @dev Initializes the BaluniV1Pool contract.
      * @param _assetA The address of the accepted asset.
-     * @param _yearnVault The address of the Yearn Vault for assetA.
+     * @param _yearnVaultAddress The address of the Yearn Vault for assetA.
      * @param _assetB The address of the asset to be purchased with interest.
-     * @param _registry The address of the BaluniV1Registry contract.
+     * @param _registryAddress The address of the BaluniV1Registry contract.
      */
     function initialize(
         string memory _name,
         string memory _symbol,
         address _assetA,
-        address _yearnVault,
+        address _yearnVaultAddress,
         address _assetB,
-        address _registry
+        address _registryAddress
     ) external initializer {
         __Ownable_init(msg.sender);
         __ERC20_init(_name, _symbol);
 
         baseAsset = _assetA;
-        yearnVault = IYearnVault(_yearnVault);
+        _yearnVault = IYearnVault(_yearnVaultAddress);
         quoteAsset = _assetB;
-        registry = IBaluniV1Registry(_registry);
+        _registry = IBaluniV1Registry(_registryAddress);
 
         require(baseAsset != address(0), 'Invalid assetA address');
-        require(address(yearnVault) != address(0), 'Invalid Yearn Vault address');
+        require(address(_yearnVault) != address(0), 'Invalid Yearn Vault address');
         require(quoteAsset != address(0), 'Invalid assetB address');
     }
 
@@ -77,15 +79,15 @@ contract BaluniV1yVault is
      * @param amount The amount of assetA to deposit.
      * @param to The address to receive pool tokens.
      */
-    function deposit(uint256 amount, address to) external nonReentrant whenNotPaused {
+    function deposit(uint256 amount, address to) external override nonReentrant whenNotPaused {
         require(amount > 0, 'Amount must be greater than zero');
 
         _processInterest();
 
         IERC20(baseAsset).transferFrom(msg.sender, address(this), amount);
 
-        IERC20(baseAsset).approve(address(yearnVault), amount);
-        yearnVault.deposit(amount, address(this));
+        IERC20(baseAsset).approve(address(_yearnVault), amount);
+        _yearnVault.deposit(amount, address(this));
 
         _mint(to, amount);
         totalDeposits += amount;
@@ -96,7 +98,7 @@ contract BaluniV1yVault is
      * @param shares The amount of pool tokens to redeem.
      * @param to The address to receive assetA and assetB.
      */
-    function withdraw(uint256 shares, address to) external nonReentrant whenNotPaused {
+    function withdraw(uint256 shares, address to) external override nonReentrant whenNotPaused {
         require(shares > 0, 'Shares must be greater than zero');
         require(balanceOf(msg.sender) >= shares, 'Insufficient balance');
 
@@ -107,8 +109,8 @@ contract BaluniV1yVault is
         totalDeposits -= withdrawAmountA;
         accumulatedAssetB -= withdrawAmountB;
 
-        uint256 sharesToRedeem = yearnVault.convertToShares(withdrawAmountA);
-        yearnVault.redeem(sharesToRedeem, address(this), address(this));
+        uint256 sharesToRedeem = _yearnVault.convertToShares(withdrawAmountA);
+        _yearnVault.redeem(sharesToRedeem, address(this), address(this));
         IERC20(baseAsset).transfer(to, withdrawAmountA);
         IERC20(quoteAsset).transfer(to, withdrawAmountB);
     }
@@ -116,15 +118,15 @@ contract BaluniV1yVault is
     /**
      * @dev Uses the accumulated interest to purchase assetB.
      */
-    function buy() public nonReentrant onlyOwner whenNotPaused {
-        uint256 totalAssets = yearnVault.convertToAssets(yearnVault.balanceOf(address(this)));
+    function _buy() internal {
+        uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
         uint256 interest = totalAssets > totalDeposits ? totalAssets - totalDeposits : 0;
         require(interest > 0, 'No interest available');
 
-        uint256 sharesToRedeem = yearnVault.previewWithdraw(interest);
-        yearnVault.redeem(sharesToRedeem, address(this), address(this));
+        uint256 sharesToRedeem = _yearnVault.previewWithdraw(interest);
+        _yearnVault.redeem(sharesToRedeem, address(this), address(this));
 
-        IBaluniV1Swapper swapper = IBaluniV1Swapper(registry.getBaluniSwapper());
+        IBaluniV1Swapper swapper = IBaluniV1Swapper(_registry.getBaluniSwapper());
 
         IERC20(baseAsset).approve(address(swapper), interest);
 
@@ -133,38 +135,42 @@ contract BaluniV1yVault is
         accumulatedAssetB += amountOut;
     }
 
+    function buy() external override nonReentrant onlyOwner whenNotPaused {
+        _buy();
+    }
+
     /**
      * @dev Checks and processes accumulated interest.
      */
     function _processInterest() internal {
-        uint256 totalAssets = yearnVault.convertToAssets(yearnVault.balanceOf(address(this)));
+        uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
         uint256 interest = totalAssets > totalDeposits ? totalAssets - totalDeposits : 0;
         if (interest > 0) {
-            buy();
+            _buy();
         }
     }
 
     /**
      * @dev pause pool, restricting certain operations
      */
-    function pause() external onlyOwner {
+    function pause() external override onlyOwner {
         _pause();
     }
 
     /**
      * @dev unpause pool, enabling certain operations
      */
-    function unpause() external onlyOwner {
+    function unpause() external override onlyOwner {
         _unpause();
     }
 
-    function totalValuation() public view returns (uint256) {
-        IBaluniV1Oracle oracle = IBaluniV1Oracle(registry.getBaluniOracle());
-        address USDC = registry.getUSDC();
+    function totalValuation() public view override returns (uint256) {
+        IBaluniV1Oracle oracle = IBaluniV1Oracle(_registry.getBaluniOracle());
+        address USDC = _registry.getUSDC();
         uint256 valuation = 0;
         uint balanceBase = IERC20(baseAsset).balanceOf(address(this));
-        uint yearnBalance = yearnVault.balanceOf(address(this));
-        uint yearnBalanceConvert = yearnVault.convertToAssets(yearnBalance);
+        uint yearnBalance = _yearnVault.balanceOf(address(this));
+        uint yearnBalanceConvert = _yearnVault.convertToAssets(yearnBalance);
         uint balanceQuote = IERC20(quoteAsset).balanceOf(address(this));
         valuation += oracle.convert(quoteAsset, baseAsset, yearnBalanceConvert);
         valuation += oracle.convert(quoteAsset, baseAsset, balanceQuote);
@@ -173,10 +179,18 @@ contract BaluniV1yVault is
         return valuation;
     }
 
-    function unitPrice() external view returns (uint256) {
-        address USDC = registry.getUSDC();
+    function unitPrice() external view override returns (uint256) {
+        address USDC = _registry.getUSDC();
         uint8 decimals = IERC20Metadata(USDC).decimals();
         uint256 valuationScaledUp = totalValuation() * 10 ** (18 - decimals);
         return (valuationScaledUp / totalSupply()) * 1e18;
+    }
+
+    function registry() external view override returns (address) {
+        return address(_registry);
+    }
+
+    function yearnVault() external view override returns (address) {
+        return address(_yearnVault);
     }
 }

@@ -148,6 +148,19 @@
     },
     {
       "inputs": [],
+      "name": "getBaluniVaultRegistry",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getMAX_BPS_FEE",
       "outputs": [
         {
@@ -363,6 +376,19 @@
         }
       ],
       "name": "setBaluniSwapper",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_baluniPoolRegistry",
+          "type": "address"
+        }
+      ],
+      "name": "setBaluniVaultRegistry",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

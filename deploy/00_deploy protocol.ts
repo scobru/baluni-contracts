@@ -6,7 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import {
   BaluniV1Pool,
-  BaluniV1yVault,
+  BaluniV1yVaultType1,
   BaluniV1PoolPeriphery,
   BaluniV1Rebalancer,
   BaluniV1PoolRegistry,
@@ -15,6 +15,7 @@ import {
   BaluniV1Oracle,
   BaluniV1AgentFactory,
   BaluniV1Router,
+  BaluniV1VaultRegistry,
 } from '../typechain-types'
 
 const WNATIVE = '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270'
@@ -181,6 +182,21 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   // // Save the deployment information to the deployment folder
   // saveDeploymentInfo(chainId, deploymentInfo)
 
+  const BaluniV1VaultRegistry = await ethers.getContractFactory('BaluniV1VaultRegistry')
+  const baluniV1VaultRegistry = (await upgrades.deployProxy(
+    BaluniV1VaultRegistry,
+    ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655' /* await registry.getAddress() */],
+    {
+      kind: 'uups',
+    }
+  )) as unknown as BaluniV1VaultRegistry
+  await baluniV1VaultRegistry?.waitForDeployment()
+  console.log('BaluniV1VaultRegistry deployed to:', baluniV1VaultRegistry.target)
+  deploymentInfo.BaluniV1VaultRegistry = baluniV1VaultRegistry.target
+  //await registry.setBaluniPoolRegistry(await baluniV1PoolRegistry.target)
+
+  saveDeploymentInfo(chainId, deploymentInfo)
+
   const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
   const baluniV1yVault = await upgrades.deployProxy(
     BaluniV1yVault,
@@ -202,6 +218,8 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   deploymentInfo.BaluniV1yVault = baluniV1yVault.target
 
   saveDeploymentInfo(chainId, deploymentInfo)
+
+  await baluniV1VaultRegistry.addVault(baluniV1yVault.target)
 }
 export default deployProtocol
 
