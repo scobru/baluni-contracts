@@ -6,6 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import {
   BaluniV1Pool,
+  BaluniV1yVault,
   BaluniV1PoolPeriphery,
   BaluniV1Rebalancer,
   BaluniV1PoolRegistry,
@@ -52,139 +53,156 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const chainId = Number(network.config.chainId)
   const deploymentInfo: any = {}
 
-  const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
-  const baluniV1Registry = await upgrades.deployProxy(BaluniV1Registry, [], { kind: 'uups' })
-  const registry = await baluniV1Registry?.waitForDeployment()
-  console.log('BaluniV1Registry deployed to:', registry.target)
-  deploymentInfo.BaluniV1Registry = registry.target
+  // const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
+  // const baluniV1Registry = await upgrades.deployProxy(BaluniV1Registry, [], { kind: 'uups' })
+  // const registry = await baluniV1Registry?.waitForDeployment()
+  // console.log('BaluniV1Registry deployed to:', registry.target)
+  // deploymentInfo.BaluniV1Registry = registry.target
 
-  await registry.setWNATIVE(WNATIVE)
-  await registry.setUSDC(USDC)
-  await registry.set1inchSpotAgg(_1INCHSPOTAGG)
-  await registry.setTreasury(TREASURY)
-  await registry.setUniswapFactory(uniswapFactory)
-  await registry.setUniswapRouter(uniswapRouter)
-  await registry.setBaluniRegistry(await registry.getAddress())
+  // await registry.setWNATIVE(WNATIVE)
+  // await registry.setUSDC(USDC)
+  // await registry.set1inchSpotAgg(_1INCHSPOTAGG)
+  // await registry.setTreasury(TREASURY)
+  // await registry.setUniswapFactory(uniswapFactory)
+  // await registry.setUniswapRouter(uniswapRouter)
+  // await registry.setBaluniRegistry(await registry.getAddress())
 
-  const BaluniV1Swapper = await ethers.getContractFactory('BaluniV1Swapper')
-  const baluniSwapper = await upgrades.deployProxy(BaluniV1Swapper, [await registry.getAddress()], {
-    kind: 'uups',
-  })
-  const instanceSwapper = (await baluniSwapper?.waitForDeployment()) as unknown as BaluniV1Swapper
-  console.log('BaluniV1Swapper deployed to:', instanceSwapper.target)
-  deploymentInfo.BaluniV1Swapper = instanceSwapper.target
+  // const BaluniV1Swapper = await ethers.getContractFactory('BaluniV1Swapper')
+  // const baluniSwapper = await upgrades.deployProxy(BaluniV1Swapper, [await registry.getAddress()], {
+  //   kind: 'uups',
+  // })
+  // const instanceSwapper = (await baluniSwapper?.waitForDeployment()) as unknown as BaluniV1Swapper
+  // console.log('BaluniV1Swapper deployed to:', instanceSwapper.target)
+  // deploymentInfo.BaluniV1Swapper = instanceSwapper.target
 
-  await registry.setBaluniSwapper(await instanceSwapper.target)
+  // await registry.setBaluniSwapper(await instanceSwapper.target)
 
-  const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
-  const baluniOracle = (await upgrades.deployProxy(BaluniV1Oracle, [await registry.getAddress()], {
-    kind: 'uups',
-  })) as unknown as BaluniV1Oracle
-  const instanceOracle = await baluniOracle?.waitForDeployment()
-  console.log('BaluniV1Oracle deployed to:', instanceOracle.target)
-  deploymentInfo.BaluniV1Oracle = instanceOracle.target
+  // const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
+  // const baluniOracle = (await upgrades.deployProxy(BaluniV1Oracle, [await registry.getAddress()], {
+  //   kind: 'uups',
+  // })) as unknown as BaluniV1Oracle
+  // const instanceOracle = await baluniOracle?.waitForDeployment()
+  // console.log('BaluniV1Oracle deployed to:', instanceOracle.target)
+  // deploymentInfo.BaluniV1Oracle = instanceOracle.target
 
-  await registry.setBaluniOracle(await instanceOracle.target)
+  // await registry.setBaluniOracle(await instanceOracle.target)
 
-  const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
-  const baluniRebalancer = (await upgrades.deployProxy(BaluniV1Rebalancer, [await registry.getAddress()], {
-    kind: 'uups',
-  })) as unknown as BaluniV1Rebalancer
-  const instanceRebalance = await baluniRebalancer?.waitForDeployment()
-  console.log('BaluniV1Rebalance deployed to:', instanceRebalance.target)
-  deploymentInfo.BaluniV1Rebalance = instanceRebalance.target
+  // const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
+  // const baluniRebalancer = (await upgrades.deployProxy(BaluniV1Rebalancer, [await registry.getAddress()], {
+  //   kind: 'uups',
+  // })) as unknown as BaluniV1Rebalancer
+  // const instanceRebalance = await baluniRebalancer?.waitForDeployment()
+  // console.log('BaluniV1Rebalance deployed to:', instanceRebalance.target)
+  // deploymentInfo.BaluniV1Rebalance = instanceRebalance.target
 
-  await registry.setBaluniRebalancer(await instanceRebalance.target)
+  // await registry.setBaluniRebalancer(await instanceRebalance.target)
 
-  const BaluniV1AgentFactory = await ethers.getContractFactory('BaluniV1AgentFactory')
-  const agentFactory = (await upgrades.deployProxy(
-    BaluniV1AgentFactory,
-    [registry.target],
-    {
-      kind: 'uups',
-    }
-  )) as unknown as BaluniV1AgentFactory
-  const instanceAgentFactory = await agentFactory?.waitForDeployment()
-  console.log('BaluniV1AgentFactory deployed to:', instanceAgentFactory.target)
-  deploymentInfo.BaluniV1AgentFactory = instanceAgentFactory.target
+  // const BaluniV1AgentFactory = await ethers.getContractFactory('BaluniV1AgentFactory')
+  // const agentFactory = (await upgrades.deployProxy(BaluniV1AgentFactory, [registry.target], {
+  //   kind: 'uups',
+  // })) as unknown as BaluniV1AgentFactory
+  // const instanceAgentFactory = await agentFactory?.waitForDeployment()
+  // console.log('BaluniV1AgentFactory deployed to:', instanceAgentFactory.target)
+  // deploymentInfo.BaluniV1AgentFactory = instanceAgentFactory.target
 
-  await registry.setBaluniAgentFactory(await instanceAgentFactory.target)
+  // await registry.setBaluniAgentFactory(await instanceAgentFactory.target)
 
-  const BaluniV1Router = await ethers.getContractFactory('BaluniV1Router')
-  const baluniRouter = (await upgrades.deployProxy(BaluniV1Router, [await registry.getAddress()], {
-    kind: 'uups',
-  })) as unknown as BaluniV1Router
-  const instanceRouter = await baluniRouter?.waitForDeployment()
-  console.log('BaluniV1Router deployed to:', instanceRouter.target)
-  deploymentInfo.BaluniV1Router = instanceRouter.target
+  // const BaluniV1Router = await ethers.getContractFactory('BaluniV1Router')
+  // const baluniRouter = (await upgrades.deployProxy(BaluniV1Router, [await registry.getAddress()], {
+  //   kind: 'uups',
+  // })) as unknown as BaluniV1Router
+  // const instanceRouter = await baluniRouter?.waitForDeployment()
+  // console.log('BaluniV1Router deployed to:', instanceRouter.target)
+  // deploymentInfo.BaluniV1Router = instanceRouter.target
 
-  await registry.setBaluniRouter(await instanceRouter.target)
+  // await registry.setBaluniRouter(await instanceRouter.target)
 
-  const BaluniV1PoolPeriphery = await ethers.getContractFactory('BaluniV1PoolPeriphery')
-  const baluniV1PoolPeriphery = (await upgrades.deployProxy(
-    BaluniV1PoolPeriphery,
-    [await registry.getAddress()], // PoolFactory
-    {
-      kind: 'uups',
-    }
-  )) as unknown as BaluniV1PoolPeriphery
-  const instancePoolPeriphery = await baluniV1PoolPeriphery?.waitForDeployment()
-  console.log('BaluniV1PoolPeriphery deployed to:', instancePoolPeriphery.target)
-  deploymentInfo.BaluniV1PoolPeriphery = instancePoolPeriphery.target
+  // const BaluniV1PoolPeriphery = await ethers.getContractFactory('BaluniV1PoolPeriphery')
+  // const baluniV1PoolPeriphery = (await upgrades.deployProxy(
+  //   BaluniV1PoolPeriphery,
+  //   [await registry.getAddress()], // PoolFactory
+  //   {
+  //     kind: 'uups',
+  //   }
+  // )) as unknown as BaluniV1PoolPeriphery
+  // const instancePoolPeriphery = await baluniV1PoolPeriphery?.waitForDeployment()
+  // console.log('BaluniV1PoolPeriphery deployed to:', instancePoolPeriphery.target)
+  // deploymentInfo.BaluniV1PoolPeriphery = instancePoolPeriphery.target
 
-  await registry.setBaluniPoolPeriphery(await instancePoolPeriphery.target)
+  // await registry.setBaluniPoolPeriphery(await instancePoolPeriphery.target)
 
-  const BaluniV1PoolRegistry = await ethers.getContractFactory('BaluniV1PoolRegistry')
-  const baluniV1PoolRegistry = (await upgrades.deployProxy(BaluniV1PoolRegistry, [await registry.getAddress()], {
-    kind: 'uups',
-  })) as unknown as BaluniV1PoolRegistry
-  await baluniV1PoolRegistry?.waitForDeployment()
-  console.log('BaluniV1PoolRegistry deployed to:', baluniV1PoolRegistry.target)
-  deploymentInfo.BaluniV1PoolRegistry = baluniV1PoolRegistry.target
+  // const BaluniV1PoolRegistry = await ethers.getContractFactory('BaluniV1PoolRegistry')
+  // const baluniV1PoolRegistry = (await upgrades.deployProxy(BaluniV1PoolRegistry, [await registry.getAddress()], {
+  //   kind: 'uups',
+  // })) as unknown as BaluniV1PoolRegistry
+  // await baluniV1PoolRegistry?.waitForDeployment()
+  // console.log('BaluniV1PoolRegistry deployed to:', baluniV1PoolRegistry.target)
+  // deploymentInfo.BaluniV1PoolRegistry = baluniV1PoolRegistry.target
 
-  await registry.setBaluniPoolRegistry(await baluniV1PoolRegistry.target)
+  // await registry.setBaluniPoolRegistry(await baluniV1PoolRegistry.target)
 
-  const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
-  const baluniV1Pool = (await upgrades.deployProxy(
-    BaluniV1Pool,
+  // const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
+  // const baluniV1Pool = (await upgrades.deployProxy(
+  //   BaluniV1Pool,
+  //   [
+  //     [USDC, USDC_E, USDT, DAI],
+  //     [2500, 2500, 2500, 2500],
+  //     500,
+  //     await registry.getAddress(), // PoolFactory
+  //   ],
+  //   {
+  //     kind: 'uups',
+  //   }
+  // )) as unknown as BaluniV1Pool
+  // await baluniV1Pool?.waitForDeployment()
+  // console.log('BaluniV1Pool deployed to:', baluniV1Pool.target)
+  // deploymentInfo.BaluniV1Pool = baluniV1Pool.target
+
+  // await baluniV1PoolRegistry.addPool(baluniV1Pool.target)
+
+  // const baluniV1Pool2 = (await upgrades.deployProxy(
+  //   BaluniV1Pool,
+  //   [
+  //     [WBTC, WETH, USDC_E],
+  //     [5000, 3000, 2000],
+  //     500,
+  //     await registry.getAddress(), // PoolFactory
+  //   ],
+  //   {
+  //     kind: 'uups',
+  //   }
+  // )) as unknown as BaluniV1Pool
+  // await baluniV1Pool2?.waitForDeployment()
+  // console.log('BaluniV1Pool2 deployed to:', baluniV1Pool2.target)
+  // deploymentInfo.BaluniV1Pool2 = baluniV1Pool2.target
+
+  // await baluniV1PoolRegistry.addPool(baluniV1Pool2.target)
+
+  // // Save the deployment information to the deployment folder
+  // saveDeploymentInfo(chainId, deploymentInfo)
+
+  const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
+  const baluniV1yVault = await upgrades.deployProxy(
+    BaluniV1yVault,
     [
-      [USDC, USDC_E, USDT, DAI],
-      [2500, 2500, 2500, 2500],
-      500,
-      await registry.getAddress(), // PoolFactory
+      'BALUNI Yearn Vault USDC Accumulator WBTC',
+      'byUSDCx',
+      USDC,
+      '0x34b9421Fe3d52191B64bC32ec1aB764dcBcDbF5e', // yearn vault
+      WBTC,
+      '0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', // await registry.getAddress(),
     ],
     {
       kind: 'uups',
     }
-  )) as unknown as BaluniV1Pool
-  await baluniV1Pool?.waitForDeployment()
-  console.log('BaluniV1Pool deployed to:', baluniV1Pool.target)
-  deploymentInfo.BaluniV1Pool = baluniV1Pool.target
+  )
 
-  await baluniV1PoolRegistry.addPool(baluniV1Pool.target)
+  await baluniV1yVault?.waitForDeployment()
+  console.log('BaluniV1yPoolAcc deployed to:', baluniV1yVault.target)
+  deploymentInfo.BaluniV1yVault = baluniV1yVault.target
 
-  const baluniV1Pool2 = (await upgrades.deployProxy(
-    BaluniV1Pool,
-    [
-      [WBTC, WETH, USDC_E],
-      [5000, 3000, 2000],
-      500,
-      await registry.getAddress(), // PoolFactory
-    ],
-    {
-      kind: 'uups',
-    }
-  )) as unknown as BaluniV1Pool
-  await baluniV1Pool2?.waitForDeployment()
-  console.log('BaluniV1Pool2 deployed to:', baluniV1Pool2.target)
-  deploymentInfo.BaluniV1Pool2 = baluniV1Pool2.target
-
-  await baluniV1PoolRegistry.addPool(baluniV1Pool2.target)
-
-  // Save the deployment information to the deployment folder
   saveDeploymentInfo(chainId, deploymentInfo)
 }
-
 export default deployProtocol
 
 deployProtocol.tags = ['deploy-protocol']

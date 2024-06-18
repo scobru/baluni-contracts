@@ -47,6 +47,7 @@ import '../interfaces/I1inchSpotAgg.sol';
 import '../interfaces/IBaluniV1Registry.sol';
 import '../interfaces/IBaluniV1Oracle.sol';
 import '../interfaces/IStaticOracle.sol';
+import '../interfaces/IYearnVault.sol';
 
 contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, IBaluniV1Oracle {
     IBaluniV1Registry public registry;
@@ -76,13 +77,17 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         address toToken,
         uint256 amount
     ) public view override returns (uint256 valuation) {
-        return this.convertWithStaticOracle(fromToken, toToken, amount);
-
-        // try this.convertWithStaticOracle(fromToken, toToken, amount) returns (uint256 _valuation) {
-        //     return _valuation;
-        // } catch {
-        //     return this.convertWithAgg(fromToken, toToken, amount);
-        // }
+        (address assetFrom, uint256 assetAmountFrom) = isYearnVault(fromToken, amount);
+        (address assetTo, ) = isYearnVault(toToken, 0);
+        if (assetFrom != address(0) && assetTo != address(0)) {
+            return this.convertWithStaticOracle(assetFrom, assetTo, assetAmountFrom);
+        } else if (assetFrom != address(0)) {
+            return this.convertWithStaticOracle(assetFrom, toToken, assetAmountFrom);
+        } else if (assetTo != address(0)) {
+            return this.convertWithStaticOracle(fromToken, assetTo, amount);
+        } else {
+            return this.convertWithStaticOracle(fromToken, toToken, amount);
+        }
     }
 
     /**
@@ -99,13 +104,17 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         address toToken,
         uint256 amount
     ) external view override returns (uint256 valuation) {
-        return this.convertScaledWithStaticOracle(fromToken, toToken, amount);
-
-        // try this.convertScaledWithStaticOracle(fromToken, toToken, amount) returns (uint256 _valuation) {
-        //     return _valuation;
-        // } catch {
-        //     return this.convertScaledWithAgg(fromToken, toToken, amount);
-        // }
+        (address assetFrom, uint256 assetAmountFrom) = isYearnVault(fromToken, amount);
+        (address assetTo, ) = isYearnVault(toToken, 0);
+        if (assetFrom != address(0) && assetTo != address(0)) {
+            return this.convertScaledWithStaticOracle(assetFrom, assetTo, assetAmountFrom);
+        } else if (assetFrom != address(0)) {
+            return this.convertScaledWithStaticOracle(assetFrom, toToken, assetAmountFrom);
+        } else if (assetTo != address(0)) {
+            return this.convertScaledWithStaticOracle(fromToken, assetTo, amount);
+        } else {
+            return this.convertScaledWithStaticOracle(fromToken, toToken, amount);
+        }
     }
 
     /**
@@ -120,21 +129,21 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         address toToken,
         uint256 amount
     ) external view returns (uint256 valuation) {
-        // if (fromToken == toToken) return amount;
-        // address _1InchSpotAgg = registry.get1inchSpotAgg();
-        // uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
-        // uint8 toDecimal = IERC20Metadata(toToken).decimals();
-        // uint256 rate = I1inchSpotAgg(_1InchSpotAgg).getRate(IERC20(fromToken), IERC20(toToken), false);
-        // rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
-        // uint256 factor;
-        // if (fromDecimal >= toDecimal) {
-        //     factor = 10 ** (fromDecimal - toDecimal);
-        //     valuation = ((amount / factor) * rate) / 1e18;
-        // } else {
-        //     factor = 10 ** (toDecimal - fromDecimal);
-        //     valuation = ((amount * factor) * rate) / 1e18;
-        // }
-        // return valuation;
+        if (fromToken == toToken) return amount;
+        address _1InchSpotAgg = registry.get1inchSpotAgg();
+        uint8 fromDecimal = IERC20Metadata(fromToken).decimals();
+        uint8 toDecimal = IERC20Metadata(toToken).decimals();
+        uint256 rate = I1inchSpotAgg(_1InchSpotAgg).getRate(IERC20(fromToken), IERC20(toToken), false);
+        rate = (rate * (10 ** fromDecimal)) / (10 ** toDecimal);
+        uint256 factor;
+        if (fromDecimal >= toDecimal) {
+            factor = 10 ** (fromDecimal - toDecimal);
+            valuation = ((amount / factor) * rate) / 1e18;
+        } else {
+            factor = 10 ** (toDecimal - fromDecimal);
+            valuation = ((amount * factor) * rate) / 1e18;
+        }
+        return valuation;
     }
 
     /**
@@ -229,4 +238,13 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    function isYearnVault(address _address, uint256 amount) public view returns (address, uint256) {
+        try IYearnVault(_address).asset() returns (address) {
+            uint256 convertToAssets = IYearnVault(_address).convertToAssets(amount);
+            return (_address, convertToAssets);
+        } catch {
+            return (address(0), 0);
+        }
+    }
 }

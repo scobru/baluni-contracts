@@ -112,7 +112,7 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 8],
+      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 9],
     },
   })
   await baluniOracle?.waitForDeployment()
