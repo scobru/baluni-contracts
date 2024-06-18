@@ -195,7 +195,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   deploymentInfo.BaluniV1VaultRegistry = baluniV1VaultRegistry.target
   //await registry.setBaluniPoolRegistry(await baluniV1PoolRegistry.target)
 
-  saveDeploymentInfo(chainId, deploymentInfo)
+  //saveDeploymentInfo(chainId, deploymentInfo)
 
   const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
   const baluniV1yVault = await upgrades.deployProxy(
@@ -217,7 +217,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   console.log('BaluniV1yPoolAcc deployed to:', baluniV1yVault.target)
   deploymentInfo.BaluniV1yVault = baluniV1yVault.target
 
-  saveDeploymentInfo(chainId, deploymentInfo)
+  //saveDeploymentInfo(chainId, deploymentInfo)
 
   await baluniV1VaultRegistry.addVault(baluniV1yVault.target)
 }

@@ -40,14 +40,14 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   // console.log("BaluniV1AgentFactory upgraded to:", instanceAgentFactory.target);
   // await instanceAgentFactory.changeImplementation();
 
-  const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
+  /* const BaluniV1Registry = await ethers.getContractFactory('BaluniV1Registry')
   await upgrades.prepareUpgrade('0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', BaluniV1Registry)
   const _registry = await upgrades.upgradeProxy('0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', BaluniV1Registry, {
     kind: 'uups',
   })
   const instanceRegistry = await _registry?.waitForDeployment()
   console.log('BaluniV1Registry upgraded to:', await _registry.getAddress())
-  await instanceRegistry.setBaluniVaultRegistry('0xa88161f82BAa0A065B1b3F785E85e6b5DB45E892')
+  await instanceRegistry.setBaluniVaultRegistry('0xa88161f82BAa0A065B1b3F785E85e6b5DB45E892') */
 
   /*  const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
   await upgrades.prepareUpgrade('0x8c4eDC7a07B372606009E345017C2cB74d043578', BaluniV1Rebalancer)
@@ -136,6 +136,14 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   })
   await baluniPool?.waitForDeployment()
   console.log('BaluniV1Pool upgraded to:', baluniPool.target) */
+
+  const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
+  await upgrades.prepareUpgrade('0x3338029b136B128D899Bd15cDBfEa1B9824CCB35', BaluniV1yVault)
+  const baluniVault = await upgrades.upgradeProxy('0x3338029b136B128D899Bd15cDBfEa1B9824CCB35', BaluniV1yVault, {
+    kind: 'uups',
+  })
+  await baluniVault?.waitForDeployment()
+  console.log('BaluniV1yVault upgraded to:', baluniVault.target)
 
   // const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
   // await upgrades.prepareUpgrade(factoryAddress, BaluniV1PoolFactory);

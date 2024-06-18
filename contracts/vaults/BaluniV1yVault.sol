@@ -35,9 +35,9 @@ contract BaluniV1yVault is
     // The registry contract used in the BaluniV1 system
     IBaluniV1Registry private _registry;
 
-    uint256 public totalDeposits;
-
     uint256 public accumulatedAssetB;
+
+    uint256 public lastDeposit;
 
     /**
      * @dev Initializes the BaluniV1Pool contract.
@@ -86,11 +86,27 @@ contract BaluniV1yVault is
 
         IERC20(baseAsset).transferFrom(msg.sender, address(this), amount);
 
-        IERC20(baseAsset).approve(address(_yearnVault), amount);
-        _yearnVault.deposit(amount, address(this));
+        address baluniRouter = _registry.getBaluniRouter();
+        address treasury = _registry.getTreasury();
 
-        _mint(to, amount);
-        totalDeposits += amount;
+        uint hairCut = _haircut(amount);
+        uint hairCut2 = _haircut(hairCut);
+
+        IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
+        IERC20(baseAsset).transfer(baluniRouter, hairCut2);
+
+        uint256 amountAfter = amount - hairCut;
+
+        IERC20(baseAsset).approve(address(_yearnVault), amountAfter);
+        _yearnVault.deposit(amountAfter, address(this));
+
+        uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
+
+        // scale up amount
+        uint256 amountScaled = amountAfter * 10 ** (18 - baseDecimal);
+        _mint(to, amountScaled);
+
+        lastDeposit = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
     }
 
     /**
@@ -102,17 +118,47 @@ contract BaluniV1yVault is
         require(shares > 0, 'Shares must be greater than zero');
         require(balanceOf(msg.sender) >= shares, 'Insufficient balance');
 
-        uint256 withdrawAmountA = (shares * totalDeposits) / totalSupply();
-        uint256 withdrawAmountB = (shares * accumulatedAssetB) / totalSupply();
+        uint8 yearnDecimal = IERC20Metadata(address(_yearnVault)).decimals();
+        uint8 quoteDecimal = IERC20Metadata(quoteAsset).decimals();
+
+        uint256 balanceYearnVault = _yearnVault.balanceOf(address(this));
+        uint256 quoteBalance = IERC20(quoteAsset).balanceOf(address(this));
+        uint256 baseBalance = IERC20(baseAsset).balanceOf(address(this));
+
+        // scale up totalDeposit and accumualteAssetB
+        balanceYearnVault *= 10 ** (18 - yearnDecimal);
+        quoteBalance *= 10 ** (18 - quoteDecimal);
+
+        uint256 withdrawAmountA = (shares * balanceYearnVault) / totalSupply();
+        uint256 withdrawAmountB = (shares * quoteBalance) / totalSupply();
 
         _burn(msg.sender, shares);
-        totalDeposits -= withdrawAmountA;
-        accumulatedAssetB -= withdrawAmountB;
 
-        uint256 sharesToRedeem = _yearnVault.convertToShares(withdrawAmountA);
-        _yearnVault.redeem(sharesToRedeem, address(this), address(this));
-        IERC20(baseAsset).transfer(to, withdrawAmountA);
-        IERC20(quoteAsset).transfer(to, withdrawAmountB);
+        // scale down totalDeposit and accumualteAssetB
+        withdrawAmountA /= 10 ** (18 - yearnDecimal);
+        withdrawAmountB /= 10 ** (18 - quoteDecimal);
+
+        _yearnVault.redeem(withdrawAmountA, address(this), address(this));
+
+        uint256 baseBalanceAfter = IERC20(baseAsset).balanceOf(address(this));
+        uint256 amountToSend = baseBalanceAfter - baseBalance;
+
+        uint hairCut = _haircut(amountToSend);
+        IERC20(baseAsset).transfer(to, amountToSend - hairCut);
+
+        uint hairCut2 = _haircut(hairCut);
+        address baluniRouter = _registry.getBaluniRouter();
+        address treasury = _registry.getTreasury();
+        IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
+        IERC20(baseAsset).transfer(treasury, hairCut2);
+
+        hairCut = _haircut(withdrawAmountB);
+        IERC20(quoteAsset).transfer(to, withdrawAmountB - hairCut);
+        hairCut2 = _haircut(hairCut);
+        IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
+        IERC20(baseAsset).transfer(treasury, hairCut2);
+
+        lastDeposit = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
     }
 
     /**
@@ -120,7 +166,7 @@ contract BaluniV1yVault is
      */
     function _buy() internal {
         uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
-        uint256 interest = totalAssets > totalDeposits ? totalAssets - totalDeposits : 0;
+        uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
         require(interest > 0, 'No interest available');
 
         uint256 sharesToRedeem = _yearnVault.previewWithdraw(interest);
@@ -144,7 +190,7 @@ contract BaluniV1yVault is
      */
     function _processInterest() internal {
         uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
-        uint256 interest = totalAssets > totalDeposits ? totalAssets - totalDeposits : 0;
+        uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
         if (interest > 0) {
             _buy();
         }
@@ -192,5 +238,16 @@ contract BaluniV1yVault is
 
     function yearnVault() external view override returns (address) {
         return address(_yearnVault);
+    }
+
+    /**
+     * @dev Calculates the fee amount based on the provided amount using the haircut formula.
+     * @param amount The amount to calculate the fee for.
+     * @return The fee amount.
+     */
+    function _haircut(uint256 amount) internal view returns (uint256) {
+        uint256 _BPS_FEE = _registry.getBPS_FEE();
+        uint256 _BPS_BASE = _registry.getBPS_BASE();
+        return (amount * _BPS_FEE) / _BPS_BASE;
     }
 }
