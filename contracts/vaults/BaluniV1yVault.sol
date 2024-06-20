@@ -39,6 +39,8 @@ contract BaluniV1yVault is
 
     uint256 public lastDeposit;
 
+    uint256 public allTimeInterest;
+
     event Buy(address indexed sender, uint256 amount, uint256 interest);
 
     /**
@@ -229,6 +231,13 @@ contract BaluniV1yVault is
         if (baseAsset != USDC) valuation += oracle.convert(baseAsset, USDC, yearnBalanceConvert);
         valuation += oracle.convert(quoteAsset, baseAsset, balanceQuote);
         valuation += yearnBalanceConvert;
+
+        uint256 interest = interestEarned();
+
+        if (baseAsset != USDC) valuation += oracle.convert(baseAsset, USDC, interest);
+
+        valuation += interest;
+
         return valuation;
     }
 
@@ -262,7 +271,7 @@ contract BaluniV1yVault is
      * @dev Returns the amount of interest earned by the vault.
      * @return The amount of interest earned.
      */
-    function interestEarned() external view override returns (uint256) {
+    function interestEarned() public view override returns (uint256) {
         uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
         uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
         return interest;

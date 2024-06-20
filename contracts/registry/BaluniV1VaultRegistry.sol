@@ -82,7 +82,7 @@ contract BaluniV1VaultRegistry is Initializable, UUPSUpgradeable, OwnableUpgrade
      * @dev Retrieves all the vaults created by the factory.
      * @return An array of vault addresses.
      */
-    function getAllvaults() external view returns (address[] memory) {
+    function getAllVaults() external view returns (address[] memory) {
         return allVaults;
     }
 
@@ -90,7 +90,7 @@ contract BaluniV1VaultRegistry is Initializable, UUPSUpgradeable, OwnableUpgrade
      * @dev Retrieves the number of vaults created by the factory.
      * @return The count of vaults.
      */
-    function getvaultsCount() external view returns (uint256) {
+    function getVaultsCount() external view returns (uint256) {
         return allVaults.length;
     }
 

@@ -145,17 +145,17 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   await baluniVault?.waitForDeployment()
   console.log('BaluniV1yVault upgraded to:', baluniVault.target)
 
-  // const BaluniV1PoolFactory = await ethers.getContractFactory("BaluniV1PoolFactory");
-  // await upgrades.prepareUpgrade(factoryAddress, BaluniV1PoolFactory);
-  // const baluniPoolFactory = await upgrades.upgradeProxy(factoryAddress, BaluniV1PoolFactory, {
-  //   kind: "uups",
-  //   call: {
-  //     fn: "reinitialize",
-  //     args: [4],
-  //   },
-  // });
-  // const instanceFactory = await baluniPoolFactory?.waitForDeployment();
-  // console.log("BaluniV1PoolFactory upgraded to:", instanceFactory.target);
+  /* const BaluniV1VaultRegistry = await ethers.getContractFactory('BaluniV1VaultRegistry')
+  await upgrades.prepareUpgrade('0x922b999C559a76438afB79c61ad62B37e30ffc87', BaluniV1VaultRegistry)
+  const baluniVaultRegistry = await upgrades.upgradeProxy(
+    '0x922b999C559a76438afB79c61ad62B37e30ffc87',
+    BaluniV1VaultRegistry,
+    {
+      kind: 'uups',
+    }
+  )
+  await baluniVaultRegistry?.waitForDeployment()
+  console.log('BaluniV1VaultRegistry upgraded to:', baluniVaultRegistry.target) */
 
   // const pool = await deploy("BaluniV1Pool", {
   //   from: deployer,
