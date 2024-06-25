@@ -476,7 +476,7 @@ contract BaluniV1Router is
         require(totalBaluni > 0, 'Total supply cannot be zero');
         uint256 totalUSDC = _totalValuationScaled();
         shareUSDC = (amount * totalUSDC) / totalBaluni;
-        shareUSDC /= 10 ** (18 - baseDecimal); // down scale to USDC
+        shareUSDC /= 10 ** (18 - baseDecimal);
     }
 
     /**
@@ -523,7 +523,8 @@ contract BaluniV1Router is
             address token = tokens.at(i);
             uint256 balance = IERC20(token).balanceOf(address(this));
             if (token == baseAsset) return balance * 1e12;
-            uint256 tokenBalanceValuation = _calculateERC20ValuationScaled(balance, token);
+            address baluniOracle = registry.getBaluniOracle();
+            uint256 tokenBalanceValuation = IBaluniV1Oracle(baluniOracle).convertScaled(token, baseAsset, balance);
             _totalV += tokenBalanceValuation;
         }
 

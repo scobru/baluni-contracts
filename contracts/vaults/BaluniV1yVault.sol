@@ -244,8 +244,10 @@ contract BaluniV1yVault is
     function unitPrice() external view override returns (uint256) {
         address USDC = _registry.getUSDC();
         uint8 decimals = IERC20Metadata(USDC).decimals();
-        uint256 valuationScaledUp = totalValuation() * 10 ** (18 - decimals);
-        return (valuationScaledUp / totalSupply()) * 1e18;
+        uint256 factor = 10 ** (18 - decimals);
+        uint256 valuationScaledUp = totalValuation() * factor;
+        uint256 unitPriceScaled = (valuationScaledUp * 1e18) / totalSupply();
+        return unitPriceScaled;
     }
 
     function registry() external view override returns (address) {

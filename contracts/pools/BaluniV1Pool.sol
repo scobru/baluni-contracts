@@ -616,12 +616,23 @@ contract BaluniV1Pool is
     function unitPrice() external view override returns (uint256) {
         uint256 baseDecimal = IERC20Metadata(baseAsset).decimals();
         uint256 factor = 10 ** (18 - baseDecimal);
-        (uint256 totalVal, ) = _computeTotalValuation();
-        uint256 totalSupply = totalSupply();
-        if (totalSupply == 0) {
+        (uint256 tVal, ) = _computeTotalValuation();
+
+        uint256 supply = totalSupply();
+
+        if (supply == 0) {
             return 0;
         }
-        return (((totalVal * factor) / totalSupply) * ONE);
+
+        if (tVal == 0) {
+            return 0;
+        }
+
+        // Ensure scaling is done properly to avoid precision loss
+        uint256 scaledTotalVal = tVal * factor;
+        uint256 unitPriceScaledDown = (scaledTotalVal * ONE) / supply;
+
+        return unitPriceScaledDown;
     }
 
     /**
