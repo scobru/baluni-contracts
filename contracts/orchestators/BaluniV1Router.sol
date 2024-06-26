@@ -255,7 +255,6 @@ contract BaluniV1Router is
             uint256 totalBaluni = totalSupply();
             require(totalBaluni > 0, 'Total supply is 0');
             uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
-
             if (totalERC20Balance == 0 || token == address(this)) continue;
             uint256 decimals = IERC20Metadata(token).decimals();
             uint256 share = _calculateERC20Share(totalBaluni, totalERC20Balance, burnAmountAfterFee, decimals);
@@ -276,25 +275,28 @@ contract BaluniV1Router is
         require(uniswapFactory != address(0), 'UniswapFactory not set');
         address treasury = registry.getTreasury();
         require(treasury != address(0), 'Treasury not set');
-        address USDC = registry.getUSDC();
-        require(USDC != address(0), 'USDC not set');
         address WNATIVE = registry.getWNATIVE();
         require(WNATIVE != address(0), 'WNATIVE not set');
 
         uint256 burnAmountAfterFee = _calculateNetAmountAfterFee(burnAmount);
         require(burnAmountAfterFee <= burnAmount, 'Fee calculation error');
 
+        uint burnAmountToSend = burnAmount - burnAmountAfterFee;
+
+        transfer(treasury, burnAmountToSend);
+
         for (uint256 i; i < tokens.length(); i++) {
             address token = tokens.at(i);
             require(token != address(0), 'Invalid token address');
+
             uint256 totalBaluni = totalSupply();
             require(totalBaluni > 0, 'Total supply is 0');
+
             uint256 totalERC20Balance = IERC20(token).balanceOf(address(this));
 
             if (totalERC20Balance == 0 || token == address(this)) continue;
 
             uint256 decimals = IERC20Metadata(token).decimals();
-            transfer(treasury, burnAmount - burnAmountAfterFee);
 
             uint256 burnAmountToken = _calculateERC20Share(
                 totalBaluni,
@@ -302,15 +304,17 @@ contract BaluniV1Router is
                 burnAmountAfterFee,
                 decimals
             );
+
             require(burnAmountToken <= totalERC20Balance, 'Share calculation error');
 
             if (token == baseAsset) {
-                IERC20(USDC).transfer(msg.sender, burnAmountToken);
+                IERC20(baseAsset).transfer(msg.sender, burnAmountToken);
                 continue;
             }
 
             address baluniSwapper = registry.getBaluniSwapper();
             require(baluniSwapper != address(0), 'BaluniSwapper not set');
+
             IERC20(token).approve(baluniSwapper, burnAmountToken);
 
             try IBaluniV1Swapper(baluniSwapper).singleSwap(token, baseAsset, burnAmountToken, msg.sender) returns (
@@ -518,16 +522,24 @@ contract BaluniV1Router is
      * @return The total valuation of the contract.
      */
     function _totalValuationScaled() internal view returns (uint256) {
-        uint256 _totalV;
-        for (uint256 i; i < tokens.length(); i++) {
+        uint256 _totalV = 0;
+
+        for (uint256 i = 0; i < tokens.length(); i++) {
             address token = tokens.at(i);
             uint256 balance = IERC20(token).balanceOf(address(this));
-            if (token == baseAsset) return balance * 1e12;
+
+            if (balance == 0) continue;
+
+            if (token == baseAsset) {
+                _totalV += balance * 1e12;
+                continue;
+            }
+
             address baluniOracle = registry.getBaluniOracle();
             uint256 tokenBalanceValuation = IBaluniV1Oracle(baluniOracle).convertScaled(token, baseAsset, balance);
+            require(tokenBalanceValuation > 0, 'Token valuation is zero');
             _totalV += tokenBalanceValuation;
         }
-
         return _totalV;
     }
 
@@ -566,5 +578,14 @@ contract BaluniV1Router is
      */
     function addToken(address _token) external onlyOwner {
         EnumerableSetUpgradeable.add(tokens, _token);
+    }
+
+    /**
+     * @dev Removes a token from the `tokens` set.
+     * Can only be called by the contract owner.
+     * @param _token The address of the token to be removed.
+     */
+    function removeToken(address _token) external onlyOwner {
+        EnumerableSetUpgradeable.remove(tokens, _token);
     }
 }

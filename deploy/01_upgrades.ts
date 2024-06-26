@@ -105,29 +105,29 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   await baluniAgentFactory?.waitForDeployment()
   console.log('BaluniV1AgentFactory upgraded to:', baluniAgentFactory.target) */
 
-  /* const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
+  const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
   await upgrades.prepareUpgrade('0xD8dDca643684e67c17087B7cF6CeE08C91F12511', BaluniV1Oracle)
   const baluniOracle = await upgrades.upgradeProxy('0xD8dDca643684e67c17087B7cF6CeE08C91F12511', BaluniV1Oracle, {
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 9],
+      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 15],
     },
   })
   await baluniOracle?.waitForDeployment()
-  console.log('BaluniV1Oracle upgraded to:', baluniOracle.target) */
+  console.log('BaluniV1Oracle upgraded to:', baluniOracle.target)
 
-  const BaluniV1Router = await ethers.getContractFactory('BaluniV1Router')
+  /* const BaluniV1Router = await ethers.getContractFactory('BaluniV1Router')
   await upgrades.prepareUpgrade('0x8d7F211172bc11d7a99ad30026299e8ec508ACB0', BaluniV1Router)
   const baluniRouter = await upgrades.upgradeProxy('0x8d7F211172bc11d7a99ad30026299e8ec508ACB0', BaluniV1Router, {
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 7],
+      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 18],
     },
   })
   await baluniRouter?.waitForDeployment()
-  console.log('BaluniV1Router upgraded to:', baluniRouter.target)
+  console.log('BaluniV1Router upgraded to:', baluniRouter.target) */
 
   /*   const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
   await upgrades.prepareUpgrade('0x2abEf7D3eCA3074277534FfFfd994851Ac0092d3', BaluniV1Pool)

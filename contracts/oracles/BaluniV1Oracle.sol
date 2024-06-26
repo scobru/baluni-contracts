@@ -48,6 +48,7 @@ import '../interfaces/IBaluniV1Registry.sol';
 import '../interfaces/IBaluniV1Oracle.sol';
 import '../interfaces/IStaticOracle.sol';
 import '../interfaces/IYearnVault.sol';
+import '../interfaces/IBaluniV1yVault.sol';
 
 contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, IBaluniV1Oracle {
     IBaluniV1Registry public registry;
@@ -81,9 +82,9 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         (address assetTo, ) = isYearnVault(toToken, 0);
         if (assetFrom != address(0) && assetTo != address(0)) {
             return this.convertWithStaticOracle(assetFrom, assetTo, assetAmountFrom);
-        } else if (assetFrom != address(0)) {
+        } else if (assetFrom != address(0) && assetTo == address(0)) {
             return this.convertWithStaticOracle(assetFrom, toToken, assetAmountFrom);
-        } else if (assetTo != address(0)) {
+        } else if (assetTo != address(0) && assetFrom == address(0)) {
             return this.convertWithStaticOracle(fromToken, assetTo, amount);
         } else {
             return this.convertWithStaticOracle(fromToken, toToken, amount);
@@ -240,11 +241,15 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function isYearnVault(address _address, uint256 amount) public view returns (address, uint256) {
-        try IYearnVault(_address).asset() returns (address) {
-            uint256 convertToAssets = IYearnVault(_address).convertToAssets(amount);
-            return (_address, convertToAssets);
-        } catch {
+        IBaluniV1yVault byVault = IBaluniV1yVault(_address);
+
+        if (byVault.yearnVault() == address(0)) {
             return (address(0), 0);
         }
+
+        address yearnVaultAddress = address(byVault.yearnVault());
+
+        uint256 convertToAssets = IYearnVault(yearnVaultAddress).convertToAssets(amount);
+        return (IYearnVault(yearnVaultAddress).asset(), convertToAssets);
     }
 }

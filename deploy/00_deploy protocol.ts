@@ -179,47 +179,67 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   // await baluniV1PoolRegistry.addPool(baluniV1Pool2.target)
 
-  // // Save the deployment information to the deployment folder
-  // saveDeploymentInfo(chainId, deploymentInfo)
-
-  const BaluniV1VaultRegistry = await ethers.getContractFactory('BaluniV1VaultRegistry')
-  const baluniV1VaultRegistry = (await upgrades.deployProxy(
-    BaluniV1VaultRegistry,
-    ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655' /* await registry.getAddress() */],
-    {
-      kind: 'uups',
-    }
-  )) as unknown as BaluniV1VaultRegistry
-  await baluniV1VaultRegistry?.waitForDeployment()
-  console.log('BaluniV1VaultRegistry deployed to:', baluniV1VaultRegistry.target)
-  deploymentInfo.BaluniV1VaultRegistry = baluniV1VaultRegistry.target
-  //await registry.setBaluniPoolRegistry(await baluniV1PoolRegistry.target)
-
-  //saveDeploymentInfo(chainId, deploymentInfo)
-
-  const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
-  const baluniV1yVault = await upgrades.deployProxy(
-    BaluniV1yVault,
+  const byUSDCx = "0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5"
+  const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
+  const baluniV1Pool3 = (await upgrades.deployProxy(
+    BaluniV1Pool,
     [
-      'BALUNI Yearn Vault USDC Accumulator WBTC',
-      'byUSDCx',
-      USDC,
-      '0x34b9421Fe3d52191B64bC32ec1aB764dcBcDbF5e', // yearn vault
-      WBTC,
-      '0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', // await registry.getAddress(),
+      [byUSDCx, WNATIVE],
+      [5000, 5000],
+      500,
+      "0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655", // PoolFactory
     ],
     {
       kind: 'uups',
     }
-  )
+  )) as unknown as BaluniV1Pool
+  await baluniV1Pool3?.waitForDeployment()
+  console.log('BaluniV1Pool3 deployed to:', baluniV1Pool3.target)
+  //deploymentInfo.BaluniV1Pool2 = baluniV1Pool3.target
 
-  await baluniV1yVault?.waitForDeployment()
-  console.log('BaluniV1yPoolAcc deployed to:', baluniV1yVault.target)
-  deploymentInfo.BaluniV1yVault = baluniV1yVault.target
+  //await baluniV1PoolRegistry.addPool(baluniV1Pool2.target)
 
-  //saveDeploymentInfo(chainId, deploymentInfo)
+  // // Save the deployment information to the deployment folder
+  // saveDeploymentInfo(chainId, deploymentInfo)
 
-  await baluniV1VaultRegistry.addVault(baluniV1yVault.target)
+  // const BaluniV1VaultRegistry = await ethers.getContractFactory('BaluniV1VaultRegistry')
+  // const baluniV1VaultRegistry = (await upgrades.deployProxy(
+  //   BaluniV1VaultRegistry,
+  //   ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655' /* await registry.getAddress() */],
+  //   {
+  //     kind: 'uups',
+  //   }
+  // )) as unknown as BaluniV1VaultRegistry
+  // await baluniV1VaultRegistry?.waitForDeployment()
+  // console.log('BaluniV1VaultRegistry deployed to:', baluniV1VaultRegistry.target)
+  // deploymentInfo.BaluniV1VaultRegistry = baluniV1VaultRegistry.target
+  // //await registry.setBaluniPoolRegistry(await baluniV1PoolRegistry.target)
+
+  // //saveDeploymentInfo(chainId, deploymentInfo)
+
+  // const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
+  // const baluniV1yVault = await upgrades.deployProxy(
+  //   BaluniV1yVault,
+  //   [
+  //     'BALUNI Yearn Vault USDC Accumulator WBTC',
+  //     'byUSDCx',
+  //     USDC,
+  //     '0x34b9421Fe3d52191B64bC32ec1aB764dcBcDbF5e', // yearn vault
+  //     WBTC,
+  //     '0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', // await registry.getAddress(),
+  //   ],
+  //   {
+  //     kind: 'uups',
+  //   }
+  // )
+
+  // await baluniV1yVault?.waitForDeployment()
+  // console.log('BaluniV1yPoolAcc deployed to:', baluniV1yVault.target)
+  // deploymentInfo.BaluniV1yVault = baluniV1yVault.target
+
+  // //saveDeploymentInfo(chainId, deploymentInfo)
+
+  // await baluniV1VaultRegistry.addVault(baluniV1yVault.target)
 }
 export default deployProtocol
 
