@@ -41,15 +41,14 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '../interfaces/IBaluniV1Registry.sol';
-import '../interfaces/IBaluniV1yVault.sol';
+import '../interfaces/IBaluniV1DCAVault.sol';
 
-contract BaluniV1VaultRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+contract BaluniV1DCAVaultRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     address[] public allVaults;
 
     IBaluniV1Registry public registry;
 
-    mapping(address => address) public getVaultType0;
-    mapping(address => mapping(address => address)) public getVaultType1;
+    mapping(address => mapping(address => address)) public getVault;
 
     event vaultCreated(address indexed vault, address[] assets);
 
@@ -68,14 +67,11 @@ contract BaluniV1VaultRegistry is Initializable, UUPSUpgradeable, OwnableUpgrade
     function addVault(address vaultAddress) external onlyOwner {
         require(vaultAddress != address(0), 'BaluniV1VaultFactory: INVALID_vault_ADDRESS');
         allVaults.push(vaultAddress);
-        address baseAsset = IBaluniV1yVault(vaultAddress).baseAsset();
-        address quoteAsset = IBaluniV1yVault(vaultAddress).quoteAsset();
-        if (quoteAsset == address(0)) {
-            getVaultType0[baseAsset] = vaultAddress;
-        } else {
-            getVaultType1[baseAsset][quoteAsset] = vaultAddress;
-            getVaultType1[quoteAsset][baseAsset] = vaultAddress;
-        }
+        address baseAsset = IBaluniV1DCAVault(vaultAddress).baseAsset();
+        address quoteAsset = IBaluniV1DCAVault(vaultAddress).quoteAsset();
+
+        getVault[baseAsset][quoteAsset] = vaultAddress;
+        getVault[quoteAsset][baseAsset] = vaultAddress;
     }
 
     /**
@@ -101,8 +97,8 @@ contract BaluniV1VaultRegistry is Initializable, UUPSUpgradeable, OwnableUpgrade
      */
     function getVaultAsset(address vaultAddress) external view returns (address[] memory) {
         address[] memory assets = new address[](2);
-        assets[0] = IBaluniV1yVault(vaultAddress).baseAsset();
-        assets[1] = IBaluniV1yVault(vaultAddress).quoteAsset();
+        assets[0] = IBaluniV1DCAVault(vaultAddress).baseAsset();
+        assets[1] = IBaluniV1DCAVault(vaultAddress).quoteAsset();
         return assets;
     }
 
@@ -113,16 +109,7 @@ contract BaluniV1VaultRegistry is Initializable, UUPSUpgradeable, OwnableUpgrade
      * @return The address of the vault.
      */
     function getVaultType1ByAssets(address asset1, address asset2) external view returns (address) {
-        return getVaultType1[asset1][asset2];
-    }
-
-    /**
-     * @dev Retrieves the address of the vault type 0 associated with the given asset.
-     * @param asset The address of the asset.
-     * @return The address of the vault type 0 associated with the asset.
-     */
-    function getVaultType0ByAsset(address asset) external view returns (address) {
-        return getVaultType0[asset];
+        return getVault[asset1][asset2];
     }
 
     function getVaultsByAsset(address token) external view returns (address[] memory) {
@@ -130,7 +117,7 @@ contract BaluniV1VaultRegistry is Initializable, UUPSUpgradeable, OwnableUpgrade
         uint256 count = 0;
 
         for (uint256 i = 0; i < allVaults.length; i++) {
-            IBaluniV1yVault vault = IBaluniV1yVault(allVaults[i]);
+            IBaluniV1DCAVault vault = IBaluniV1DCAVault(allVaults[i]);
             address asset = vault.baseAsset();
 
             if (asset == token) {
@@ -165,9 +152,8 @@ contract BaluniV1VaultRegistry is Initializable, UUPSUpgradeable, OwnableUpgrade
         for (uint256 i = 0; i < allVaults.length; i++) {
             if (allVaults[i] == _vault) {
                 allVaults[i] = allVaults[allVaults.length - 1];
-                getVaultType0[IBaluniV1yVault(_vault).baseAsset()] = address(0);
-                getVaultType1[IBaluniV1yVault(_vault).quoteAsset()][IBaluniV1yVault(_vault).baseAsset()] = address(0);
-                getVaultType1[IBaluniV1yVault(_vault).baseAsset()][IBaluniV1yVault(_vault).quoteAsset()] = address(0);
+                getVault[IBaluniV1DCAVault(_vault).quoteAsset()][IBaluniV1DCAVault(_vault).baseAsset()] = address(0);
+                getVault[IBaluniV1DCAVault(_vault).baseAsset()][IBaluniV1DCAVault(_vault).quoteAsset()] = address(0);
                 allVaults.pop();
                 break;
             }

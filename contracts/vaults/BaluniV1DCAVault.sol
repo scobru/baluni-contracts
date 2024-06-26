@@ -9,54 +9,48 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol';
 
 import '../interfaces/IBaluniV1Registry.sol';
-import '../interfaces/IYearnVault.sol';
 import '../interfaces/IBaluniV1Swapper.sol';
 import '../interfaces/IBaluniV1Oracle.sol';
-import '../interfaces/IBaluniV1yVault.sol';
 
-contract BaluniV1yVault is
+contract BaluniV1DCAVault is
     Initializable,
     UUPSUpgradeable,
     OwnableUpgradeable,
     ERC20Upgradeable,
     ReentrancyGuardUpgradeable,
-    PausableUpgradeable,
-    IBaluniV1yVault
+    PausableUpgradeable
 {
-    // The address of the asset accepted by the pool
     address public baseAsset;
-
-    // The address of the Yearn Vault for assetA
-    IYearnVault private _yearnVault;
-
-    // The address of the asset to be purchased with interest
     address public quoteAsset;
 
-    // The registry contract used in the BaluniV1 system
     IBaluniV1Registry private _registry;
 
-    uint256 public accumulatedAssetB;
-
     uint256 public lastDeposit;
+    uint256 public lastInvestedBlock;
+    uint256 public maxPerSwap;
+    uint256 public swapDuration;
+    uint256 public reinvestDuration;
 
-    uint256 public allTimeInterest;
+    mapping(address => bool) public executors;
 
-    event Buy(address indexed sender, uint256 amount, uint256 interest);
+    event ExecuteTrade(address indexed sender, uint256 amountIn, uint256 amountOut);
 
     /**
-     * @dev Initializes the BaluniV1Pool contract.
-     * @param _assetA The address of the accepted asset.
-     * @param _yearnVaultAddress The address of the Yearn Vault for assetA.
-     * @param _assetB The address of the asset to be purchased with interest.
-     * @param _registryAddress The address of the BaluniV1Registry contract.
+     * @dev Initializes the BaluniV1DCA contract.
+     * @param _name The name of the token.
+     * @param _symbol The symbol of the token.
+     * @param _baseAsset The address of the base asset.
+     * @param _quoteAsset The address of the quote asset.
+     * @param _registryAddress The address of the registry contract.
+     * @param _reinvestDuration The duration between reinvestments.
      */
     function initialize(
         string memory _name,
         string memory _symbol,
-        address _assetA,
-        address _yearnVaultAddress,
-        address _assetB,
-        address _registryAddress
+        address _baseAsset,
+        address _quoteAsset,
+        address _registryAddress,
+        uint256 _reinvestDuration
     ) external initializer {
         __Ownable_init(msg.sender);
         __ERC20_init(_name, _symbol);
@@ -64,14 +58,44 @@ contract BaluniV1yVault is
         __ReentrancyGuard_init();
         __Pausable_init();
 
-        baseAsset = _assetA;
-        _yearnVault = IYearnVault(_yearnVaultAddress);
-        quoteAsset = _assetB;
+        baseAsset = _baseAsset;
+        quoteAsset = _quoteAsset;
         _registry = IBaluniV1Registry(_registryAddress);
 
-        require(baseAsset != address(0), 'Invalid assetA address');
-        require(address(_yearnVault) != address(0), 'Invalid Yearn Vault address');
-        require(quoteAsset != address(0), 'Invalid assetB address');
+        swapDuration = 360 * _reinvestDuration;
+        reinvestDuration = _reinvestDuration;
+        lastInvestedBlock = block.number;
+        maxPerSwap = 10000 * 10 ** ERC20Upgradeable(_baseAsset).decimals();
+    }
+
+    function reinitialize(
+        string memory _name,
+        string memory _symbol,
+        address _baseAsset,
+        address _quoteAsset,
+        address _registryAddress,
+        uint256 _reinvestDuration,
+        uint64 _version
+    ) external reinitializer(_version) {
+        __Ownable_init(msg.sender);
+        __ERC20_init(_name, _symbol);
+        __UUPSUpgradeable_init();
+        __ReentrancyGuard_init();
+        __Pausable_init();
+
+        baseAsset = _baseAsset;
+        quoteAsset = _quoteAsset;
+        _registry = IBaluniV1Registry(_registryAddress);
+
+        swapDuration = 360 * _reinvestDuration;
+        reinvestDuration = _reinvestDuration;
+        lastInvestedBlock = block.number;
+        maxPerSwap = 10000 * 10 ** ERC20Upgradeable(_baseAsset).decimals();
+    }
+
+    modifier onlyExecutor() {
+        require(executors[msg.sender], 'executor: wut?');
+        _;
     }
 
     /**
@@ -82,14 +106,12 @@ contract BaluniV1yVault is
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
-     * @dev Deposits assetA into the pool and Yearn Vault.
+     * @dev Deposits assetA into the pool.
      * @param amount The amount of assetA to deposit.
      * @param to The address to receive pool tokens.
      */
-    function deposit(uint256 amount, address to) external override nonReentrant whenNotPaused {
+    function deposit(uint256 amount, address to) external nonReentrant whenNotPaused {
         require(amount > 0, 'Amount must be greater than zero');
-
-        _processInterest();
 
         IERC20(baseAsset).transferFrom(msg.sender, address(this), amount);
 
@@ -103,52 +125,40 @@ contract BaluniV1yVault is
         IERC20(baseAsset).transfer(treasury, hairCut2);
 
         uint256 amountAfter = amount - hairCut;
-
-        IERC20(baseAsset).approve(address(_yearnVault), amountAfter);
-        _yearnVault.deposit(amountAfter, address(this));
-
         uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
 
         // scale up amount
         uint256 amountScaled = amountAfter * 10 ** (18 - baseDecimal);
         _mint(to, amountScaled);
 
-        lastDeposit = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
+        lastDeposit += amountAfter;
     }
 
     /**
-     * @dev Withdraws assetA and assetB from the pool and Yearn Vault.
+     * @dev Withdraws assetA and assetB from the pool.
      * @param shares The amount of pool tokens to redeem.
      * @param to The address to receive assetA and assetB.
      */
-    function withdraw(uint256 shares, address to) external override nonReentrant whenNotPaused {
+    function withdraw(uint256 shares, address to) external nonReentrant whenNotPaused {
         require(shares > 0, 'Shares must be greater than zero');
         require(balanceOf(msg.sender) >= shares, 'Insufficient balance');
 
-        uint8 yearnDecimal = IERC20Metadata(address(_yearnVault)).decimals();
         uint8 quoteDecimal = IERC20Metadata(quoteAsset).decimals();
-
-        uint256 balanceYearnVault = _yearnVault.balanceOf(address(this));
         uint256 quoteBalance = IERC20(quoteAsset).balanceOf(address(this));
         uint256 baseBalance = IERC20(baseAsset).balanceOf(address(this));
 
         // scale up totalDeposit and accumualteAssetB
-        balanceYearnVault *= 10 ** (18 - yearnDecimal);
         quoteBalance *= 10 ** (18 - quoteDecimal);
 
-        uint256 withdrawAmountA = (shares * balanceYearnVault) / totalSupply();
+        uint256 withdrawAmountA = (shares * baseBalance) / totalSupply();
         uint256 withdrawAmountB = (shares * quoteBalance) / totalSupply();
 
         _burn(msg.sender, shares);
 
         // scale down totalDeposit and accumualteAssetB
-        withdrawAmountA /= 10 ** (18 - yearnDecimal);
         withdrawAmountB /= 10 ** (18 - quoteDecimal);
 
-        _yearnVault.redeem(withdrawAmountA, address(this), address(this));
-
-        uint256 baseBalanceAfter = IERC20(baseAsset).balanceOf(address(this));
-        uint256 amountToSend = baseBalanceAfter - baseBalance;
+        uint256 amountToSend = withdrawAmountA;
 
         uint hairCut = _haircut(amountToSend);
         IERC20(baseAsset).transfer(to, amountToSend - hairCut);
@@ -160,91 +170,75 @@ contract BaluniV1yVault is
         IERC20(baseAsset).transfer(treasury, hairCut2);
 
         hairCut = _haircut(withdrawAmountB);
-        accumulatedAssetB -= withdrawAmountB;
         IERC20(quoteAsset).transfer(to, withdrawAmountB - hairCut);
         hairCut2 = _haircut(hairCut);
         IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
         IERC20(baseAsset).transfer(treasury, hairCut2);
 
-        lastDeposit = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
+        lastDeposit -= amountToSend;
     }
 
-    /**
-     * @dev Uses the accumulated interest to purchase assetB.
-     */
-    function _buy() internal {
-        uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
-        uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
-        require(interest > 0, 'BaluniV1yVault: No interest available');
+    function systemDeposit() external onlyExecutor nonReentrant whenNotPaused {
+        require((block.number - lastInvestedBlock) > reinvestDuration, 'wait till next reinvest cycle');
 
-        uint256 sharesToRedeem = _yearnVault.convertToShares(interest);
-        uint256 amountOut = _yearnVault.redeem(sharesToRedeem, address(this), address(this));
-
-        require(amountOut > 0, 'BaluniV1yVault: Redeem Failed');
+        uint amtToSwap = getAmountToSwap(); // return 1e18
+        require(amtToSwap > 0, 'Nothing to swap');
 
         IBaluniV1Swapper swapper = IBaluniV1Swapper(_registry.getBaluniSwapper());
+        IERC20(baseAsset).approve(address(swapper), amtToSwap);
 
-        IERC20(baseAsset).approve(address(swapper), amountOut);
+        uint256 quoteReceived = swapper.singleSwap(baseAsset, quoteAsset, amtToSwap, address(this));
+        lastInvestedBlock = block.number;
 
-        swapper.singleSwap(baseAsset, quoteAsset, amountOut, address(this));
-
-        emit Buy(msg.sender, amountOut, interest);
+        emit ExecuteTrade(msg.sender, amtToSwap, quoteReceived);
     }
 
-    function buy() external override nonReentrant onlyOwner whenNotPaused {
-        _buy();
+    function getAmountToSwap() public view returns (uint) {
+        uint baseTokenBal = IERC20(baseAsset).balanceOf(address(this));
+        uint blockDiff = block.number - lastInvestedBlock;
+        uint toSwapQty = (baseTokenBal * blockDiff) / swapDuration;
+        return toSwapQty > maxPerSwap ? maxPerSwap : toSwapQty;
     }
 
-    /**
-     * @dev Checks and processes accumulated interest.
-     */
-    function _processInterest() internal {
-        uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
-        uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
-        uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
-        uint limit = 1 * 10 ** (baseDecimal - 2);
-        if (interest > limit) {
-            _buy();
-        }
+    function canSystemDeposit() public view returns (bool) {
+        uint amtToSwap = getAmountToSwap();
+        return ((block.number - lastInvestedBlock) > reinvestDuration) && (amtToSwap > 0);
     }
 
     /**
      * @dev pause pool, restricting certain operations
      */
-    function pause() external override onlyOwner {
+    function pause() external onlyOwner {
         _pause();
     }
 
     /**
      * @dev unpause pool, enabling certain operations
      */
-    function unpause() external override onlyOwner {
+    function unpause() external onlyOwner {
         _unpause();
     }
 
-    function totalValuation() public view override returns (uint256) {
+    function totalValuation() public view returns (uint256) {
         IBaluniV1Oracle oracle = IBaluniV1Oracle(_registry.getBaluniOracle());
         address USDC = _registry.getUSDC();
         uint256 valuation = 0;
 
-        uint yearnBalance = _yearnVault.balanceOf(address(this));
-        uint yearnBalanceConvert = _yearnVault.convertToAssets(yearnBalance);
+        uint baseBalance = IERC20(baseAsset).balanceOf(address(this));
         uint balanceQuote = IERC20(quoteAsset).balanceOf(address(this));
 
-        if (baseAsset != USDC) valuation += oracle.convert(baseAsset, USDC, yearnBalanceConvert);
+        if (baseBalance == 0 && balanceQuote == 0) return 0;
+
+        if (baseAsset != USDC) valuation += oracle.convert(baseAsset, USDC, baseBalance);
         valuation += oracle.convert(quoteAsset, baseAsset, balanceQuote);
-        valuation += yearnBalanceConvert;
-
-        uint256 interest = interestEarned();
-
-        if (baseAsset != USDC) valuation += oracle.convert(baseAsset, USDC, interest);
-
-        valuation += interest;
+        valuation += baseBalance;
 
         return valuation;
     }
 
-    function unitPrice() external view override returns (uint256) {
+    function unitPrice() external view returns (uint256) {
+        if (totalSupply() == 0) return 0;
+
         address USDC = _registry.getUSDC();
         uint8 decimals = IERC20Metadata(USDC).decimals();
         uint256 factor = 10 ** (18 - decimals);
@@ -253,12 +247,12 @@ contract BaluniV1yVault is
         return unitPriceScaled;
     }
 
-    function registry() external view override returns (address) {
+    function registry() external view returns (address) {
         return address(_registry);
     }
 
-    function yearnVault() external view override returns (address) {
-        return address(_yearnVault);
+    function setExecutor(address _wallet, bool _allow) external onlyOwner {
+        executors[_wallet] = _allow;
     }
 
     /**
@@ -270,15 +264,5 @@ contract BaluniV1yVault is
         uint256 _BPS_FEE = _registry.getBPS_FEE();
         uint256 _BPS_BASE = _registry.getBPS_BASE();
         return (amount * _BPS_FEE) / _BPS_BASE;
-    }
-
-    /**
-     * @dev Returns the amount of interest earned by the vault.
-     * @return The amount of interest earned.
-     */
-    function interestEarned() public view override returns (uint256) {
-        uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
-        uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
-        return interest;
     }
 }

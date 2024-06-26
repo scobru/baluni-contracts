@@ -105,7 +105,7 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   await baluniAgentFactory?.waitForDeployment()
   console.log('BaluniV1AgentFactory upgraded to:', baluniAgentFactory.target) */
 
-  const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
+  /* const BaluniV1Oracle = await ethers.getContractFactory('BaluniV1Oracle')
   await upgrades.prepareUpgrade('0xD8dDca643684e67c17087B7cF6CeE08C91F12511', BaluniV1Oracle)
   const baluniOracle = await upgrades.upgradeProxy('0xD8dDca643684e67c17087B7cF6CeE08C91F12511', BaluniV1Oracle, {
     kind: 'uups',
@@ -116,6 +116,7 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   })
   await baluniOracle?.waitForDeployment()
   console.log('BaluniV1Oracle upgraded to:', baluniOracle.target)
+ */
 
   /* const BaluniV1Router = await ethers.getContractFactory('BaluniV1Router')
   await upgrades.prepareUpgrade('0x8d7F211172bc11d7a99ad30026299e8ec508ACB0', BaluniV1Router)
@@ -137,16 +138,31 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
     await baluniPool?.waitForDeployment()
     console.log('BaluniV1Pool upgraded to:', baluniPool.target) */
 
-  /*  const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
-   await upgrades.prepareUpgrade('0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5', BaluniV1yVault)
-   const baluniVault = await upgrades.upgradeProxy('0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5', BaluniV1yVault, {
-     kind: 'uups',
-   })
-   await baluniVault?.waitForDeployment()
-   console.log('BaluniV1yVault upgraded to:', baluniVault.target) */
+  /*   const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
+    await upgrades.prepareUpgrade('0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5', BaluniV1yVault)
+    const baluniVault = await upgrades.upgradeProxy('0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5', BaluniV1yVault, {
+      kind: 'uups',
+    })
+    await baluniVault?.waitForDeployment()
+    console.log('BaluniV1yVault upgraded to:', baluniVault.target) */
+
+  const BaluniV1DCAVault = await ethers.getContractFactory('BaluniV1DCAVault')
+  await upgrades.forceImport('0x55E2cd4b9Dd9dCc1ce9A046B9A63215C700EE556', BaluniV1DCAVault)
+  await upgrades.prepareUpgrade('0x55E2cd4b9Dd9dCc1ce9A046B9A63215C700EE556', BaluniV1DCAVault)
+  const baluniDCAVault = await upgrades.upgradeProxy('0x55E2cd4b9Dd9dCc1ce9A046B9A63215C700EE556', BaluniV1DCAVault, {
+    kind: 'uups',
+    /* call: {
+      fn: 'reinitialize',
+      args: ['Baluni DCA Vault', 'bdUSDCx', USDC, WBTC, '0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 28800, 3],
+    }, */
+  })
+  await baluniDCAVault?.waitForDeployment()
+  console.log('BaluniV1yVault upgraded to:', baluniDCAVault.target)
 
   /* const BaluniV1VaultRegistry = await ethers.getContractFactory('BaluniV1VaultRegistry')
+
   await upgrades.prepareUpgrade('0x922b999C559a76438afB79c61ad62B37e30ffc87', BaluniV1VaultRegistry)
+
   const baluniVaultRegistry = await upgrades.upgradeProxy(
     '0x922b999C559a76438afB79c61ad62B37e30ffc87',
     BaluniV1VaultRegistry,
@@ -154,10 +170,12 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
       kind: 'uups',
     }
   )
+
   await baluniVaultRegistry?.waitForDeployment()
+
   console.log('BaluniV1VaultRegistry upgraded to:', baluniVaultRegistry.target) */
 
-  const BaluniV1PoolRegistry = await ethers.getContractFactory('BaluniV1PoolRegistry')
+  /* const BaluniV1PoolRegistry = await ethers.getContractFactory('BaluniV1PoolRegistry')
   await upgrades.prepareUpgrade('0x84436609a3a6E3023aF5691BCa9e00280a3E360b', BaluniV1PoolRegistry)
   const baluniPoolRegistry = await upgrades.upgradeProxy(
     '0x84436609a3a6E3023aF5691BCa9e00280a3E360b',
@@ -167,7 +185,7 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
     }
   )
   await baluniPoolRegistry?.waitForDeployment()
-  console.log('BaluniV1PoolRegistry upgraded to:', baluniPoolRegistry.target)
+  console.log('BaluniV1PoolRegistry upgraded to:', baluniPoolRegistry.target) */
 
   // const pool = await deploy("BaluniV1Pool", {
   //   from: deployer,

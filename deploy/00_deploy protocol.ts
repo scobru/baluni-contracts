@@ -6,7 +6,8 @@ import fs from 'fs'
 import path from 'path'
 import {
   BaluniV1Pool,
-  BaluniV1yVaultType1,
+  BaluniV1DCAVault,
+  BaluniV1yVault,
   BaluniV1PoolPeriphery,
   BaluniV1Rebalancer,
   BaluniV1PoolRegistry,
@@ -179,22 +180,47 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   // await baluniV1PoolRegistry.addPool(baluniV1Pool2.target)
 
-  const byUSDCx = "0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5"
-  const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
-  const baluniV1Pool3 = (await upgrades.deployProxy(
-    BaluniV1Pool,
-    [
-      [byUSDCx, WNATIVE],
-      [5000, 5000],
-      500,
-      "0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655", // PoolFactory
-    ],
+  // const byUSDCx = "0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5"
+  // const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
+  // const baluniV1Pool3 = (await upgrades.deployProxy(
+  //   BaluniV1Pool,
+  //   [
+  //     [byUSDCx, WNATIVE],
+  //     [5000, 5000],
+  //     500,
+  //     "0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655", // PoolFactory
+  //   ],
+  //   {
+  //     kind: 'uups',
+  //   }
+  // )) as unknown as BaluniV1Pool
+  // await baluniV1Pool3?.waitForDeployment()
+  // console.log('BaluniV1Pool3 deployed to:', baluniV1Pool3.target)
+
+
+  const BaluniV1DCAVaultRegistry = await ethers.getContractFactory('BaluniV1DCAVaultRegistry')
+  const baluniV1DCAVaultRegistry = (await upgrades.deployProxy(BaluniV1DCAVaultRegistry, ["0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655"], {
+    kind: 'uups',
+  })) as unknown as BaluniV1VaultRegistry
+  const instanceVaultRegistry = await baluniV1DCAVaultRegistry?.waitForDeployment()
+  console.log('BaluniDCAVaultRegistry deployed to:', baluniV1DCAVaultRegistry.target)
+  deploymentInfo.BaluniDCAVaultRegistry = baluniV1DCAVaultRegistry.target
+
+  const BaluniV1DCAVault = await ethers.getContractFactory('BaluniV1DCAVault')
+
+  const baluniDCAVault = (await upgrades.deployProxy(
+    BaluniV1DCAVault,
+    ['Baluni DCA Vault', 'bdUSDCx', USDC, WBTC, '0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 28800],
     {
       kind: 'uups',
     }
-  )) as unknown as BaluniV1Pool
-  await baluniV1Pool3?.waitForDeployment()
-  console.log('BaluniV1Pool3 deployed to:', baluniV1Pool3.target)
+  )) as unknown as BaluniV1DCAVault
+
+  await baluniDCAVault?.waitForDeployment()
+  console.log('BaluniV1DCAVault deployed to:', baluniDCAVault.target)
+
+  await instanceVaultRegistry.addVault(baluniDCAVault.target)
+
   //deploymentInfo.BaluniV1Pool2 = baluniV1Pool3.target
 
   //await baluniV1PoolRegistry.addPool(baluniV1Pool2.target)
