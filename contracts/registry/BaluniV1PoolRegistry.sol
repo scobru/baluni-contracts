@@ -154,4 +154,16 @@ contract BaluniV1PoolRegistry is Initializable, UUPSUpgradeable, OwnableUpgradea
         }
         return false;
     }
+
+    function removePool(address _pool) external onlyOwner {
+        for (uint256 i = 0; i < allPools.length; i++) {
+            if (allPools[i] == _pool) {
+                allPools[i] = allPools[allPools.length - 1];
+                getPool[IBaluniV1Pool(_pool).getAssets()[0]][IBaluniV1Pool(_pool).getAssets()[1]] = address(0);
+                getPool[IBaluniV1Pool(_pool).getAssets()[1]][IBaluniV1Pool(_pool).getAssets()[0]] = address(0);
+                allPools.pop();
+                break;
+            }
+        }
+    }
 }

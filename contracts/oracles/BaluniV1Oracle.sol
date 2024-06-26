@@ -78,17 +78,29 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         address toToken,
         uint256 amount
     ) public view override returns (uint256 valuation) {
-        (address assetFrom, uint256 assetAmountFrom) = isYearnVault(fromToken, amount);
-        (address assetTo, ) = isYearnVault(toToken, 0);
-        if (assetFrom != address(0) && assetTo != address(0)) {
-            return this.convertWithStaticOracle(assetFrom, assetTo, assetAmountFrom);
-        } else if (assetFrom != address(0) && assetTo == address(0)) {
-            return this.convertWithStaticOracle(assetFrom, toToken, assetAmountFrom);
-        } else if (assetTo != address(0) && assetFrom == address(0)) {
-            return this.convertWithStaticOracle(fromToken, assetTo, amount);
-        } else {
-            return this.convertWithStaticOracle(fromToken, toToken, amount);
+        /*  (address assetYearnFrom, uint256 assetAmountYearnFrom) = isYearnVault(fromToken, amount);
+        (address assetYearnTo, ) = isYearnVault(toToken, 0);
+
+        if (assetYearnFrom != address(0)) {
+            fromToken = assetYearnFrom;
+            amount = assetAmountYearnFrom;
         }
+
+        if (assetYearnTo != address(0)) {
+            toToken = assetYearnTo;
+        }
+
+        if (fromToken == toToken) return amount; 
+
+        uint256 _valuation = this.convertWithStaticOracle(fromToken, toToken, amount);
+
+        if (_valuation == 0) {
+            _valuation = this.convertWithAgg(fromToken, toToken, amount);
+        }
+
+        return _valuation;*/
+
+        return this.convertWithStaticOracle(fromToken, toToken, amount);
     }
 
     /**
@@ -105,17 +117,20 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
         address toToken,
         uint256 amount
     ) external view override returns (uint256 valuation) {
-        (address assetFrom, uint256 assetAmountFrom) = isYearnVault(fromToken, amount);
-        (address assetTo, ) = isYearnVault(toToken, 0);
-        if (assetFrom != address(0) && assetTo != address(0)) {
-            return this.convertScaledWithStaticOracle(assetFrom, assetTo, assetAmountFrom);
-        } else if (assetFrom != address(0)) {
-            return this.convertScaledWithStaticOracle(assetFrom, toToken, assetAmountFrom);
-        } else if (assetTo != address(0)) {
-            return this.convertScaledWithStaticOracle(fromToken, assetTo, amount);
-        } else {
+        /* (address assetYearnFrom, uint256 assetAmountYearnFrom) = isYearnVault(fromToken, amount);
+        (address assetYearnTo, ) = isYearnVault(toToken, 0);
+
+        if (assetYearnFrom != address(0) && assetYearnTo != address(0)) {
+            return this.convertScaledWithStaticOracle(assetYearnFrom, assetYearnTo, assetAmountYearnFrom);
+        } else if (assetYearnFrom != address(0) && assetYearnTo == address(0)) {
+            return this.convertScaledWithStaticOracle(assetYearnFrom, toToken, assetAmountYearnFrom);
+        } else if (assetYearnFrom == address(0) && assetYearnTo != address(0)) {
+            return this.convertScaledWithStaticOracle(fromToken, assetYearnTo, amount);
+        } else if (assetYearnFrom == address(0) && assetYearnTo == address(0)) {
             return this.convertScaledWithStaticOracle(fromToken, toToken, amount);
-        }
+        } */
+
+        return this.convertScaledWithStaticOracle(fromToken, toToken, amount);
     }
 
     /**
@@ -241,13 +256,17 @@ contract BaluniV1Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function isYearnVault(address _address, uint256 amount) public view returns (address, uint256) {
-        IBaluniV1yVault byVault = IBaluniV1yVault(_address);
+        IBaluniV1yVault baluniYearnVault = IBaluniV1yVault(_address);
 
-        if (byVault.yearnVault() == address(0)) {
+        if (baluniYearnVault.yearnVault() == address(0)) {
             return (address(0), 0);
         }
 
-        address yearnVaultAddress = address(byVault.yearnVault());
+        address yearnVaultAddress = address(baluniYearnVault.yearnVault());
+
+        if (amount == 0) {
+            return (IYearnVault(yearnVaultAddress).asset(), 0);
+        }
 
         uint256 convertToAssets = IYearnVault(yearnVaultAddress).convertToAssets(amount);
         return (IYearnVault(yearnVaultAddress).asset(), convertToAssets);
