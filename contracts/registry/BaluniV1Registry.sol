@@ -222,4 +222,16 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
     function getBaluniVaultRegistry() external view override returns (address) {
         return baluniVaultRegistry;
     }
+
+    // Upgrade 3
+
+    address public baluniDCAVaultRegistry;
+
+    function setBaluniDCAVaultRegistry(address _baluniDCAVaultRegistry) external override onlyOwner {
+        baluniDCAVaultRegistry = _baluniDCAVaultRegistry;
+    }
+
+    function getBaluniDCAVaultRegistry() external view override returns (address) {
+        return baluniDCAVaultRegistry;
+    }
 }

@@ -57,6 +57,19 @@
     },
     {
       "inputs": [],
+      "name": "getBaluniDCAVaultRegistry",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getBaluniOracle",
       "outputs": [
         {
@@ -285,6 +298,19 @@
         }
       ],
       "name": "setBaluniAgentFactory",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_baluniPoolRegistry",
+          "type": "address"
+        }
+      ],
+      "name": "setBaluniDCAVaultRegistry",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
