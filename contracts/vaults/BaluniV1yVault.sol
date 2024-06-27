@@ -23,33 +23,17 @@ contract BaluniV1yVault is
     PausableUpgradeable,
     IBaluniV1yVault
 {
-    // The address of the asset accepted by the pool
     address public baseAsset;
-
-    // The address of the Yearn Vault for assetA
     IYearnVault private _yearnVault;
-
-    // The address of the asset to be purchased with interest
     address public quoteAsset;
-
-    // The registry contract used in the BaluniV1 system
     IBaluniV1Registry private _registry;
 
     uint256 public accumulatedAssetB;
-
     uint256 public lastDeposit;
-
     uint256 public allTimeInterest;
 
     event Buy(address indexed sender, uint256 amount, uint256 interest);
 
-    /**
-     * @dev Initializes the BaluniV1Pool contract.
-     * @param _assetA The address of the accepted asset.
-     * @param _yearnVaultAddress The address of the Yearn Vault for assetA.
-     * @param _assetB The address of the asset to be purchased with interest.
-     * @param _registryAddress The address of the BaluniV1Registry contract.
-     */
     function initialize(
         string memory _name,
         string memory _symbol,
@@ -74,18 +58,8 @@ contract BaluniV1yVault is
         require(quoteAsset != address(0), 'Invalid assetB address');
     }
 
-    /**
-     * @dev Internal function to authorize an upgrade to a new implementation contract.
-     * @param newImplementation The address of the new implementation contract.
-     * @notice This function can only be called by the contract owner.
-     */
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    /**
-     * @dev Deposits assetA into the pool and Yearn Vault.
-     * @param amount The amount of assetA to deposit.
-     * @param to The address to receive pool tokens.
-     */
     function deposit(uint256 amount, address to) external override nonReentrant whenNotPaused {
         require(amount > 0, 'Amount must be greater than zero');
 
@@ -108,70 +82,21 @@ contract BaluniV1yVault is
         _yearnVault.deposit(amountAfter, address(this));
 
         uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
+        uint8 yearnDecimal = IERC20Metadata(address(_yearnVault)).decimals();
 
-        // scale up amount
-        uint256 amountScaled = amountAfter * 10 ** (18 - baseDecimal);
+        if (baseDecimal > yearnDecimal) {
+            amountAfter = amountAfter / 10 ** (baseDecimal - yearnDecimal);
+        } else {
+            amountAfter = amountAfter * 10 ** (yearnDecimal - baseDecimal);
+        }
+
+        uint256 amountScaled = amountAfter * 10 ** (18 - yearnDecimal);
+
         _mint(to, amountScaled);
 
         lastDeposit = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
     }
 
-    /**
-     * @dev Withdraws assetA and assetB from the pool and Yearn Vault.
-     * @param shares The amount of pool tokens to redeem.
-     * @param to The address to receive assetA and assetB.
-     */
-    function withdraw(uint256 shares, address to) external override nonReentrant whenNotPaused {
-        require(shares > 0, 'Shares must be greater than zero');
-        require(balanceOf(msg.sender) >= shares, 'Insufficient balance');
-
-        uint8 yearnDecimal = IERC20Metadata(address(_yearnVault)).decimals();
-        uint8 quoteDecimal = IERC20Metadata(quoteAsset).decimals();
-
-        uint256 balanceYearnVault = _yearnVault.balanceOf(address(this));
-        uint256 quoteBalance = IERC20(quoteAsset).balanceOf(address(this));
-        uint256 baseBalance = IERC20(baseAsset).balanceOf(address(this));
-
-        // scale up totalDeposit and accumualteAssetB
-        balanceYearnVault *= 10 ** (18 - yearnDecimal);
-        quoteBalance *= 10 ** (18 - quoteDecimal);
-
-        uint256 withdrawAmountA = (shares * balanceYearnVault) / totalSupply();
-        uint256 withdrawAmountB = (shares * quoteBalance) / totalSupply();
-
-        _burn(msg.sender, shares);
-
-        // scale down totalDeposit and accumualteAssetB
-        withdrawAmountA /= 10 ** (18 - yearnDecimal);
-        withdrawAmountB /= 10 ** (18 - quoteDecimal);
-
-        _yearnVault.redeem(withdrawAmountA, address(this), address(this));
-
-        uint256 baseBalanceAfter = IERC20(baseAsset).balanceOf(address(this));
-        uint256 amountToSend = baseBalanceAfter - baseBalance;
-
-        uint hairCut = _haircut(amountToSend);
-        IERC20(baseAsset).transfer(to, amountToSend - hairCut);
-
-        uint hairCut2 = _haircut(hairCut);
-        address baluniRouter = _registry.getBaluniRouter();
-        address treasury = _registry.getTreasury();
-        IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
-        IERC20(baseAsset).transfer(treasury, hairCut2);
-
-        hairCut = _haircut(withdrawAmountB);
-        accumulatedAssetB -= withdrawAmountB;
-        IERC20(quoteAsset).transfer(to, withdrawAmountB - hairCut);
-        hairCut2 = _haircut(hairCut);
-        IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
-        IERC20(baseAsset).transfer(treasury, hairCut2);
-
-        lastDeposit = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
-    }
-
-    /**
-     * @dev Uses the accumulated interest to purchase assetB.
-     */
     function _buy() internal {
         uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
         uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
@@ -195,9 +120,6 @@ contract BaluniV1yVault is
         _buy();
     }
 
-    /**
-     * @dev Checks and processes accumulated interest.
-     */
     function _processInterest() internal {
         uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
         uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
@@ -208,16 +130,10 @@ contract BaluniV1yVault is
         }
     }
 
-    /**
-     * @dev pause pool, restricting certain operations
-     */
     function pause() external override onlyOwner {
         _pause();
     }
 
-    /**
-     * @dev unpause pool, enabling certain operations
-     */
     function unpause() external override onlyOwner {
         _unpause();
     }
@@ -245,6 +161,7 @@ contract BaluniV1yVault is
     }
 
     function unitPrice() external view override returns (uint256) {
+        if (totalSupply() == 0) return 0;
         address USDC = _registry.getUSDC();
         uint8 decimals = IERC20Metadata(USDC).decimals();
         uint256 factor = 10 ** (18 - decimals);
@@ -261,24 +178,66 @@ contract BaluniV1yVault is
         return address(_yearnVault);
     }
 
-    /**
-     * @dev Calculates the fee amount based on the provided amount using the haircut formula.
-     * @param amount The amount to calculate the fee for.
-     * @return The fee amount.
-     */
     function _haircut(uint256 amount) internal view returns (uint256) {
         uint256 _BPS_FEE = _registry.getBPS_FEE();
         uint256 _BPS_BASE = _registry.getBPS_BASE();
         return (amount * _BPS_FEE) / _BPS_BASE;
     }
 
-    /**
-     * @dev Returns the amount of interest earned by the vault.
-     * @return The amount of interest earned.
-     */
     function interestEarned() public view override returns (uint256) {
         uint256 totalAssets = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
         uint256 interest = totalAssets > lastDeposit ? totalAssets - lastDeposit : 0;
         return interest;
+    }
+
+    function withdraw(uint256 shares, address to) external override nonReentrant whenNotPaused {
+        require(shares > 0, 'Shares must be greater than zero');
+        require(balanceOf(msg.sender) >= shares, 'Insufficient balance');
+
+        uint8 yearnDecimal = IERC20Metadata(address(_yearnVault)).decimals();
+        uint8 quoteDecimal = IERC20Metadata(quoteAsset).decimals();
+        uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
+        uint256 balanceYearnVault = _yearnVault.balanceOf(address(this));
+        uint256 quoteBalance = IERC20(quoteAsset).balanceOf(address(this));
+        uint256 baseBalance = IERC20(baseAsset).balanceOf(address(this));
+        balanceYearnVault *= 10 ** (18 - yearnDecimal);
+        quoteBalance *= 10 ** (18 - quoteDecimal);
+
+        uint256 withdrawAmountA = (shares * balanceYearnVault) / totalSupply();
+        uint256 withdrawAmountB = (shares * quoteBalance) / totalSupply();
+
+        _burn(msg.sender, shares);
+
+        withdrawAmountA /= 10 ** (18 - yearnDecimal);
+        withdrawAmountB /= 10 ** (18 - quoteDecimal);
+
+        _yearnVault.redeem(withdrawAmountA, address(this), address(this));
+
+        uint256 baseBalanceAfter = IERC20(baseAsset).balanceOf(address(this));
+        uint256 amountToSend = baseBalanceAfter - baseBalance;
+        address receiver = to;
+
+        if (amountToSend > 0) {
+            uint hairCut = _haircut(amountToSend);
+            IERC20(baseAsset).transfer(receiver, amountToSend - hairCut);
+            uint hairCut2 = _haircut(hairCut);
+            address baluniRouter = _registry.getBaluniRouter();
+            address treasury = _registry.getTreasury();
+            IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
+            IERC20(baseAsset).transfer(treasury, hairCut2);
+        }
+
+        if (withdrawAmountB > 0) {
+            uint hairCut = _haircut(withdrawAmountB);
+            accumulatedAssetB -= withdrawAmountB;
+            IERC20(quoteAsset).transfer(receiver, withdrawAmountB - hairCut);
+            uint hairCut2 = _haircut(hairCut);
+            address baluniRouter = _registry.getBaluniRouter();
+            address treasury = _registry.getTreasury();
+            IERC20(quoteAsset).transfer(baluniRouter, hairCut - hairCut2);
+            IERC20(quoteAsset).transfer(treasury, hairCut2);
+        }
+
+        lastDeposit = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
     }
 }

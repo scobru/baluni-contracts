@@ -198,7 +198,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   // console.log('BaluniV1Pool3 deployed to:', baluniV1Pool3.target)
 
 
-  const BaluniV1DCAVaultRegistry = await ethers.getContractFactory('BaluniV1DCAVaultRegistry')
+  /* const BaluniV1DCAVaultRegistry = await ethers.getContractFactory('BaluniV1DCAVaultRegistry')
   const baluniV1DCAVaultRegistry = (await upgrades.deployProxy(BaluniV1DCAVaultRegistry, ["0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655"], {
     kind: 'uups',
   })) as unknown as BaluniV1VaultRegistry
@@ -219,7 +219,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
   await baluniDCAVault?.waitForDeployment()
   console.log('BaluniV1DCAVault deployed to:', baluniDCAVault.target)
 
-  await instanceVaultRegistry.addVault(baluniDCAVault.target)
+  await instanceVaultRegistry.addVault(baluniDCAVault.target) */
 
   //deploymentInfo.BaluniV1Pool2 = baluniV1Pool3.target
 
@@ -243,24 +243,24 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   // //saveDeploymentInfo(chainId, deploymentInfo)
 
-  // const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
-  // const baluniV1yVault = await upgrades.deployProxy(
-  //   BaluniV1yVault,
-  //   [
-  //     'BALUNI Yearn Vault USDC Accumulator WBTC',
-  //     'byUSDCx',
-  //     USDC,
-  //     '0x34b9421Fe3d52191B64bC32ec1aB764dcBcDbF5e', // yearn vault
-  //     WBTC,
-  //     '0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', // await registry.getAddress(),
-  //   ],
-  //   {
-  //     kind: 'uups',
-  //   }
-  // )
+  const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
+  const baluniV1yVault = await upgrades.deployProxy(
+    BaluniV1yVault,
+    [
+      'BALUNI Yearn Vault USDC Accumulator WBTC',
+      'byUSDCxWBTC',
+      USDC,
+      '0x34b9421Fe3d52191B64bC32ec1aB764dcBcDbF5e', // yearn vault
+      WBTC,
+      '0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', // await registry.getAddress(),
+    ],
+    {
+      kind: 'uups',
+    }
+  )
 
-  // await baluniV1yVault?.waitForDeployment()
-  // console.log('BaluniV1yPoolAcc deployed to:', baluniV1yVault.target)
+  await baluniV1yVault?.waitForDeployment()
+  console.log('BaluniV1yPoolAcc deployed to:', baluniV1yVault.target)
   // deploymentInfo.BaluniV1yVault = baluniV1yVault.target
 
   // //saveDeploymentInfo(chainId, deploymentInfo)
