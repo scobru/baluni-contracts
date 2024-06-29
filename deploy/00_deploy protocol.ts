@@ -103,7 +103,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   console.log('BaluniV1Rebalance deployed to:', instanceRebalance.target)
 
-  deploymentInfo.BaluniV1Rebalance = instanceRebalance.target
+  deploymentInfo.BaluniV1Rebalancer = instanceRebalance.target
   await registry.setBaluniRebalancer(await instanceRebalance.target)
   const BaluniV1AgentFactory = await ethers.getContractFactory('BaluniV1AgentFactory')
   const agentFactory = (await upgrades.deployProxy(BaluniV1AgentFactory, [registry.target], {
@@ -288,7 +288,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   deploymentInfo.BaluniVaultYearn_USDCxWBTC = baluniV1YearnVault.target
   saveDeploymentInfo(chainId, deploymentInfo)
-  await baluniV1YearnVaultRegistry.addVault(baluniV1YearnVault.target)
+  await baluniYearnVaultRegistry.addVault(baluniV1YearnVault.target)
 }
 export default deployProtocol
 
