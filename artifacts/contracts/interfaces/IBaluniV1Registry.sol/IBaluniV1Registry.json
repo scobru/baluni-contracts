@@ -252,6 +252,19 @@
     },
     {
       "inputs": [],
+      "name": "getUniswapQuoter",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getUniswapRouter",
       "outputs": [
         {
@@ -493,6 +506,19 @@
         }
       ],
       "name": "setUniswapFactory",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_uniswapQuoter",
+          "type": "address"
+        }
+      ],
+      "name": "setUniswapQuoter",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

@@ -44,6 +44,7 @@ import '@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
 import '../interfaces/IBaluniV1PoolPeriphery.sol';
@@ -145,6 +146,10 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         require(uniswapRouter != address(0), 'BaluniSwapper: Address not set');
         _secureApproval(token0, uniswapRouter, amount);
 
+        address quoter = registry.getUniswapQuoter();
+        uint256 amountOutMin = IQuoter(quoter).quoteExactInputSingle(token0, token1, 3000, amount, 0);
+        amountOutMin = amountOutMin - (amountOutMin * slippagePct) / 10000;
+
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn: token0,
             tokenOut: token1,
@@ -152,7 +157,7 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             recipient: address(receiver),
             deadline: block.timestamp,
             amountIn: amount,
-            amountOutMinimum: 0,
+            amountOutMinimum: amountOutMin,
             sqrtPriceLimitX96: 0
         });
         uint256 amountReceived = ISwapRouter(uniswapRouter).exactInputSingle(params);
@@ -187,18 +192,24 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address token0,
         address token1,
         address token2,
-        uint256 tokenBalance,
+        uint256 amount,
         address receiver
     ) internal returns (uint256 amountOut) {
         address uniswapRouter = registry.getUniswapRouter();
-        _secureApproval(token0, uniswapRouter, tokenBalance);
+        _secureApproval(token0, uniswapRouter, amount);
+
+        address quoter = registry.getUniswapQuoter();
+        bytes memory path = abi.encodePacked(token0, uint24(3000), token1, uint24(3000), token2);
+
+        uint256 amountOutMin = IQuoter(quoter).quoteExactInput(path, amount);
+        amountOutMin = amountOutMin - (amountOutMin * slippagePct) / 10000;
 
         ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
             path: abi.encodePacked(token0, uint24(3000), token1, uint24(3000), token2),
             recipient: address(receiver),
             deadline: block.timestamp,
-            amountIn: tokenBalance,
-            amountOutMinimum: 0
+            amountIn: amount,
+            amountOutMinimum: amountOutMin
         });
         uint256 amountReceived = ISwapRouter(uniswapRouter).exactInput(params);
         require(amountReceived > 0, 'BaluniSwapper: Amount Received is 0');
@@ -220,5 +231,14 @@ contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             _token.approve(spender, 0);
             _token.approve(spender, amount);
         }
+    }
+
+    uint256 slippagePct;
+    function setSlippagePercentage(uint256 _slippagePercentage) external onlyOwner {
+        slippagePct = _slippagePercentage;
+    }
+
+    function getSlippagePercentage() external view returns (uint256) {
+        return slippagePct;
     }
 }

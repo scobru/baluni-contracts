@@ -10,6 +10,8 @@ interface IBaluniV1Registry {
 
     function setUniswapRouter(address _uniswapRouter) external;
 
+    function setUniswapQuoter(address _uniswapQuoter) external;
+
     function setBaluniAgentFactory(address _baluniAgentFactory) external;
 
     function setBaluniPoolPeriphery(address _baluniPoolPeriphery) external;
@@ -41,6 +43,8 @@ interface IBaluniV1Registry {
     function setBPS_FEE(uint256 __BPS_FEE) external;
 
     function setBaluniYearnVaultRegistry(address _baluniYearnVaultRegistry) external;
+
+    function getUniswapQuoter() external view returns (address);
 
     function getUniswapFactory() external view returns (address);
 
