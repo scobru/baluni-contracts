@@ -186,7 +186,7 @@ contract BaluniV1DCAVault is
         lastDeposit -= amountToSend;
     }
 
-    function systemDeposit() external onlyExecutor nonReentrant whenNotPaused {
+    function systemDeposit() external nonReentrant whenNotPaused {
         require((block.number - lastInvestedBlock) > reinvestDuration, 'wait till next reinvest cycle');
 
         uint amtToSwap = getAmountToSwap(); // return 1e18
