@@ -28,26 +28,30 @@ npx hardhat test --parallel
 
 ### Polygon
 
-BaluniV1Registry deployed to: 0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655
+BaluniV1Registry deployed to: 0x67438aBdBFE5839a39B3AEf8517B4D213aEf1020
 
-BaluniV1Swapper deployed to: 0x1d70473cF880341198C1909E236d29Afe2F220f8
+BaluniV1Swapper deployed to: 0x1af439B890539c7867cD37eB9B428d34Ec344d10
 
-BaluniV1Oracle deployed to: 0xD8dDca643684e67c17087B7cF6CeE08C91F12511
+BaluniV1Oracle deployed to: 0x8f9C7474F5894E1EB7D3E4a3E9dC8e487282E631
 
-BaluniV1Rebalance deployed to: 0x8c4eDC7a07B372606009E345017C2cB74d043578
+BaluniV1Rebalance deployed to: 0x91e3b021502a408339A884ffe5a897d20Bfa7B9B
 
-BaluniV1AgentFactory deployed to: 0x51e32A98929465Bb02505aE9268c3d1c0cbC7615
+BaluniV1AgentFactory deployed to: 0x9BC11A2c47419a7994EfeD2d355192B79e6b7BFF
 
-BaluniV1Router deployed to: 0x8d7F211172bc11d7a99ad30026299e8ec508ACB0
+BaluniV1Router deployed to: 0x605f25330E33044C13cf277ac14e82D93fcd9BFF
 
-BaluniV1PoolPeriphery deployed to: 0x6DC8B43A5963109A73383aa220c443931C88937a
+BaluniV1PoolPeriphery deployed to: 0xC19Fdc9532D8218E486Bd55B205ceAC371bb4dCf
 
-BaluniV1PoolRegistry deployed to: 0x84436609a3a6E3023aF5691BCa9e00280a3E360b
+BaluniV1PoolRegistry deployed to: 0x36561C90E151bbB68867808E7992145bcB568Ce5
 
-BaluniV1Pool USDC-USDC.e-USDT-DAI deployed to: 0x2abEf7D3eCA3074277534FfFfd994851Ac0092d3
+BaluniV1Pool deployed to: 0x869800089Df2909F0ce7de24152Fc7419B2A8190
 
-BaluniV1Pool2 WBTC-WETH-USDC deployed to: 0xabEEAbbEaf1D160031e4BB2AC2918C8EeE73E9aa
+baluniPoolBalanced deployed to: 0x8845532dd1B7E67B449175367587a6075a7CC3A6
 
-BaluniV1yVault byUSDCx to: 0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5
+baluniPoolConservative deployed to: 0xAc2980268AE0cC3DbaEcd4E019A47561b5eaD676
 
-BaluniV1VaultRegistry deployed to: 0x922b999C559a76438afB79c61ad62B37e30ffc87
+baluniPoolModerate deployed to: 0x9f4Bd7066EDEecd8175D7fa2282a4cbeB8f1A75E
+
+BaluniDCAVaultRegistry deployed to: 0x83b5dC651EbD465e1E20218b8bd92fC0041DD43e
+
+BaluniV1DCAVault deployed to: 0x6210418831c28841E263889B41c286A36bdb90bc

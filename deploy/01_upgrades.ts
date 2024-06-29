@@ -4,6 +4,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
 import { ethers, upgrades } from 'hardhat'
 import erc20ABI from '../abis/common/ERC20.json'
+import { getContract } from 'viem'
 
 /**
  * Deploys a contract named "YourContract" using the deployer account and
@@ -13,7 +14,7 @@ import erc20ABI from '../abis/common/ERC20.json'
  */
 
 /// Deploy -----------------------------------------------------------------------
-const USDC = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'
+const USDC = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'
 const WNATIVE = '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270'
 const USDT = '0xc2132d05d31c914a87c6611c10748aeb04b58e8f'
 const AAVE = '0xc2132d05d31c914a87c6611c10748aeb04b58e8f'
@@ -23,6 +24,8 @@ const WETH = '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619'
 const _1INCHSPOTAGG = '0x0AdDd25a91563696D8567Df78D5A01C9a991F9B8' // 1inch Spot Aggregator
 const uniswapRouter = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
 const uniswapFactory = '0x1F98431c8aD98523631AE4a59f267346ea31F984'
+const DAI = '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063'
+const USDC_E = '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'
 
 const staticOracle = '0xB210CE856631EeEB767eFa666EC7C1C57738d438'
 
@@ -49,17 +52,18 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   console.log('BaluniV1Registry upgraded to:', await _registry.getAddress())
   await instanceRegistry.setBaluniVaultRegistry('0xa88161f82BAa0A065B1b3F785E85e6b5DB45E892') */
 
-  /*  const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
+  /* const BaluniV1Rebalancer = await ethers.getContractFactory('BaluniV1Rebalancer')
+  //await upgrades.forceImport('0x8c4eDC7a07B372606009E345017C2cB74d043578', BaluniV1Rebalancer)
   await upgrades.prepareUpgrade('0x8c4eDC7a07B372606009E345017C2cB74d043578', BaluniV1Rebalancer)
   const rebalancer = await upgrades.upgradeProxy('0x8c4eDC7a07B372606009E345017C2cB74d043578', BaluniV1Rebalancer, {
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 30],
-    },
+      args: ['0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 34],
+    }, 
   })
   const instanceRebalancer = await rebalancer?.waitForDeployment()
-  console.log('BaluniV1Rebalancer upgraded to:', instanceRebalancer.target) */
+  console.log('BaluniV1Rebalancer upgraded to:', instanceRebalancer.target)  */
 
   /*  const BaluniV1Swapper = await ethers.getContractFactory('BaluniV1Swapper')
   await upgrades.prepareUpgrade('0x1d70473cF880341198C1909E236d29Afe2F220f8', BaluniV1Swapper)
@@ -130,37 +134,75 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
   await baluniRouter?.waitForDeployment()
   console.log('BaluniV1Router upgraded to:', baluniRouter.target) */
 
+  /* const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
+  await upgrades.prepareUpgrade('0x2abEf7D3eCA3074277534FfFfd994851Ac0092d3', BaluniV1Pool)
+  const baluniPool = await upgrades.upgradeProxy('0x2abEf7D3eCA3074277534FfFfd994851Ac0092d3', BaluniV1Pool, {
+    kind: 'uups',
+    call: {
+      fn: 'reinitialize',
+      args: [
+        [USDC, USDC_E, USDT, DAI],
+        [2500, 2500, 2500, 2500],
+        100,
+        "0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655",
+        10 // baluni registry
+      ]
+    },
+  })
+  await baluniPool?.waitForDeployment()
+  console.log('BaluniV1Pool upgraded to:', baluniPool.target) */
+
   /*   const BaluniV1Pool = await ethers.getContractFactory('BaluniV1Pool')
-    await upgrades.prepareUpgrade('0x6B5D784086738B30148237d441487bF2Ac396220', BaluniV1Pool)
-    const baluniPool = await upgrades.upgradeProxy('0x6B5D784086738B30148237d441487bF2Ac396220', BaluniV1Pool, {
+    await upgrades.prepareUpgrade('0xabEEAbbEaf1D160031e4BB2AC2918C8EeE73E9aa', BaluniV1Pool)
+    const baluniPool = await upgrades.upgradeProxy('0xabEEAbbEaf1D160031e4BB2AC2918C8EeE73E9aa', BaluniV1Pool, {
       kind: 'uups',
+      call: {
+        fn: 'reinitialize',
+        args: [
+          [WBTC, WETH, USDC],
+          [5000, 3000, 2000],
+          100,
+          "0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655",
+          2 // baluni registry
+        ]
+      },
     })
     await baluniPool?.waitForDeployment()
     console.log('BaluniV1Pool upgraded to:', baluniPool.target) */
 
-  const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
+  //await upgrades.admin.transferProxyAdminOwnership('0x196D5479088Aada724119FBaE7B04a292cF6F0d3', '0x8aA5F726d9F868a21a8bd748E2f1E43bA31eb670')
+  //await upgrades.admin.changeProxyAdmin('0x18F5429a422dA0B7c340A304212a49A02009aD36', '0x84F07be28ecd5b29Df340be8b065A6113a8e893e')
+
+  // Get the current proxy admin address for the given proxy address
+  /* const BaluniV1yVault = await ethers.getContractFactory('BaluniV1yVault')
   //await upgrades.forceImport('0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5', BaluniV1yVault)
   //await upgrades.prepareUpgrade('0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5', BaluniV1yVault)
-  const baluniVault = await upgrades.upgradeProxy('0xdE23f8ABCa49B363A86eeBa60017AaF6bB0C29a5', BaluniV1yVault, {
+  const baluniVault = await upgrades.upgradeProxy('0x196D5479088Aada724119FBaE7B04a292cF6F0d3', BaluniV1yVault, {
     kind: 'uups',
   })
   await baluniVault?.waitForDeployment()
-  console.log('BaluniV1yVault upgraded to:', baluniVault.target)
+  console.log('BaluniV1yVault upgraded to:', baluniVault.target) */
+
+  //await upgrades.admin.changeProxyAdmin('0x18F5429a422dA0B7c340A304212a49A02009aD36', '0x84F07be28ecd5b29Df340be8b065A6113a8e893e')
+  //await upgrades.admin.transferProxyAdminOwnership('0x18F5429a422dA0B7c340A304212a49A02009aD36', '0x8aA5F726d9F868a21a8bd748E2f1E43bA31eb670')
 
   /*  const BaluniV1DCAVault = await ethers.getContractFactory('BaluniV1DCAVault')
-   await upgrades.forceImport('0x55E2cd4b9Dd9dCc1ce9A046B9A63215C700EE556', BaluniV1DCAVault)
-   await upgrades.prepareUpgrade('0x55E2cd4b9Dd9dCc1ce9A046B9A63215C700EE556', BaluniV1DCAVault)
-   const baluniDCAVault = await upgrades.upgradeProxy('0x55E2cd4b9Dd9dCc1ce9A046B9A63215C700EE556', BaluniV1DCAVault, {
+   //await upgrades.forceImport('0x18F5429a422dA0B7c340A304212a49A02009aD36', BaluniV1DCAVault)
+   //await upgrades.prepareUpgrade('0x18F5429a422dA0B7c340A304212a49A02009aD36', BaluniV1DCAVault)
+   const baluniDCAVault = await upgrades.upgradeProxy('0x18F5429a422dA0B7c340A304212a49A02009aD36', BaluniV1DCAVault, {
      kind: 'uups',
-    
+     call: {
+       fn: 'reinitialize',
+       args: ['Baluni DCA Vault', 'bdUSDCxWBTC', USDC, WBTC, '0xe81562a7e2af6F147Ff05EAbAb9B36e88830b655', 3600, 8],
+     },
    })
    await baluniDCAVault?.waitForDeployment()
-   console.log('BaluniV1yVault upgraded to:', baluniDCAVault.target) */
+   console.log('BaluniV1DCAVault upgraded to:', baluniDCAVault.target) */
 
   /* const BaluniV1VaultRegistry = await ethers.getContractFactory('BaluniV1VaultRegistry')
-
+ 
   await upgrades.prepareUpgrade('0x922b999C559a76438afB79c61ad62B37e30ffc87', BaluniV1VaultRegistry)
-
+ 
   const baluniVaultRegistry = await upgrades.upgradeProxy(
     '0x922b999C559a76438afB79c61ad62B37e30ffc87',
     BaluniV1VaultRegistry,
@@ -168,9 +210,9 @@ const upgradeProtocol: DeployFunction = async function (hre: HardhatRuntimeEnvir
       kind: 'uups',
     }
   )
-
+ 
   await baluniVaultRegistry?.waitForDeployment()
-
+ 
   console.log('BaluniV1VaultRegistry upgraded to:', baluniVaultRegistry.target) */
 
   /* const BaluniV1PoolRegistry = await ethers.getContractFactory('BaluniV1PoolRegistry')

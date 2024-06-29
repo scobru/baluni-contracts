@@ -11,6 +11,7 @@ import '@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol';
 import '../interfaces/IBaluniV1Registry.sol';
 import '../interfaces/IBaluniV1Swapper.sol';
 import '../interfaces/IBaluniV1Oracle.sol';
+import '../interfaces/IBaluniV1DCAVault.sol';
 
 contract BaluniV1DCAVault is
     Initializable,
@@ -18,12 +19,14 @@ contract BaluniV1DCAVault is
     OwnableUpgradeable,
     ERC20Upgradeable,
     ReentrancyGuardUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    IBaluniV1DCAVault
 {
     address public baseAsset;
     address public quoteAsset;
 
     IBaluniV1Registry private _registry;
+    uint256 public accumulatedAssetB;
 
     uint256 public lastDeposit;
     uint256 public lastInvestedBlock;
@@ -91,6 +94,11 @@ contract BaluniV1DCAVault is
         reinvestDuration = _reinvestDuration;
         lastInvestedBlock = block.number;
         maxPerSwap = 10000 * 10 ** ERC20Upgradeable(_baseAsset).decimals();
+    }
+
+    function changeReinvestDuration(uint256 _reinvestDuration) external onlyOwner {
+        reinvestDuration = _reinvestDuration;
+        swapDuration = 360 * _reinvestDuration;
     }
 
     modifier onlyExecutor() {
@@ -219,23 +227,6 @@ contract BaluniV1DCAVault is
         _unpause();
     }
 
-    function totalValuation() public view returns (uint256) {
-        IBaluniV1Oracle oracle = IBaluniV1Oracle(_registry.getBaluniOracle());
-        address USDC = _registry.getUSDC();
-        uint256 valuation = 0;
-
-        uint baseBalance = IERC20(baseAsset).balanceOf(address(this));
-        uint balanceQuote = IERC20(quoteAsset).balanceOf(address(this));
-
-        if (baseBalance == 0 && balanceQuote == 0) return 0;
-
-        if (baseAsset != USDC) valuation += oracle.convert(baseAsset, USDC, baseBalance);
-        valuation += oracle.convert(quoteAsset, baseAsset, balanceQuote);
-        valuation += baseBalance;
-
-        return valuation;
-    }
-
     function unitPrice() external view returns (uint256) {
         if (totalSupply() == 0) return 0;
 
@@ -264,5 +255,26 @@ contract BaluniV1DCAVault is
         uint256 _BPS_FEE = _registry.getBPS_FEE();
         uint256 _BPS_BASE = _registry.getBPS_BASE();
         return (amount * _BPS_FEE) / _BPS_BASE;
+    }
+
+    function totalValuation() public view returns (uint256) {
+        IBaluniV1Oracle oracle = IBaluniV1Oracle(_registry.getBaluniOracle());
+        address USDC = _registry.getUSDC();
+        uint256 valuation = 0;
+
+        uint baseBalance = IERC20(baseAsset).balanceOf(address(this));
+        uint balanceQuote = IERC20(quoteAsset).balanceOf(address(this));
+
+        if (baseBalance == 0 && balanceQuote == 0) return 0;
+
+        valuation += oracle.convert(quoteAsset, USDC, balanceQuote);
+
+        if (baseAsset == USDC) {
+            valuation += baseBalance;
+        } else {
+            valuation += oracle.convert(baseAsset, USDC, baseBalance);
+        }
+
+        return valuation;
     }
 }

@@ -19,13 +19,6 @@ interface IBaluniV1Pool {
     event Deposit(address indexed user, uint256 amount);
     event RebalancePerformed(address indexed user, address[] assets);
 
-    function initialize(
-        address[] memory _assets,
-        uint256[] memory _weights,
-        uint256 _trigger,
-        address _registry
-    ) external;
-
     function rebalanceAndDeposit(address receiver) external returns (uint256[] memory);
 
     function swap(

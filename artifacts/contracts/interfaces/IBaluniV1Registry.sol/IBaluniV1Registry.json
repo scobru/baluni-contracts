@@ -161,7 +161,7 @@
     },
     {
       "inputs": [],
-      "name": "getBaluniVaultRegistry",
+      "name": "getBaluniYearnVaultRegistry",
       "outputs": [
         {
           "internalType": "address",
@@ -175,6 +175,19 @@
     {
       "inputs": [],
       "name": "getMAX_BPS_FEE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getREBALANCE_THRESHOLD",
       "outputs": [
         {
           "internalType": "uint256",
@@ -410,11 +423,24 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_baluniPoolRegistry",
+          "name": "_baluniYearnVaultRegistry",
           "type": "address"
         }
       ],
-      "name": "setBaluniVaultRegistry",
+      "name": "setBaluniYearnVaultRegistry",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_REBALANCE_THRESHOLD",
+          "type": "uint256"
+        }
+      ],
+      "name": "setREBALANCE_THRESHOLD",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

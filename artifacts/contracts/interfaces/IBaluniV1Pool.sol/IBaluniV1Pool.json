@@ -340,34 +340,6 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address[]",
-          "name": "_assets",
-          "type": "address[]"
-        },
-        {
-          "internalType": "uint256[]",
-          "name": "_weights",
-          "type": "uint256[]"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_trigger",
-          "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "_registry",
-          "type": "address"
-        }
-      ],
-      "name": "initialize",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [],
       "name": "isRebalanceNeeded",
       "outputs": [

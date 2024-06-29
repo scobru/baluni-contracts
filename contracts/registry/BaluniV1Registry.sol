@@ -55,13 +55,18 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
     address public baluniRegistry;
     address public baluniOracle;
     address public baluniSwapper;
+    address public baluniYearnVaultRegistry;
+    address public baluniDCAVaultRegistry;
+
     address public treasury;
+    address public staticOracle;
     address public WNATIVE;
     address public USDC;
     address public _1inchSpotAgg;
     uint256 public _MAX_BPS_FEE;
     uint256 public _BPS_FEE;
     uint256 public _BPS_BASE;
+    uint256 public _REBALANCE_THRESHOLD;
 
     function initialize() public initializer {
         __Ownable_init(msg.sender);
@@ -69,6 +74,7 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         _MAX_BPS_FEE = 100;
         _BPS_FEE = 30;
         _BPS_BASE = 10000;
+        _REBALANCE_THRESHOLD = 100;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
@@ -109,6 +115,10 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         baluniRebalancer = _baluniRebalancer;
     }
 
+    function setBaluniYearnVaultRegistry(address _baluniYearnVaultRegistry) external override onlyOwner {
+        baluniYearnVaultRegistry = _baluniYearnVaultRegistry;
+    }
+
     function setBaluniRouter(address _baluniRouter) external override onlyOwner {
         baluniRouter = _baluniRouter;
     }
@@ -129,8 +139,20 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         _1inchSpotAgg = __1inchSpotAgg;
     }
 
+    function setStaticOracle(address _staticOracle) external override onlyOwner {
+        staticOracle = _staticOracle;
+    }
+
+    function setBaluniDCAVaultRegistry(address _baluniDCAVaultRegistry) external override onlyOwner {
+        baluniDCAVaultRegistry = _baluniDCAVaultRegistry;
+    }
+
     function setBPS_FEE(uint256 __BPS_FEE) external override onlyOwner {
         _BPS_FEE = __BPS_FEE;
+    }
+
+    function setREBALANCE_THRESHOLD(uint256 __REBALANCE_THRESHOLD) external override onlyOwner {
+        _REBALANCE_THRESHOLD = __REBALANCE_THRESHOLD;
     }
 
     function getUniswapFactory() external view override returns (address) {
@@ -197,38 +219,20 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         return _BPS_BASE;
     }
 
-    function getTreasury() external view override returns (address) {
-        return treasury;
+    function getREBALANCE_THRESHOLD() external view override returns (uint256) {
+        return _REBALANCE_THRESHOLD;
     }
 
-    // Upgrade 1
-    address public staticOracle;
-
-    function setStaticOracle(address _staticOracle) external override onlyOwner {
-        staticOracle = _staticOracle;
+    function getTreasury() external view override returns (address) {
+        return treasury;
     }
 
     function getStaticOracle() external view override returns (address) {
         return staticOracle;
     }
 
-    // Upgrade 2
-    address public baluniVaultRegistry;
-
-    function setBaluniVaultRegistry(address _baluniVaultRegistry) external override onlyOwner {
-        baluniVaultRegistry = _baluniVaultRegistry;
-    }
-
-    function getBaluniVaultRegistry() external view override returns (address) {
-        return baluniVaultRegistry;
-    }
-
-    // Upgrade 3
-
-    address public baluniDCAVaultRegistry;
-
-    function setBaluniDCAVaultRegistry(address _baluniDCAVaultRegistry) external override onlyOwner {
-        baluniDCAVaultRegistry = _baluniDCAVaultRegistry;
+    function getBaluniYearnVaultRegistry() external view override returns (address) {
+        return baluniYearnVaultRegistry;
     }
 
     function getBaluniDCAVaultRegistry() external view override returns (address) {

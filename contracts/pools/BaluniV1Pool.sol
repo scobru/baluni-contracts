@@ -63,9 +63,6 @@ contract BaluniV1Pool is
     // An array to store information about different assets in the pool
     AssetInfo[] public assetInfos;
 
-    // A trigger value used in the pool
-    uint256 public trigger;
-
     // A constant value representing 1
     uint256 public ONE;
 
@@ -77,9 +74,6 @@ contract BaluniV1Pool is
 
     // The registry contract used in the BaluniV1 system
     IBaluniV1Registry public registry;
-
-    uint256 public constant k = 0.00002e18; // Example value, set according to your research
-    uint256 public constant n = 7;
 
     /**
      * @dev A mapping that stores the reserves for each address.
@@ -100,23 +94,58 @@ contract BaluniV1Pool is
      * @dev Initializes the BaluniV1Pool contract.
      * @param _assets The array of asset addresses.
      * @param _weights The array of asset weights.
-     * @param _trigger The trigger value.
      * @param _registry The address of the BaluniV1Registry contract.
      */
     function initialize(
+        string memory _name,
+        string memory _symbol,
         address[] memory _assets,
         uint256[] memory _weights,
-        uint256 _trigger,
         address _registry
     ) external initializer {
         __Ownable_init(msg.sender);
-        __ERC20_init(generateTokenName(_assets), generateTokenSymbol(_assets));
+        __ERC20_init(_name, _symbol);
+        __UUPSUpgradeable_init();
+        __ReentrancyGuard_init();
+        __Pausable_init();
 
         registry = IBaluniV1Registry(_registry);
         ONE = 1e18;
-        trigger = _trigger;
         baseAsset = registry.getUSDC();
         scalingFactor = 10 ** (18 - 6);
+
+        require(baseAsset != address(0), 'Invalid base asset address');
+        require(initializeAssets(_assets, _weights), 'Initialization failed');
+
+        uint256 totalWeight = 0;
+
+        for (uint256 i = 0; i < _weights.length; i++) {
+            totalWeight += _weights[i];
+        }
+
+        require(totalWeight == 10000, 'Invalid weights');
+    }
+
+    function reinitialize(
+        string memory _name,
+        string memory _symbol,
+        address[] memory _assets,
+        uint256[] memory _weights,
+        address _registry,
+        uint64 _version
+    ) external reinitializer(_version) {
+        __Ownable_init(msg.sender);
+        __ERC20_init(_name, _symbol);
+        __UUPSUpgradeable_init();
+        __ReentrancyGuard_init();
+        __Pausable_init();
+
+        registry = IBaluniV1Registry(_registry);
+        ONE = 1e18;
+        baseAsset = registry.getUSDC();
+        scalingFactor = 10 ** (18 - 6);
+
+        // reset assetInfos
 
         require(baseAsset != address(0), 'Invalid base asset address');
         require(initializeAssets(_assets, _weights), 'Initialization failed');
@@ -147,6 +176,8 @@ contract BaluniV1Pool is
 
         require(registry.getBaluniRebalancer() != address(0), 'Invalid rebalancer address');
         require(_assets.length == _weights.length, 'Assets and weights length mismatch');
+        // reset asset Infos
+        delete assetInfos;
 
         for (uint256 i = 0; i < _assets.length; i++) {
             require(_assets[i] != address(0), 'Invalid asset address');
@@ -413,6 +444,7 @@ contract BaluniV1Pool is
 
             if (asset == baseAsset) {
                 valuation = amounts[i];
+                totalValue += valuation;
                 continue;
             }
 
@@ -464,6 +496,7 @@ contract BaluniV1Pool is
     ) external override ensure(deadline) nonReentrant whenNotPaused returns (uint256) {
         require(to != address(0), 'Invalid address');
         require(share > 0, 'Share must be greater than 0');
+
         uint256 allowance = IERC20(address(this)).allowance(msg.sender, address(this));
         require(allowance >= share, 'BaluniV1Pool: Insufficient Allowance');
 
@@ -472,35 +505,36 @@ contract BaluniV1Pool is
 
         uint256 totalSupply = totalSupply();
         require(totalSupply > 0, 'No liquidity');
-        uint256 fee = _haircut(share);
-        uint256 shareAfterFee = share - fee;
 
-        for (uint256 i = 0; i < assetInfos.length; i++) {
-            require(
-                IERC20(assetInfos[i].asset).balanceOf(address(this)) >= calculateAssetShare(shareAfterFee)[i],
-                'BaluniV1Pool: Insufficient Asset Balance'
-            );
-            bool transferSuccess = IERC20(assetInfos[i].asset).transfer(to, calculateAssetShare(shareAfterFee)[i]);
-            require(transferSuccess, 'Asset transfer failed');
-        }
-
-        require(balanceOf(address(this)) >= shareAfterFee, 'Insufficient BALUNI liquidity');
         address treasury = registry.getTreasury();
         require(treasury != address(0), 'Invalid treasury address');
 
-        require(balanceOf(address(this)) >= fee, 'Insufficient BALUNI for fee');
+        for (uint256 i = 0; i < assetInfos.length; i++) {
+            uint256 amountToSend = calculateAssetShare(share)[i];
+            require(
+                IERC20(assetInfos[i].asset).balanceOf(address(this)) >= amountToSend,
+                'BaluniV1Pool: Insufficient Asset Balance'
+            );
 
-        bool feeTransferSuccess = IERC20(address(this)).transfer(treasury, fee);
-        require(feeTransferSuccess, 'Fee transfer failed');
+            uint256 fee = _haircut(amountToSend);
+            amountToSend -= fee;
+            bool transferProtocolSuccess = IERC20(assetInfos[i].asset).transfer(treasury, fee);
+            require(transferProtocolSuccess, 'BaluniV1Pool: Fee Transfer Failed');
 
-        _burn(address(this), shareAfterFee);
+            bool transferSuccess = IERC20(assetInfos[i].asset).transfer(to, amountToSend);
+            require(transferSuccess, 'Asset transfer failed');
+        }
+
+        require(balanceOf(address(this)) >= share, 'Insufficient BALUNI liquidity');
+
+        _burn(address(this), share);
 
         _updateSlippage();
         _update();
 
-        emit Withdraw(to, shareAfterFee);
+        emit Withdraw(to, share);
 
-        return shareAfterFee;
+        return share;
     }
 
     /**
@@ -513,7 +547,7 @@ contract BaluniV1Pool is
         uint256 shareAfterFee = share - fee;
         uint256[] memory assetShares = new uint256[](assetInfos.length);
         for (uint256 i = 0; i < assetInfos.length; i++) {
-            uint256 assetBalance = assetInfos[i].reserve;
+            uint256 assetBalance = IERC20(assetInfos[i].asset).balanceOf(address(this));
             assetShares[i] = (assetBalance * shareAfterFee) / totalSupply();
         }
         return assetShares;
@@ -643,7 +677,7 @@ contract BaluniV1Pool is
         uint256[] memory _reserves = new uint256[](assetInfos.length);
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
-            _reserves[i] = assetInfos[i].reserve;
+            _reserves[i] = IERC20(assetInfos[i].asset).balanceOf(address(this));
         }
 
         return _reserves;
@@ -656,7 +690,7 @@ contract BaluniV1Pool is
      */
     function getAssetReserve(address asset) public view override returns (uint256) {
         for (uint256 i = 0; i < assetInfos.length; i++) {
-            if (asset == assetInfos[i].asset) return assetInfos[i].reserve;
+            if (asset == assetInfos[i].asset) return IERC20(asset).balanceOf(address(this));
         }
     }
 
@@ -684,15 +718,15 @@ contract BaluniV1Pool is
         return weights;
     }
 
-    // return true if one of the deviation overcome the trigger
     /**
      * @dev Checks if rebalancing is needed for the pool.
      * @return A boolean value indicating whether rebalancing is needed or not.
      */
     function isRebalanceNeeded() public view returns (bool) {
+        uint256 rebalance_threshold = registry.getREBALANCE_THRESHOLD();
         (bool[] memory directions, uint256[] memory deviations) = getDeviations();
         for (uint256 i = 0; i < deviations.length; i++) {
-            if (directions[i] && deviations[i] > trigger) {
+            if (directions[i] && deviations[i] > rebalance_threshold) {
                 return true;
             }
         }
@@ -748,11 +782,12 @@ contract BaluniV1Pool is
         }
 
         uint256[] memory balances = getReserves();
+        uint256 rebalance_threshold = registry.getREBALANCE_THRESHOLD();
         IBaluniV1Rebalancer(rebalancer).rebalance(
             balances,
             assets,
             weights,
-            trigger,
+            rebalance_threshold,
             address(this),
             address(this),
             baseAsset
@@ -836,11 +871,8 @@ contract BaluniV1Pool is
      * @param _assets The array of asset addresses.
      * @return The generated token name.
      */
-    function generateTokenName(address[] memory _assets) internal view returns (string memory) {
-        string memory name = 'Baluni Pool: ';
-        for (uint256 i = 0; i < _assets.length; i++) {
-            name = string(abi.encodePacked(name, IERC20Metadata(_assets[i]).symbol(), '-'));
-        }
+    function generateTokenName(address[] memory _assets) internal pure returns (string memory) {
+        string memory name = 'Baluni Liquidity Pool';
         return name;
     }
 
@@ -850,9 +882,13 @@ contract BaluniV1Pool is
      * @return The generated token symbol.
      */
     function generateTokenSymbol(address[] memory _assets) internal view returns (string memory) {
-        string memory symbol = 'BALUNI-';
+        string memory symbol = 'bLP-';
         for (uint256 i = 0; i < _assets.length; i++) {
-            symbol = string(abi.encodePacked(symbol, IERC20Metadata(_assets[i]).symbol(), '-'));
+            if (i == 0) {
+                symbol = string(abi.encodePacked(symbol, IERC20Metadata(_assets[i]).symbol()));
+            } else {
+                symbol = string(abi.encodePacked(symbol, '-', IERC20Metadata(_assets[i]).symbol()));
+            }
         }
         return symbol;
     }

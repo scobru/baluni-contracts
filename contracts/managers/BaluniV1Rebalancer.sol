@@ -114,9 +114,13 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         for (uint256 i = 0; i < vars.overweightVaults.length; i++) {
             if (vars.overweightAmounts[i] > 0) {
                 address asset = assets[vars.overweightVaults[i]];
+
                 if (asset == baseAsset) {
+                    IERC20(asset).transferFrom(sender, address(this), vars.overweightAmounts[i]);
+                    vars.amountOut += vars.overweightAmounts[i];
                     continue;
                 }
+
                 require(
                     vars.balances[vars.overweightVaults[i]] >= vars.overweightAmounts[i],
                     'BaluniV1Rebalancer: Under Overweight Amount!!'
@@ -153,7 +157,7 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
         }
 
         uint256 baseAssetBalance = IERC20(baseAsset).balanceOf(address(this));
-        require(baseAssetBalance >= vars.amountOut, 'Insufficient base asset balance');
+        require(baseAssetBalance >= vars.amountOut, 'BaluniV1Rebalancer:  Insufficient base asset balance');
 
         address[] memory _assets = assets;
         uint256 BPS_BASE = registry.getBPS_BASE();
@@ -171,8 +175,12 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
                     continue;
                 }
 
-                require(rebBuyQty > 0, 'Rebalance buy quantity is zero');
-                require(rebBuyQty <= baseAssetBalance, 'Rebalance buy quantity exceeds base asset balance');
+                require(rebBuyQty > 0, 'BaluniV1Rebalancer: Rebalance buy quantity is zero');
+
+                require(
+                    rebBuyQty <= baseAssetBalance,
+                    'BaluniV1Rebalancer: Rebalance buy quantity exceeds base asset balance'
+                );
 
                 address baluniSwapper = registry.getBaluniSwapper();
                 IERC20(baseAsset).approve(baluniSwapper, rebBuyQty);
