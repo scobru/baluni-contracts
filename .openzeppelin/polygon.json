@@ -39657,7 +39657,7 @@
             "label": "assetInfos",
             "offset": 0,
             "slot": "0",
-            "type": "t_array(t_struct(AssetInfo)3426_storage)dyn_storage",
+            "type": "t_array(t_struct(AssetInfo)2881_storage)dyn_storage",
             "contract": "BaluniV1Pool",
             "src": "contracts\\pools\\BaluniV1Pool.sol:64"
           },
@@ -39689,7 +39689,7 @@
             "label": "registry",
             "offset": 0,
             "slot": "4",
-            "type": "t_contract(IBaluniV1Registry)4053",
+            "type": "t_contract(IBaluniV1Registry)3518",
             "contract": "BaluniV1Pool",
             "src": "contracts\\pools\\BaluniV1Pool.sol:76"
           },
@@ -39821,15 +39821,15 @@
             "label": "uint64",
             "numberOfBytes": "8"
           },
-          "t_array(t_struct(AssetInfo)3426_storage)dyn_storage": {
+          "t_array(t_struct(AssetInfo)2881_storage)dyn_storage": {
             "label": "struct IBaluniV1Pool.AssetInfo[]",
             "numberOfBytes": "32"
           },
-          "t_contract(IBaluniV1Registry)4053": {
+          "t_contract(IBaluniV1Registry)3518": {
             "label": "contract IBaluniV1Registry",
             "numberOfBytes": "20"
           },
-          "t_struct(AssetInfo)3426_storage": {
+          "t_struct(AssetInfo)2881_storage": {
             "label": "struct IBaluniV1Pool.AssetInfo",
             "members": [
               {
@@ -40535,7 +40535,7 @@
             "label": "_yearnVault",
             "offset": 0,
             "slot": "1",
-            "type": "t_contract(IYearnVault)4675",
+            "type": "t_contract(IYearnVault)4140",
             "contract": "BaluniV1YearnVault",
             "src": "contracts\\vaults\\BaluniV1YearnVault.sol:27"
           },
@@ -40551,7 +40551,7 @@
             "label": "_registry",
             "offset": 0,
             "slot": "3",
-            "type": "t_contract(IBaluniV1Registry)4053",
+            "type": "t_contract(IBaluniV1Registry)3518",
             "contract": "BaluniV1YearnVault",
             "src": "contracts\\vaults\\BaluniV1YearnVault.sol:29"
           },
@@ -40699,11 +40699,11 @@
             "label": "uint64",
             "numberOfBytes": "8"
           },
-          "t_contract(IBaluniV1Registry)4053": {
+          "t_contract(IBaluniV1Registry)3518": {
             "label": "contract IBaluniV1Registry",
             "numberOfBytes": "20"
           },
-          "t_contract(IYearnVault)4675": {
+          "t_contract(IYearnVault)4140": {
             "label": "contract IYearnVault",
             "numberOfBytes": "20"
           }
@@ -41385,6 +41385,291 @@
           "t_mapping(t_address,t_bool)": {
             "label": "mapping(address => bool)",
             "numberOfBytes": "32"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.Pausable": [
+            {
+              "contract": "PausableUpgradeable",
+              "label": "_paused",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\PausableUpgradeable.sol:21",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.ERC20": [
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_balances",
+              "type": "t_mapping(t_address,t_uint256)",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:38",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_allowances",
+              "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:40",
+              "offset": 0,
+              "slot": "1"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_totalSupply",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:42",
+              "offset": 0,
+              "slot": "2"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_name",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:44",
+              "offset": 0,
+              "slot": "3"
+            },
+            {
+              "contract": "ERC20Upgradeable",
+              "label": "_symbol",
+              "type": "t_string_storage",
+              "src": "@openzeppelin\\contracts-upgradeable\\token\\ERC20\\ERC20Upgradeable.sol:45",
+              "offset": 0,
+              "slot": "4"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "9a40c25d3a895034c056bc769c2141a665ab0a0a2558c891caf0c4d361544d88": {
+      "address": "0xB937f76678fdcaee7F6c45A42784c67c75Ff4ddD",
+      "txHash": "0x1d397ff70d27e30924ef4e7d2049be87d21afe59ca6d80dc93f397ae28574fb0",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "baseAsset",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_address",
+            "contract": "BaluniV1YearnVault",
+            "src": "contracts\\vaults\\BaluniV1YearnVault.sol:26"
+          },
+          {
+            "label": "_yearnVault",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IYearnVault)4742",
+            "contract": "BaluniV1YearnVault",
+            "src": "contracts\\vaults\\BaluniV1YearnVault.sol:27"
+          },
+          {
+            "label": "quoteAsset",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_address",
+            "contract": "BaluniV1YearnVault",
+            "src": "contracts\\vaults\\BaluniV1YearnVault.sol:28"
+          },
+          {
+            "label": "_registry",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_contract(IBaluniV1Registry)4120",
+            "contract": "BaluniV1YearnVault",
+            "src": "contracts\\vaults\\BaluniV1YearnVault.sol:29"
+          },
+          {
+            "label": "accumulatedAssetB",
+            "offset": 0,
+            "slot": "4",
+            "type": "t_uint256",
+            "contract": "BaluniV1YearnVault",
+            "src": "contracts\\vaults\\BaluniV1YearnVault.sol:31"
+          },
+          {
+            "label": "lastDeposit",
+            "offset": 0,
+            "slot": "5",
+            "type": "t_uint256",
+            "contract": "BaluniV1YearnVault",
+            "src": "contracts\\vaults\\BaluniV1YearnVault.sol:32"
+          },
+          {
+            "label": "allTimeInterest",
+            "offset": 0,
+            "slot": "6",
+            "type": "t_uint256",
+            "contract": "BaluniV1YearnVault",
+            "src": "contracts\\vaults\\BaluniV1YearnVault.sol:33"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+            "label": "mapping(address => mapping(address => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(ERC20Storage)201_storage": {
+            "label": "struct ERC20Upgradeable.ERC20Storage",
+            "members": [
+              {
+                "label": "_balances",
+                "type": "t_mapping(t_address,t_uint256)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_allowances",
+                "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "_totalSupply",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "_name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "_symbol",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "4"
+              }
+            ],
+            "numberOfBytes": "160"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(PausableStorage)296_storage": {
+            "label": "struct PausableUpgradeable.PausableStorage",
+            "members": [
+              {
+                "label": "_paused",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)360_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1Registry)4120": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IYearnVault)4742": {
+            "label": "contract IYearnVault",
+            "numberOfBytes": "20"
           }
         },
         "namespaces": {

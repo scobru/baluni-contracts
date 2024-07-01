@@ -141,7 +141,7 @@ contract BaluniV1YearnVault is
         emit Buy(msg.sender, amountOut, interest);
     }
 
-    function buy() external override nonReentrant onlyOwner whenNotPaused {
+    function buy() external override nonReentrant whenNotPaused {
         _buy();
     }
 
@@ -221,7 +221,6 @@ contract BaluniV1YearnVault is
 
         uint8 yearnDecimal = IERC20Metadata(address(_yearnVault)).decimals();
         uint8 quoteDecimal = IERC20Metadata(quoteAsset).decimals();
-        uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
         uint256 balanceYearnVault = _yearnVault.balanceOf(address(this));
         uint256 quoteBalance = IERC20(quoteAsset).balanceOf(address(this));
         uint256 baseBalance = IERC20(baseAsset).balanceOf(address(this));
