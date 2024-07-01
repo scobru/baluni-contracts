@@ -93,8 +93,16 @@ contract BaluniV1PoolZap is Initializable, OwnableUpgradeable, ReentrancyGuardUp
         address[] memory poolAssets = baluniPool.getAssets();
         uint256[] memory amounts = new uint256[](poolAssets.length);
 
+        uint256[] memory balances = new uint256[](poolAssets.length);
+        for (uint256 i = 0; i < poolAssets.length; i++) {
+            balances[i] = IERC20(poolAssets[i]).balanceOf(address(this));
+        }
+
         // Retrieve balances before withdrawal
         uint256 balanceBefore = IERC20(tokenOut).balanceOf(address(this));
+
+        IERC20(poolAddress).transferFrom(msg.sender, address(this), share);
+        IERC20(poolAddress).approve(address(baluniPool), share);
 
         // Withdraw from the pool
         baluniPool.withdraw(share, address(this), deadline);
@@ -102,12 +110,11 @@ contract BaluniV1PoolZap is Initializable, OwnableUpgradeable, ReentrancyGuardUp
         uint256 totalAmountOut = 0;
 
         for (uint256 i = 0; i < poolAssets.length; i++) {
-            uint256 balanceAssetBefore = IERC20(poolAssets[i]).balanceOf(address(this));
             if (poolAssets[i] == tokenOut) {
-                amounts[i] = IERC20(poolAssets[i]).balanceOf(address(this)) - balanceAssetBefore;
+                amounts[i] = IERC20(poolAssets[i]).balanceOf(address(this)) - balances[i];
                 totalAmountOut += amounts[i];
             } else {
-                amounts[i] = IERC20(poolAssets[i]).balanceOf(address(this)) - balanceAssetBefore;
+                amounts[i] = IERC20(poolAssets[i]).balanceOf(address(this)) - balances[i];
                 totalAmountOut += _swap(poolAssets[i], tokenOut, amounts[i], msg.sender);
             }
         }
@@ -131,12 +138,19 @@ contract BaluniV1PoolZap is Initializable, OwnableUpgradeable, ReentrancyGuardUp
         uint256 amountIn,
         address receiver
     ) internal returns (uint256 amountOut) {
+        address WMATIC = registry.getWNATIVE();
         if (tokenIn == tokenOut) {
             return amountIn;
         }
 
         IERC20(tokenIn).approve(address(baluniSwapper), amountIn);
-        amountOut = baluniSwapper.singleSwap(tokenIn, tokenOut, amountIn, receiver);
+
+        try baluniSwapper.singleSwap(tokenIn, tokenOut, amountIn, receiver) returns (uint256 _amountOut) {
+            amountOut = _amountOut;
+        } catch {
+            amountOut = baluniSwapper.multiHopSwap(tokenIn, WMATIC, tokenOut, amountIn, receiver);
+        }
         require(amountOut > 0, 'Swap failed');
+        return amountOut;
     }
 }

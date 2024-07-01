@@ -769,10 +769,6 @@ contract BaluniV1Pool is
         address rebalancer = registry.getBaluniRebalancer();
         address[] memory assets = getAssets();
         uint256[] memory weights = getWeights();
-        uint256 _BPS_BASE = registry.getBPS_BASE();
-        uint256 balance = balanceOf(msg.sender);
-        uint256 totalSupply = totalSupply();
-        require((balance * _BPS_BASE) / totalSupply >= 100, 'Insufficient balance');
 
         for (uint256 i = 0; i < assetInfos.length; i++) {
             uint256 allowance = IERC20(assetInfos[i].asset).allowance(address(this), rebalancer);

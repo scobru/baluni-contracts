@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ethers, upgrades } from 'hardhat'
 import contracts from '../deployments/deployedContracts.json'
 
 const chainId = 137
 
 async function main() {
-  const proxyAddress = contracts[chainId].BaluniPoolStable
+  const proxyAddress = contracts[chainId].BaluniPoolModerate
   const registryAddress = contracts[chainId].BaluniV1Registry
   const response = await fetch('https://tokens.uniswap.org/')
   const data = await response.json()
@@ -20,7 +21,7 @@ async function main() {
 
   const baluniPool = await upgrades.upgradeProxy(proxyAddress, BaluniV1Pool, {
     kind: 'uups',
-    call: {
+    /* call: {
       fn: 'reinitialize',
       args: [
         'Baluni Pool: Stable',
@@ -30,7 +31,7 @@ async function main() {
         registryAddress,
         2,
       ],
-    },
+    }, */
   })
 
   await baluniPool?.waitForDeployment()
