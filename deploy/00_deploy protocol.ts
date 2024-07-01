@@ -288,7 +288,7 @@ const deployProtocol: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   deploymentInfo.BaluniVaultYearn_USDCxWBTC = baluniV1YearnVault.target
   saveDeploymentInfo(chainId, deploymentInfo)
-  await baluniYearnVaultRegistry.addVault(baluniV1YearnVault.target)
+  await baluniV1YearnVaultRegistry.addVault(baluniV1YearnVault.target)
 }
 export default deployProtocol
 

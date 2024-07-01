@@ -44,6 +44,8 @@ interface IBaluniV1Registry {
 
     function setBaluniYearnVaultRegistry(address _baluniYearnVaultRegistry) external;
 
+    function setBaluniPoolZap(address _baluniPoolZap) external;
+
     function getUniswapQuoter() external view returns (address);
 
     function getUniswapFactory() external view returns (address);
@@ -89,4 +91,6 @@ interface IBaluniV1Registry {
     function getStaticOracle() external view returns (address);
 
     function getBaluniYearnVaultRegistry() external view returns (address);
+
+    function getBaluniPoolZap() external view returns (address);
 }

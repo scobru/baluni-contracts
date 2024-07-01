@@ -109,6 +109,19 @@
     },
     {
       "inputs": [],
+      "name": "getBaluniPoolZap",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getBaluniRebalancer",
       "outputs": [
         {
@@ -376,6 +389,19 @@
         }
       ],
       "name": "setBaluniPoolRegistry",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_baluniPoolZap",
+          "type": "address"
+        }
+      ],
+      "name": "setBaluniPoolZap",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
