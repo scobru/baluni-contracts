@@ -261,4 +261,16 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
     function getBaluniPoolZap() external view override returns (address) {
         return baluniPoolZap;
     }
+
+    // v3
+
+    address public baluniHyperPoolZap;
+
+    function setBaluniHyperPoolZap(address _baluniHyperPoolZap) external override onlyOwner {
+        baluniHyperPoolZap = _baluniHyperPoolZap;
+    }
+
+    function getBaluniHyperPoolZap() external view override returns (address) {
+        return baluniHyperPoolZap;
+    }
 }

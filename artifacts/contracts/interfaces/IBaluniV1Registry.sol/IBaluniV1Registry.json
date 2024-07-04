@@ -70,6 +70,19 @@
     },
     {
       "inputs": [],
+      "name": "getBaluniHyperPoolZap",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getBaluniOracle",
       "outputs": [
         {
@@ -350,6 +363,19 @@
         }
       ],
       "name": "setBaluniDCAVaultRegistry",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_baluniHyperPoolZap",
+          "type": "address"
+        }
+      ],
+      "name": "setBaluniHyperPoolZap",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
