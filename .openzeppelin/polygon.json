@@ -43349,6 +43349,3066 @@
           ]
         }
       }
+    },
+    "9e425f36cd0fe50fb6e9951e21f930ea60a52778eb39d2229548a8b4751a8103": {
+      "address": "0xEA77A480B88958b80EF09699857e36466Ec2E503",
+      "txHash": "0xb47b1dccadb34b4f053375e6571ae91a28cc40d6f085ee6f687230ebde3b177f",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3056",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:117"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3087",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:118"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2822",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:119"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:120"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2822": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3056": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3087": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "607207bf1694560ad4e0ccf78bd004cb3b8ca7fee053be7bd216c70663f379a7": {
+      "address": "0x80bfeb2CCae104824a3BE78BC3595ceaFcEfE3B4",
+      "txHash": "0xa7c9662e07d340ae2bf2cde0af8e1ab44b165d6dda5beec1c63001a38349caa8",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3056",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:117"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3087",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:118"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2822",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:119"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:120"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2822": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3056": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3087": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "e590f66ecda8c4d1c0d3dfa0be28b4cd1b01ffeba14562ed6cacc1d5904f2625": {
+      "address": "0x8FB46d07266b1acCc08a5aeA3a8bb532cDC91F93",
+      "txHash": "0x0fd6966382f1b799776ec728b473b31203609bcb4828638f78c880421c176a7f",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3056",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:117"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3087",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:118"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2822",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:119"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:120"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2822": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3056": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3087": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "a18ee07e198683e634f2a61e123d3a49ba28e1f520a5b62c97b77dcf1a6233ea": {
+      "address": "0x598F60fC7bb2a705d4AC11bA7d3219E356429a17",
+      "txHash": "0x05bb36147ebcf3db3575b1a1bf60c6bce181b986b29a4f724ae2975298c28189",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3056",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:117"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3087",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:118"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2822",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:119"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:120"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2822": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3056": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3087": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "25c9f9b3489a0a222b4bc1431e30ac4d95c2f8c2b366b80f0a43e366e36d8649": {
+      "address": "0xaC1ccddb3D3611802cC833A8adCb42749a696570",
+      "txHash": "0xa9ece92275c2389642ae570be21c8f61c1e3b93afb9c5cd2655a3a8518787a39",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3056",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:117"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3087",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:118"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2822",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:119"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:120"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2822": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3056": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3087": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "cc7d264dda8091df42aa46656523cddd286a3a0068536d4a55379a748bac5dd1": {
+      "address": "0x8Ab200e745ED4Ff85F87B9FBbd60546E2cECe2cF",
+      "txHash": "0x0c3942d6927759cb4efc3bac00d8be21dba67864a883f1e107a6bbcbf5d9914f",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:125"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:126"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:127"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:128"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "8f9d51c9f50bc01f1d0576c3aa3adeca33cfe350bc0de22b4c247c4deaf99557": {
+      "address": "0xd930f83B478d1b2480B4aC7b95212382A2E968eA",
+      "txHash": "0x40d49a8aab0e2402b49c5061267c83ab45b282df37fe17ab3e9b6443ded28e9a",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:125"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:126"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:127"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:128"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "8f3dc3c9d113004c4880f90cfcb4c878f221f053d47331ce1c9e6ad0d3b4d771": {
+      "address": "0x27115aAa74b296D2461958498B5b4C99b8E10afA",
+      "txHash": "0x627846f65cbad6cc9726e215c5fbd54059079b82ff72688ff77105775230dcca",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "2fc9b1a33ecbc75fec031cf9c4ac5dcc6d8808c100c6e774a7c826106744dcf8": {
+      "address": "0x8B90376A65C507F8aAEBd3ac40fFE588592A2d8C",
+      "txHash": "0xf4749753d60e642fa997f15da43bb80a82123758f97f5ad6b630532b583e80f2",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "ebd145f70d38b53516c3f03909929a2c4ad9849758657197341f4e6a9f59b226": {
+      "address": "0xB5b95A098760b097c3D9e0BD461c478F12FBd364",
+      "txHash": "0x55771b67d3e9076416a4835a5b52764c3dc79f10fa8bb6864312f637f402ed01",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "7f96fa6c52433d62679448e698cf92cb8b4d7f1ba165586f6e9271a6896e6c1f": {
+      "address": "0x3c72Ea202B8883528eFE2f0cDC7B0A5ee85826A9",
+      "txHash": "0x05bcc7d4def3ac90a3436270750fd7c6c92c7a12d408ec64ce18ae6f97204891",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "27674b92e25fa07545a79544a491636e5dffe6bc978f92f9978d485bd247b681": {
+      "address": "0x9284fc7dD27534A8eeB499c9CCD1b90167B12053",
+      "txHash": "0x2ed2a313886593818e439f9cbbbda1c18cf215af783ad32c1dd6cd9b80a9b881",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "677091dc8c75dae951ca52758c8ca18ce1bdf14b798d8f3aea94d23138f1ac42": {
+      "address": "0xb3f68e973dab0C896035ab3887fBFc008Fc83DB8",
+      "txHash": "0x6939b78785389c1c737f8df47c641650de793c6401b70b888844af6ed23f5a4e",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "cc66d15db57ce6477b43dea72597db82a0a58a88e5c2dace48976a8116c2f9fc": {
+      "address": "0xEeF426333c8De586693e0b35869FFE9A5c2735D4",
+      "txHash": "0x7d6b8f755e492fc8e54a7b056913b02b58544121bc8df5d485ea3d7eb0a1162a",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "886b67107adaae77b9958885fbb6967a41895ce3600e720cc7e4a9b70497c8cf": {
+      "address": "0x323D2350CCD47252e6353F0aB2a1d78A65d4059B",
+      "txHash": "0x8067924d730ccc56bdf23385bacf064c484801cc9af3985f3e8cdd97f01a1985",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "ec13a531eb6a85b9cb93de296c72f4cf147fc766ee387f44ffb3c5b19a4eb740": {
+      "address": "0x23299f874A3FE97f46F217173cB92941Fd4Fd765",
+      "txHash": "0x4fad20e080c0bc993db235e5c0f2a654426b0b76ec78a68801950d78a2f8f462",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "6828844ccc078e70b604c6c749109edd136b07342c1c8a14976b92eeccaa3db9": {
+      "address": "0xb68fc965D0A748DEe0BFEe245e84a6290727d48b",
+      "txHash": "0x557af135f5fcd930e0a81422e808c783ab23f9e64f36fa6c1f49c8522bcbcecd",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "07026764b80cf9e959063b17be5385c497dfc792273686c7a9cec9f25c40b325": {
+      "address": "0x5E80d40867989C9c0EB94AD745043aDEc3B9D697",
+      "txHash": "0xdabb019cbec1467ac1dfcb9be1d94b86cbce2678ac983be0ca923bc97f5091c5",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "e691240e60c78c8c5b1447c105f54898d429f51fa8239f245d0340b3e753cfbe": {
+      "address": "0x831AA629f136A767c120A2Ad7aeB78C2c7e81758",
+      "txHash": "0x15ae34a44609428709a03ca64cbd28aa7a0c116af14dad06351adbc862a6212a",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
+    },
+    "65f19e171316996f328d15e0ab466dfcd9395e77d8337c90281a63a08417954e": {
+      "address": "0xdcFA99490505eEeCbDB8b82B7115de644fca246A",
+      "txHash": "0xaaa65bb74158626da0d9157edb03dc04ec279e759fa373464437b19c1f791ea2",
+      "layout": {
+        "solcVersion": "0.8.25",
+        "storage": [
+          {
+            "label": "registry",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_contract(IBaluniV1Registry)3061",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:132"
+          },
+          {
+            "label": "baluniSwapper",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_contract(IBaluniV1Swapper)3092",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:133"
+          },
+          {
+            "label": "baluniHyperUniProxy",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_contract(IBaluniV1HyperUniProxy)2827",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:134"
+          },
+          {
+            "label": "WETH9",
+            "offset": 0,
+            "slot": "3",
+            "type": "t_address",
+            "contract": "BaluniV1HyperPoolZap",
+            "src": "contracts\\managers\\BaluniV1HyperPoolZap.sol:135"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_struct(InitializableStorage)65_storage": {
+            "label": "struct Initializable.InitializableStorage",
+            "members": [
+              {
+                "label": "_initialized",
+                "type": "t_uint64",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "_initializing",
+                "type": "t_bool",
+                "offset": 8,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(OwnableStorage)14_storage": {
+            "label": "struct OwnableUpgradeable.OwnableStorage",
+            "members": [
+              {
+                "label": "_owner",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_struct(ReentrancyGuardStorage)298_storage": {
+            "label": "struct ReentrancyGuardUpgradeable.ReentrancyGuardStorage",
+            "members": [
+              {
+                "label": "_status",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              }
+            ],
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint64": {
+            "label": "uint64",
+            "numberOfBytes": "8"
+          },
+          "t_contract(IBaluniV1HyperUniProxy)2827": {
+            "label": "contract IBaluniV1HyperUniProxy",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Registry)3061": {
+            "label": "contract IBaluniV1Registry",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IBaluniV1Swapper)3092": {
+            "label": "contract IBaluniV1Swapper",
+            "numberOfBytes": "20"
+          }
+        },
+        "namespaces": {
+          "erc7201:openzeppelin.storage.ReentrancyGuard": [
+            {
+              "contract": "ReentrancyGuardUpgradeable",
+              "label": "_status",
+              "type": "t_uint256",
+              "src": "@openzeppelin\\contracts-upgradeable\\utils\\ReentrancyGuardUpgradeable.sol:40",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Ownable": [
+            {
+              "contract": "OwnableUpgradeable",
+              "label": "_owner",
+              "type": "t_address",
+              "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:24",
+              "offset": 0,
+              "slot": "0"
+            }
+          ],
+          "erc7201:openzeppelin.storage.Initializable": [
+            {
+              "contract": "Initializable",
+              "label": "_initialized",
+              "type": "t_uint64",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:69",
+              "offset": 0,
+              "slot": "0"
+            },
+            {
+              "contract": "Initializable",
+              "label": "_initializing",
+              "type": "t_bool",
+              "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:73",
+              "offset": 8,
+              "slot": "0"
+            }
+          ]
+        }
+      }
     }
   }
 }

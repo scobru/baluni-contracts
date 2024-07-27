@@ -14,4 +14,6 @@ interface IBaluniV1HyperUniProxy {
         address token,
         uint256 _deposit
     ) external view returns (uint256 amountStart, uint256 amountEnd);
+
+    function clearance() external returns (address);
 }
