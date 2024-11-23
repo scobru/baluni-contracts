@@ -18,7 +18,7 @@ async function main() {
     kind: 'uups',
     call: {
       fn: 'reinitialize',
-      args: ['Baluni Vault : Yearn USDCxWBTC', 'BV-YRN-USDCxWBTC', USDC, yearnVault, WBTC, registryAddress, 3],
+      args: ['BALUNI YEARN VAULT : USDCxWBTC', 'BYV-USDCxWBTC', USDC, yearnVault, WBTC, registryAddress, 15],
     },
   })
   await baluniVault?.waitForDeployment()

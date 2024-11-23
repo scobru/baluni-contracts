@@ -120,6 +120,8 @@ contract BaluniV1YearnVault is
         _mint(to, amountScaled);
 
         lastDeposit = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
+
+        accumulatedAssetB = IERC20(quoteAsset).balanceOf(address(this));
     }
 
     function _buy() internal {
@@ -153,6 +155,8 @@ contract BaluniV1YearnVault is
         if (interest > limit) {
             _buy();
         }
+
+        accumulatedAssetB = IERC20(quoteAsset).balanceOf(address(this));
     }
 
     function pause() external override onlyOwner {
@@ -218,59 +222,93 @@ contract BaluniV1YearnVault is
     function withdraw(uint256 shares, address to) external override nonReentrant whenNotPaused {
         require(shares > 0, 'Shares must be greater than zero');
         require(balanceOf(msg.sender) >= shares, 'Insufficient balance');
+        require(totalSupply() > 0, "Total supply cannot be zero");
 
         uint8 yearnDecimal = IERC20Metadata(address(_yearnVault)).decimals();
         uint8 quoteDecimal = IERC20Metadata(quoteAsset).decimals();
+        
+        // Ottieni i saldi
         uint256 balanceYearnVault = _yearnVault.balanceOf(address(this));
         uint256 quoteBalance = IERC20(quoteAsset).balanceOf(address(this));
         uint256 baseBalance = IERC20(baseAsset).balanceOf(address(this));
+
+        // Verifica che la moltiplicazione non causi overflow
+        require(balanceYearnVault <= type(uint256).max / (10 ** (18 - yearnDecimal)), 
+            "YearnVault balance scaling would overflow");
+        require(quoteBalance <= type(uint256).max / (10 ** (18 - quoteDecimal)), 
+            "Quote balance scaling would overflow");
+
+        // Scala i saldi
         balanceYearnVault *= 10 ** (18 - yearnDecimal);
         quoteBalance *= 10 ** (18 - quoteDecimal);
 
+        // Verifica che shares non causi overflow nella moltiplicazione
+        require(shares <= type(uint256).max / balanceYearnVault, "Shares calculation would overflow");
+        require(shares <= type(uint256).max / quoteBalance, "Shares calculation would overflow");
+
+        // Calcola gli importi da prelevare
         uint256 withdrawAmountA = (shares * balanceYearnVault) / totalSupply();
         uint256 withdrawAmountB = (shares * quoteBalance) / totalSupply();
 
         _burn(msg.sender, shares);
 
+        // Riscala gli importi
         withdrawAmountA /= 10 ** (18 - yearnDecimal);
         withdrawAmountB /= 10 ** (18 - quoteDecimal);
+
+        // Verifica che ci siano abbastanza asset nel yearnVault
+        require(withdrawAmountA <= _yearnVault.convertToAssets(balanceYearnVault), 
+            "Insufficient assets in Yearn Vault");
 
         _yearnVault.redeem(withdrawAmountA, address(this), address(this));
 
         uint256 baseBalanceAfter = IERC20(baseAsset).balanceOf(address(this));
+        require(baseBalanceAfter >= baseBalance, "Base balance check failed");
         uint256 amountToSend = baseBalanceAfter - baseBalance;
         address receiver = to;
 
         if (amountToSend > 0) {
-            uint hairCut = _haircut(amountToSend);
-            IERC20(baseAsset).transfer(receiver, amountToSend - hairCut);
-            uint hairCut2 = _haircut(hairCut);
+            uint256 hairCut = _haircut(amountToSend);
+            require(hairCut <= amountToSend, "Haircut exceeds amount");
+            
+            uint256 amountAfterHaircut = amountToSend - hairCut;
+            uint256 hairCut2 = _haircut(hairCut);
+            require(hairCut2 <= hairCut, "Secondary haircut exceeds primary haircut");
+            
             address baluniRouter = _registry.getBaluniRouter();
             address treasury = _registry.getTreasury();
+            
+            IERC20(baseAsset).transfer(receiver, amountToSend - hairCut);
             IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
             IERC20(baseAsset).transfer(treasury, hairCut2);
         }
 
         if (withdrawAmountB > 0) {
-            try this.handleWithdrawB(withdrawAmountB, receiver) {
-                // Successful
-            } catch (bytes memory reason) {
-                lastDeposit = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
-                return;
-            }
+            bool success = _handleWithdrawB(withdrawAmountB, receiver);
+            require(success, "Failed to transfer quoteAsset");
         }
 
         lastDeposit = _yearnVault.convertToAssets(_yearnVault.balanceOf(address(this)));
     }
 
-    function handleWithdrawB(uint256 withdrawAmountB, address receiver) external {
-        uint hairCut = _haircut(withdrawAmountB);
-        accumulatedAssetB -= withdrawAmountB;
-        IERC20(quoteAsset).transfer(receiver, withdrawAmountB - hairCut);
-        uint hairCut2 = _haircut(hairCut);
+    function _handleWithdrawB(uint256 withdrawAmountB, address receiver) internal returns (bool) {
+        require(withdrawAmountB <= IERC20(quoteAsset).balanceOf(address(this)), 
+            "Insufficient quote asset balance");
+        
+        uint256 hairCut = _haircut(withdrawAmountB);
+        require(hairCut <= withdrawAmountB, "Haircut exceeds withdrawal amount");
+        
+        uint256 amountAfterHaircut = withdrawAmountB - hairCut;
+        uint256 hairCut2 = _haircut(hairCut);
+        require(hairCut2 <= hairCut, "Secondary haircut exceeds primary haircut");
+        
         address baluniRouter = _registry.getBaluniRouter();
         address treasury = _registry.getTreasury();
+        
+        IERC20(quoteAsset).transfer(receiver, amountAfterHaircut);
         IERC20(quoteAsset).transfer(baluniRouter, hairCut - hairCut2);
         IERC20(quoteAsset).transfer(treasury, hairCut2);
+        
+        return true;
     }
 }
