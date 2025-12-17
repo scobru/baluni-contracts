@@ -92,14 +92,10 @@ contract BaluniV1YearnVault is
 
         IERC20(baseAsset).transferFrom(msg.sender, address(this), amount);
 
-        address baluniRouter = _registry.getBaluniRouter();
         address treasury = _registry.getTreasury();
 
         uint hairCut = _haircut(amount);
-        uint hairCut2 = _haircut(hairCut);
-
-        IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
-        IERC20(baseAsset).transfer(treasury, hairCut2);
+        IERC20(baseAsset).transfer(treasury, hairCut);
 
         uint256 amountAfter = amount - hairCut;
 
@@ -271,16 +267,10 @@ contract BaluniV1YearnVault is
             uint256 hairCut = _haircut(amountToSend);
             require(hairCut <= amountToSend, "Haircut exceeds amount");
             
-            uint256 amountAfterHaircut = amountToSend - hairCut;
-            uint256 hairCut2 = _haircut(hairCut);
-            require(hairCut2 <= hairCut, "Secondary haircut exceeds primary haircut");
-            
-            address baluniRouter = _registry.getBaluniRouter();
             address treasury = _registry.getTreasury();
             
             IERC20(baseAsset).transfer(receiver, amountToSend - hairCut);
-            IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
-            IERC20(baseAsset).transfer(treasury, hairCut2);
+            IERC20(baseAsset).transfer(treasury, hairCut);
         }
 
         if (withdrawAmountB > 0) {
@@ -299,15 +289,10 @@ contract BaluniV1YearnVault is
         require(hairCut <= withdrawAmountB, "Haircut exceeds withdrawal amount");
         
         uint256 amountAfterHaircut = withdrawAmountB - hairCut;
-        uint256 hairCut2 = _haircut(hairCut);
-        require(hairCut2 <= hairCut, "Secondary haircut exceeds primary haircut");
-        
-        address baluniRouter = _registry.getBaluniRouter();
         address treasury = _registry.getTreasury();
         
         IERC20(quoteAsset).transfer(receiver, amountAfterHaircut);
-        IERC20(quoteAsset).transfer(baluniRouter, hairCut - hairCut2);
-        IERC20(quoteAsset).transfer(treasury, hairCut2);
+        IERC20(quoteAsset).transfer(treasury, hairCut);
         
         return true;
     }

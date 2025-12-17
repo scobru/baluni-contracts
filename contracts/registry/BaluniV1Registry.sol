@@ -47,11 +47,11 @@ import '../interfaces/IBaluniV1Registry.sol';
 contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable, IBaluniV1Registry {
     address public uniswapFactory;
     address public uniswapRouter;
-    address public baluniAgentFactory;
+
     address public baluniPoolPeriphery;
     address public baluniPoolRegistry;
     address public baluniRebalancer;
-    address public baluniRouter;
+
     address public baluniRegistry;
     address public baluniOracle;
     address public baluniSwapper;
@@ -99,9 +99,7 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         baluniOracle = _baluniOracle;
     }
 
-    function setBaluniAgentFactory(address _baluniAgentFactory) external override onlyOwner {
-        baluniAgentFactory = _baluniAgentFactory;
-    }
+
 
     function setBaluniPoolPeriphery(address _baluniPoolPeriphery) external override onlyOwner {
         baluniPoolPeriphery = _baluniPoolPeriphery;
@@ -119,9 +117,7 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         baluniYearnVaultRegistry = _baluniYearnVaultRegistry;
     }
 
-    function setBaluniRouter(address _baluniRouter) external override onlyOwner {
-        baluniRouter = _baluniRouter;
-    }
+
 
     function setBaluniRegistry(address _baluniRegistry) external override onlyOwner {
         baluniRegistry = _baluniRegistry;
@@ -171,9 +167,7 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         return baluniOracle;
     }
 
-    function getBaluniAgentFactory() external view override returns (address) {
-        return baluniAgentFactory;
-    }
+
 
     function getBaluniPoolPeriphery() external view override returns (address) {
         return baluniPoolPeriphery;
@@ -187,9 +181,7 @@ contract BaluniV1Registry is Initializable, OwnableUpgradeable, UUPSUpgradeable,
         return baluniRebalancer;
     }
 
-    function getBaluniRouter() external view override returns (address) {
-        return baluniRouter;
-    }
+
 
     function getBaluniRegistry() external view override returns (address) {
         return baluniRegistry;

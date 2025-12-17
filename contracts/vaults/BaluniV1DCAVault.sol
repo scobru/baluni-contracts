@@ -123,14 +123,10 @@ contract BaluniV1DCAVault is
 
         IERC20(baseAsset).transferFrom(msg.sender, address(this), amount);
 
-        address baluniRouter = _registry.getBaluniRouter();
         address treasury = _registry.getTreasury();
 
         uint hairCut = _haircut(amount);
-        uint hairCut2 = _haircut(hairCut);
-
-        IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
-        IERC20(baseAsset).transfer(treasury, hairCut2);
+        IERC20(baseAsset).transfer(treasury, hairCut);
 
         uint256 amountAfter = amount - hairCut;
         uint8 baseDecimal = IERC20Metadata(baseAsset).decimals();
@@ -171,17 +167,12 @@ contract BaluniV1DCAVault is
         uint hairCut = _haircut(amountToSend);
         IERC20(baseAsset).transfer(to, amountToSend - hairCut);
 
-        uint hairCut2 = _haircut(hairCut);
-        address baluniRouter = _registry.getBaluniRouter();
         address treasury = _registry.getTreasury();
-        IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
-        IERC20(baseAsset).transfer(treasury, hairCut2);
+        IERC20(baseAsset).transfer(treasury, hairCut);
 
         hairCut = _haircut(withdrawAmountB);
         IERC20(quoteAsset).transfer(to, withdrawAmountB - hairCut);
-        hairCut2 = _haircut(hairCut);
-        IERC20(baseAsset).transfer(baluniRouter, hairCut - hairCut2);
-        IERC20(baseAsset).transfer(treasury, hairCut2);
+        IERC20(quoteAsset).transfer(treasury, hairCut);
 
         lastDeposit -= amountToSend;
     }

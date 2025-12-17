@@ -42,7 +42,9 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import '../interfaces/IBaluniV1Router.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
+
 import '../interfaces/IBaluniV1Swapper.sol';
 import '../interfaces/IBaluniV1Registry.sol';
 import '../interfaces/IBaluniV1Oracle.sol';
@@ -200,16 +202,12 @@ contract BaluniV1Rebalancer is Initializable, OwnableUpgradeable, UUPSUpgradeabl
 
                 vars.amountOut = amountOut;
                 uint256 amountToReceiver = calculateNetAmountAfterFee(amountOut);
-                uint256 remainingToReceiver = amountOut - amountToReceiver;
-                uint256 amountToRouter = calculateNetAmountAfterFee(remainingToReceiver);
-                uint256 amountToTreasury = remainingToReceiver - amountToRouter;
+                uint256 amountToTreasury = amountOut - amountToReceiver;
 
                 require(IERC20(asset).balanceOf(address(this)) >= amountToReceiver, 'Balance under amount to transfer');
-                address baluniRouter = registry.getBaluniRouter();
                 address treasury = registry.getTreasury();
 
                 IERC20(asset).transfer(_receiver, amountToReceiver);
-                IERC20(asset).transfer(baluniRouter, amountToRouter);
                 IERC20(asset).transfer(treasury, amountToTreasury);
             }
         }

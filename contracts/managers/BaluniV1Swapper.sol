@@ -47,8 +47,7 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/IQuoter.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-import '../interfaces/IBaluniV1PoolPeriphery.sol';
-import '../interfaces/IBaluniV1PoolRegistry.sol';
+
 import '../interfaces/IBaluniV1Registry.sol';
 
 contract BaluniV1Swapper is Initializable, OwnableUpgradeable, UUPSUpgradeable {

@@ -12,7 +12,7 @@ interface IBaluniV1Registry {
 
     function setUniswapQuoter(address _uniswapQuoter) external;
 
-    function setBaluniAgentFactory(address _baluniAgentFactory) external;
+
 
     function setBaluniPoolPeriphery(address _baluniPoolPeriphery) external;
 
@@ -26,7 +26,7 @@ interface IBaluniV1Registry {
 
     function setBaluniRebalancer(address _baluniRebalancer) external;
 
-    function setBaluniRouter(address _baluniRouter) external;
+
 
     function setBaluniRegistry(address _baluniRegistry) external;
 
@@ -58,7 +58,7 @@ interface IBaluniV1Registry {
 
     function getBaluniOracle() external view returns (address);
 
-    function getBaluniAgentFactory() external view returns (address);
+
 
     function getBaluniPoolPeriphery() external view returns (address);
 
@@ -68,7 +68,7 @@ interface IBaluniV1Registry {
 
     function getBaluniRebalancer() external view returns (address);
 
-    function getBaluniRouter() external view returns (address);
+
 
     function getBaluniRegistry() external view returns (address);
 

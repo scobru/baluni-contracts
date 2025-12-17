@@ -98,9 +98,7 @@ contract MockRebalancer {
         return true;
     }
 
-    function getBaluniRouter() external view returns (address) {
-        return address(0);
-    }
+
 
     function getTreasury() external view returns (address) {
         return treasury;
